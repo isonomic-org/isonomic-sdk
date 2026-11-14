@@ -11,7 +11,7 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 - `proto::lenient`: decoding that survives a newer peer, on both sides.
 - `client`: `AppClient` (a client scoped to one token), generic subscriptions with events routed before the reply is delivered, skipping of unknown events.
 - `testkit`: token enforcement on every call, `grant`, `app_client`, `revoke_all`, and a log of every call with its caller.
-- Frozen fixtures for `system` and `apps`, and a CI check that refuses edits to existing fixture lines.
+- Frozen fixtures for `system` and `apps`. The CI step that refuses edits to existing fixture lines is written but not yet in `.github/workflows/`: the connector cannot write workflow files (see PR 3).
 
 **Decisions**
 
