@@ -4,11 +4,18 @@ The one contract between the Isonomic window and the Isonomic engine, over a Uni
 
 | Crate | What it is |
 | --- | --- |
-| `isonomic-proto` | Versioned wire types. Wire format v0 is length-prefixed JSON, so traffic is readable. Also the rule for where a Capsule and its socket live. |
-| `isonomic-client` | Async client: one multiplexed connection, reconnect, and a live status view that callers await instead of polling. |
-| `isonomic-testkit` | An in-memory engine that speaks the real protocol, for tests. |
+| `isonomic-proto` | Versioned wire types. Wire format v0 is length-prefixed JSON, so traffic is readable. Manifests, capability tokens and the shared capability check. Also the rule for where a Capsule and its socket live. |
+| `isonomic-client` | Async client: one multiplexed connection, reconnect, a live status view that callers await instead of polling, subscriptions, and the token-scoped `AppClient` an app is given. |
+| `isonomic-testkit` | An in-memory engine that speaks the real protocol and enforces tokens, for tests. |
 
-Spec and status live in `isonomic-desktop/docs/architecture/sdk/`.
+## Docs
+
+- `docs/interfaces/<name>.md`: every method, event and error, with real JSON.
+- `docs/versioning.md`: what may change without a version bump, and how fixtures freeze the rest.
+- `docs/CHANGELOG.md`: what each change means for the engine and the window.
+- `docs/status.md`: what is built and every decision, newest first.
+
+The SDK's original spec is `isonomic-desktop/docs/architecture/sdk/spec.md`.
 
 ## Develop
 

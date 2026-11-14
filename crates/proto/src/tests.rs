@@ -30,6 +30,7 @@ fn client_messages_have_a_frozen_shape() {
         (
             ClientMessage::Request {
                 id: 1,
+                token: None,
                 call: Call::SystemStatus,
             },
             r#"{"type":"request","id":1,"method":"system.status"}"#,
@@ -37,6 +38,7 @@ fn client_messages_have_a_frozen_shape() {
         (
             ClientMessage::Request {
                 id: 2,
+                token: None,
                 call: Call::SystemLogs {
                     service: "postgres".into(),
                     limit: Some(20),
@@ -47,6 +49,7 @@ fn client_messages_have_a_frozen_shape() {
         (
             ClientMessage::Request {
                 id: 3,
+                token: None,
                 call: Call::SystemUnsubscribe { subscription: 7 },
             },
             r#"{"type":"request","id":3,"method":"system.unsubscribe","params":{"subscription":7}}"#,
@@ -121,6 +124,7 @@ fn negotiation_picks_the_highest_common_version() {
 fn frames_carry_their_length_and_refuse_oversize() {
     let frame = frame::encode(&ClientMessage::Request {
         id: 1,
+        token: None,
         call: Call::SystemProfile,
     })
     .unwrap();
@@ -131,6 +135,7 @@ fn frames_carry_their_length_and_refuse_oversize() {
         back,
         ClientMessage::Request {
             id: 1,
+            token: None,
             call: Call::SystemProfile
         }
     );

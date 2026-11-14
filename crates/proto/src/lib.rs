@@ -9,14 +9,18 @@
 //! The first message on a connection is `hello`; the engine answers
 //! `welcome` with the version both sides will speak.
 
+pub mod auth;
 pub mod frame;
 #[cfg(feature = "tokio")]
 pub mod io;
+pub mod lenient;
 pub mod locate;
+pub mod manifest;
 pub mod system;
 
 use serde::{Deserialize, Serialize};
 
+pub use manifest::{Capabilities, Manifest, Token};
 pub use system::{HardwareProfile, ServiceState, ServiceStatus, SystemStatus};
 
 /// The protocol version this crate describes.
@@ -32,16 +36,22 @@ pub enum ClientMessage {
     /// Must be first. Lists every protocol version the client can speak.
     Hello { versions: Vec<u32>, client: String },
     /// One call. `id` is chosen by the client and echoed in the response.
+    /// `token` is the calling app's capability token; a call without one
+    /// comes from the shell.
     Request {
         id: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        token: Option<Token>,
         #[serde(flatten)]
         call: Call,
     },
 }
 
-/// Every method of every interface. Milestone 0 has `system` only.
+/// Every method of every interface. Each method is named
+/// `<interface>.<verb>`; new methods are added, never changed.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "method", content = "params")]
+#[non_exhaustive]
 pub enum Call {
     /// Status of every service.
     #[serde(rename = "system.status")]
@@ -60,6 +70,48 @@ pub enum Call {
     /// Stop every service in order, then the engine.
     #[serde(rename = "system.shutdown")]
     SystemShutdown,
+    /// Shell only: record an app's approved manifest and issue its token.
+    #[serde(rename = "apps.grant")]
+    AppsGrant { manifest: Box<Manifest> },
+}
+
+impl Call {
+    /// Every method this build knows, in interface order.
+    pub const METHODS: &'static [&'static str] = &[
+        "system.status",
+        "system.subscribe",
+        "system.unsubscribe",
+        "system.logs",
+        "system.profile",
+        "system.shutdown",
+        "apps.grant",
+    ];
+
+    /// The method name on the wire, for logs and the Activity tab.
+    pub fn method(&self) -> &'static str {
+        match self {
+            Call::SystemStatus => "system.status",
+            Call::SystemSubscribe => "system.subscribe",
+            Call::SystemUnsubscribe { .. } => "system.unsubscribe",
+            Call::SystemLogs { .. } => "system.logs",
+            Call::SystemProfile => "system.profile",
+            Call::SystemShutdown => "system.shutdown",
+            Call::AppsGrant { .. } => "apps.grant",
+        }
+    }
+
+    pub fn interface(&self) -> auth::Interface {
+        use auth::Interface;
+        match self {
+            Call::SystemStatus
+            | Call::SystemSubscribe
+            | Call::SystemUnsubscribe { .. }
+            | Call::SystemLogs { .. }
+            | Call::SystemProfile
+            | Call::SystemShutdown => Interface::System,
+            Call::AppsGrant { .. } => Interface::Apps,
+        }
+    }
 }
 
 /// What the engine sends.
@@ -89,6 +141,7 @@ pub enum Outcome {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum Reply {
     Status(SystemStatus),
     Subscribed {
@@ -102,23 +155,62 @@ pub enum Reply {
     },
     Profile(HardwareProfile),
     ShuttingDown {},
+    /// Answer to `apps.grant`.
+    Granted {
+        app: String,
+        token: Token,
+    },
+}
+
+impl Reply {
+    /// The subscription this reply opened, if it opened one. Events for it
+    /// follow on the same connection.
+    pub fn opened_subscription(&self) -> Option<u64> {
+        match self {
+            Reply::Subscribed { subscription, .. } => Some(*subscription),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "event", content = "data", rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum Event {
     /// One service changed.
     ServiceStatus(ServiceStatus),
 }
 
+impl Event {
+    /// Whether this is the last event of its subscription.
+    pub fn is_final(&self) -> bool {
+        false
+    }
+}
+
+/// A typed error: a stable code to branch on and a message a person can
+/// read. Interface-specific detail rides in optional fields, so an older
+/// client simply ignores detail it does not know.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WireError {
     pub code: ErrorCode,
     pub message: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+impl WireError {
+    pub fn new(code: ErrorCode, message: impl Into<String>) -> Self {
+        Self {
+            code,
+            message: message.into(),
+        }
+    }
+}
+
+/// Stable error codes. A code this build does not know decodes as
+/// `Unrecognized` instead of failing the whole message.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum ErrorCode {
     /// No protocol version in common.
     UnsupportedVersion,
@@ -129,6 +221,17 @@ pub enum ErrorCode {
     UnknownService,
     UnknownSubscription,
     Internal,
+    /// The engine does not implement this method (yet).
+    UnknownMethod,
+    /// The token was never issued, or was revoked.
+    UnknownToken,
+    /// The token's manifest does not allow this call.
+    CapabilityDenied,
+    /// The manifest broke a rule in [`Manifest::validate`].
+    InvalidManifest,
+    /// A code from a newer engine.
+    #[serde(other)]
+    Unrecognized,
 }
 
 /// Pick the version to speak: the highest one both sides support.
@@ -142,3 +245,5 @@ pub fn negotiate(client_versions: &[u32], engine_versions: &[u32]) -> Option<u32
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_apps;
