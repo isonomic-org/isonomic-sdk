@@ -6,6 +6,7 @@ members = [
     "crates/testkit",
     "crates/app",
     "examples/hello-app",
+    "xtask",
 ]
 
 [workspace.package]
