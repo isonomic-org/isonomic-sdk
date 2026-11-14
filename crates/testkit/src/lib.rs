@@ -1,31 +1,74 @@
 //! An in-memory Isonomic engine for tests.
 //!
 //! It speaks the real protocol over in-memory streams and runs no services,
-//! so a client, or a whole window, can be tested with no socket, no engine
-//! binary and no database. Tests script it: change a service's state, take
-//! the engine offline and bring it back, and check whether shutdown was
-//! requested.
+//! so a client, an app, or a whole window can be tested with no socket, no
+//! engine binary and no database. Tests script it: change a service's
+//! state, take the engine offline and bring it back, check whether shutdown
+//! was requested, and see every call each app made.
+//!
+//! It enforces capability tokens exactly as the engine does (through
+//! `isonomic_proto::auth`), so an app cannot pass its tests while calling
+//! something its manifest does not allow.
+
+mod conn;
+mod system;
 
 use std::collections::HashMap;
 use std::io;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
-use isonomic_client::{BoxedStream, Client, Connector, Options};
-use isonomic_proto::io::{read_message, write_message};
+use isonomic_client::{AppClient, BoxedStream, Client, Connector, Options};
 use isonomic_proto::{
-    negotiate, Call, ClientMessage, ErrorCode, Event, HardwareProfile, Outcome, Reply,
-    ServerMessage, ServiceState, ServiceStatus, SystemStatus, WireError, PROTOCOL_VERSION,
+    ErrorCode, Manifest, ServiceState, ServiceStatus, SystemStatus, Token, WireError,
 };
-use tokio::io::DuplexStream;
-use tokio::sync::{broadcast, mpsc, watch};
+use tokio::sync::{broadcast, watch};
 
-struct State {
-    system: Mutex<SystemStatus>,
-    logs: Mutex<HashMap<String, Vec<String>>>,
-    changes: broadcast::Sender<ServiceStatus>,
-    online: watch::Sender<bool>,
-    shutdown_requested: AtomicBool,
+/// One app's approved manifest, as the engine holds it.
+#[derive(Debug, Clone)]
+pub(crate) struct Grant {
+    pub(crate) manifest: Manifest,
+}
+
+/// One call the engine received, for assertions.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CallRecord {
+    /// The calling app's id; `None` for the shell.
+    pub app: Option<String>,
+    pub method: String,
+}
+
+pub(crate) struct State {
+    pub(crate) system: Mutex<SystemStatus>,
+    pub(crate) logs: Mutex<HashMap<String, Vec<String>>>,
+    pub(crate) changes: broadcast::Sender<ServiceStatus>,
+    pub(crate) online: watch::Sender<bool>,
+    pub(crate) shutdown_requested: AtomicBool,
+    pub(crate) grants: Mutex<HashMap<Token, Grant>>,
+    pub(crate) calls: Mutex<Vec<CallRecord>>,
+    next_token: AtomicU64,
+}
+
+impl State {
+    /// Validate a manifest and issue a token for it. Granting the same app
+    /// again replaces its manifest and keeps earlier tokens working, like an
+    /// engine whose tokens are derived from the manifest.
+    pub(crate) fn grant(&self, manifest: Manifest) -> Result<(String, Token), WireError> {
+        manifest
+            .validate()
+            .map_err(|e| WireError::new(ErrorCode::InvalidManifest, e.to_string()))?;
+        let n = self.next_token.fetch_add(1, Ordering::SeqCst);
+        let token = Token::new(format!("tok-{}-{n}", manifest.id));
+        let app = manifest.id.clone();
+        let mut grants = self.grants.lock().unwrap();
+        for grant in grants.values_mut() {
+            if grant.manifest.id == app {
+                grant.manifest = manifest.clone();
+            }
+        }
+        grants.insert(token.clone(), Grant { manifest });
+        Ok((app, token))
+    }
 }
 
 /// The scripted engine. Cheap to clone.
@@ -66,6 +109,9 @@ impl TestEngine {
                 changes: broadcast::channel(64).0,
                 online: watch::channel(true).0,
                 shutdown_requested: AtomicBool::new(false),
+                grants: Mutex::new(HashMap::new()),
+                calls: Mutex::new(Vec::new()),
+                next_token: AtomicU64::new(1),
             }),
         }
     }
@@ -82,24 +128,51 @@ impl TestEngine {
                         "engine offline",
                     ));
                 }
-                let (client_side, engine_side) = tokio::io::duplex(64 * 1024);
-                tokio::spawn(serve(engine_side, state));
+                let (client_side, engine_side) = tokio::io::duplex(256 * 1024);
+                tokio::spawn(conn::serve(engine_side, state));
                 Ok(Box::new(client_side) as BoxedStream)
             })
         })
     }
 
-    /// A client connected to this engine, with fast reconnects. Must be
-    /// called inside a Tokio runtime.
+    /// A shell client connected to this engine, with fast reconnects. Must
+    /// be called inside a Tokio runtime.
     pub fn client(&self) -> Client {
+        self.client_on(&tokio::runtime::Handle::current())
+    }
+
+    /// The same, with the background task on a given runtime. Use this from
+    /// a UI test, whose own executor is not Tokio.
+    pub fn client_on(&self, runtime: &tokio::runtime::Handle) -> Client {
         let mut options = Options::new("test");
         options.reconnect_min = std::time::Duration::from_millis(5);
         options.reconnect_max = std::time::Duration::from_millis(20);
-        Client::start(
-            &tokio::runtime::Handle::current(),
-            self.connector(),
-            options,
-        )
+        Client::start(runtime, self.connector(), options)
+    }
+
+    /// Approve a manifest and issue its token, as the shell would through
+    /// `apps.grant`. Panics on an invalid manifest; use the wire call to
+    /// test refusals.
+    pub fn grant(&self, manifest: &Manifest) -> Token {
+        match self.state.grant(manifest.clone()) {
+            Ok((_, token)) => token,
+            Err(error) => panic!("invalid manifest: {}", error.message),
+        }
+    }
+
+    /// A client scoped to a freshly granted token for `manifest`.
+    pub fn app_client(&self, manifest: &Manifest) -> AppClient {
+        self.client().scoped(self.grant(manifest))
+    }
+
+    /// Withdraw every token, like an engine that lost its grants.
+    pub fn revoke_all(&self) {
+        self.state.grants.lock().unwrap().clear();
+    }
+
+    /// Every call received so far, oldest first.
+    pub fn calls(&self) -> Vec<CallRecord> {
+        self.state.calls.lock().unwrap().clone()
     }
 
     /// Replace (or add) one service and tell every subscriber.
@@ -153,157 +226,4 @@ impl TestEngine {
     pub fn shutdown_requested(&self) -> bool {
         self.state.shutdown_requested.load(Ordering::SeqCst)
     }
-}
-
-fn failure(id: u64, code: ErrorCode, message: &str) -> ServerMessage {
-    ServerMessage::Response {
-        id,
-        outcome: Outcome::Error(WireError {
-            code,
-            message: message.to_string(),
-        }),
-    }
-}
-
-fn answer(state: &State, call: Call) -> Outcome {
-    match call {
-        Call::SystemStatus => Outcome::Result(Reply::Status(state.system.lock().unwrap().clone())),
-        Call::SystemLogs { service, limit } => {
-            let known = state
-                .system
-                .lock()
-                .unwrap()
-                .services
-                .iter()
-                .any(|s| s.name == service);
-            if !known {
-                return Outcome::Error(WireError {
-                    code: ErrorCode::UnknownService,
-                    message: format!("no service named {service}"),
-                });
-            }
-            let mut lines = state
-                .logs
-                .lock()
-                .unwrap()
-                .get(&service)
-                .cloned()
-                .unwrap_or_default();
-            let keep = limit.map(|n| n as usize).unwrap_or(50);
-            lines.drain(..lines.len().saturating_sub(keep));
-            Outcome::Result(Reply::Logs { service, lines })
-        }
-        Call::SystemProfile => Outcome::Result(Reply::Profile(HardwareProfile {
-            profile: "standard".to_string(),
-            total_memory_bytes: 16 << 30,
-            available_memory_bytes: 8 << 30,
-        })),
-        Call::SystemShutdown => {
-            state.shutdown_requested.store(true, Ordering::SeqCst);
-            Outcome::Result(Reply::ShuttingDown {})
-        }
-        Call::SystemSubscribe | Call::SystemUnsubscribe { .. } => {
-            unreachable!("handled by the connection")
-        }
-    }
-}
-
-async fn serve(stream: DuplexStream, state: Arc<State>) {
-    let (mut reader, mut writer) = tokio::io::split(stream);
-    let (out, mut outbox) = mpsc::channel::<ServerMessage>(64);
-    let writing = tokio::spawn(async move {
-        while let Some(message) = outbox.recv().await {
-            if write_message(&mut writer, &message).await.is_err() {
-                return;
-            }
-        }
-    });
-    let mut online = state.online.subscribe();
-    let mut forwarders = HashMap::new();
-    let mut next_subscription = 1u64;
-    let mut greeted = false;
-    loop {
-        // Dropping a half-read frame is fine here: going offline ends the
-        // connection anyway.
-        let message = tokio::select! {
-            _ = online.wait_for(|up| !*up) => break,
-            message = read_message::<_, ClientMessage>(&mut reader) => match message {
-                Ok(Some(message)) => message,
-                _ => break,
-            },
-        };
-        let reply = match message {
-            ClientMessage::Hello { versions, .. } => {
-                match negotiate(&versions, &[PROTOCOL_VERSION]) {
-                    Some(version) => {
-                        greeted = true;
-                        ServerMessage::Welcome {
-                            version,
-                            engine: "testkit".to_string(),
-                        }
-                    }
-                    None => failure(0, ErrorCode::UnsupportedVersion, "no common version"),
-                }
-            }
-            ClientMessage::Request { id, .. } if !greeted => {
-                failure(id, ErrorCode::HelloRequired, "send hello first")
-            }
-            ClientMessage::Request {
-                id,
-                call: Call::SystemSubscribe,
-            } => {
-                let subscription = next_subscription;
-                next_subscription += 1;
-                let mut changes = state.changes.subscribe();
-                let snapshot = state.system.lock().unwrap().clone();
-                let _ = out
-                    .send(ServerMessage::Response {
-                        id,
-                        outcome: Outcome::Result(Reply::Subscribed {
-                            subscription,
-                            snapshot,
-                        }),
-                    })
-                    .await;
-                let events = out.clone();
-                forwarders.insert(
-                    subscription,
-                    tokio::spawn(async move {
-                        while let Ok(change) = changes.recv().await {
-                            let event = ServerMessage::Event {
-                                subscription,
-                                event: Event::ServiceStatus(change),
-                            };
-                            if events.send(event).await.is_err() {
-                                return;
-                            }
-                        }
-                    }),
-                );
-                continue;
-            }
-            ClientMessage::Request {
-                id,
-                call: Call::SystemUnsubscribe { subscription },
-            } => match forwarders.remove(&subscription) {
-                Some(task) => {
-                    task.abort();
-                    ServerMessage::Response {
-                        id,
-                        outcome: Outcome::Result(Reply::Unsubscribed {}),
-                    }
-                }
-                None => failure(id, ErrorCode::UnknownSubscription, "no such subscription"),
-            },
-            ClientMessage::Request { id, call } => ServerMessage::Response {
-                id,
-                outcome: answer(&state, call),
-            },
-        };
-        let _ = out.send(reply).await;
-    }
-    for task in forwarders.into_values() {
-        task.abort();
-    }
-    writing.abort();
 }
