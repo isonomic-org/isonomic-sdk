@@ -15,7 +15,7 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 - `Call`, `ClientMessage`, `Reply`, `Outcome` and `ServerMessage` no longer implement `Eq` (temperatures and vectors are floats). `PartialEq` remains.
 - `WireError` has a `memory` field: build errors with `WireError::new(code, message)` or `WireError::memory(refusal)`.
 
-**For the engine** (filed in `isonomic-capsule/docs/requests.md`)
+**For the engine** (filed in isonomic-capsule `docs/requests.md`, R2)
 
 - Implement the five methods in the model gateway. After choosing a default model, call `proto::auth::authorize_model(caller, model, remote)`.
 - Send the `stream` reply before the first chunk, and end every stream with exactly one chunk that has `stop`.
@@ -25,7 +25,9 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 - `Client::models()` and `AppClient::models()`; `ModelStream` (`next`, `cancel`, `text`; dropping it cancels).
 
-## Unreleased: capability tokens, `apps.grant`, tolerant decoding
+## Capability tokens, `apps.grant`, tolerant decoding
+
+**`SDK_REF`:** `32c09ffa29dd11ea0a25c072978b31f6c2b3b794` (#3, merged 14 Nov 2026). Engine requests: isonomic-capsule `docs/requests.md`, R1.
 
 **Wire (additive, still version 0)**
 
