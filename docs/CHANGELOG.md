@@ -20,7 +20,7 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 **For the engine:** nothing. `proto`, `client` and `testkit` still build without the UI checkout.
 
-**For CI:** this repo needs the `UI_DEPLOY_KEY` secret (a read-only deploy key on isonomic-ui), and `.github/ci-next.yml` moved to `.github/workflows/ci.yml`. `Cargo.lock` is no longer committed.
+**For CI:** this repo needs a `ui` input in the shared workflow, the `UI_DEPLOY_KEY` secret (a read-only deploy key on isonomic-ui), and `.github/ci-next.yml` moved to `.github/workflows/ci.yml`. `cargo xtask frozen-fixtures` is the append-only fixture check. `Cargo.lock` is no longer committed.
 
 ## Unreleased: the `models` interface
 

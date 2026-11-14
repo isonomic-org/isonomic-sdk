@@ -14,7 +14,7 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 **Verified**
 
 - Locally on Linux, against the same GPUI snapshot the UI crate pins: fmt, clippy `-D warnings`, 50 tests, 10 consecutive green runs. An engine-style consumer of `proto`, `client` and `testkit` still builds with no `../isonomic-ui`.
-- CI against the real Isonomic UI checkout is waiting on two things only Omar can do: the `UI_DEPLOY_KEY` secret, and moving `.github/ci-next.yml` to `.github/workflows/ci.yml` (the connector cannot write workflow files). The new workflow checks out the UI at `UI_REF`, installs GPUI's Linux packages, and adds the append-only fixture check.
+- CI against the real Isonomic UI checkout waits on three things: a `ui` input in the shared workflow (requested in isonomic-org/.github `docs/requests.md`), the `UI_DEPLOY_KEY` secret, and moving `.github/ci-next.yml` to `.github/workflows/ci.yml` (the connector cannot write workflow files). That workflow calls the shared one with the UI checkout, GPUI's Linux packages, and `cargo xtask frozen-fixtures`, the append-only fixture check.
 
 **Decisions**
 
@@ -24,6 +24,7 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 - **The SDK applies the UI crate's patch for GPUI's macros**, so macro output resolves through Isonomic UI exactly as in the UI repo.
 - **`Cargo.lock` is no longer committed.** With GPUI it is about 180 KB, too large for the write tooling (the inference repo made the same call). The UI repo's lockfile pins GPUI's own tree.
 - **hello-app is a workspace member** at `examples/hello-app`, so CI builds and tests it with everything else.
+- **The fixture guard is `cargo xtask frozen-fixtures`**, so it runs through the shared workflow's `xtask` input. On a pull request it fails if any existing line under `crates/proto/fixtures/` was changed or removed.
 
 ## 2026-11-14 · The `models` interface (S0, PR 2)
 
