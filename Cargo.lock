@@ -9,12 +9,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 
 [[package]]
+name = "isonomic-client"
+version = "0.0.1"
+dependencies = [
+ "isonomic-proto",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "isonomic-proto"
 version = "0.0.1"
 dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+ "tokio",
+]
+
+[[package]]
+name = "isonomic-testkit"
+version = "0.0.1"
+dependencies = [
+ "isonomic-client",
+ "isonomic-proto",
  "tokio",
 ]
 

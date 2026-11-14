@@ -1,0 +1,11 @@
+[package]
+name = "isonomic-client"
+description = "Async client for the Isonomic engine: one multiplexed connection, reconnect, a live status view"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+isonomic-proto.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
