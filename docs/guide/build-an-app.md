@@ -1,0 +1,137 @@
+# Build an Isonomic app
+
+A first-party Isonomic app is a Rust crate. It depends on `isonomic-app` (this repo) and `isonomic-ui`, implements one trait, and is linked into the window, which shows it as a tab. It never opens a socket, a file, a database or a network connection itself: everything goes through the client it is given, under its own capability token.
+
+`examples/hello-app` is the whole of this guide in about 200 lines.
+
+## 1. The crate
+
+```toml
+[dependencies]
+isonomic-app = { path = "../isonomic-sdk/crates/app" }
+isonomic-proto = { path = "../isonomic-sdk/crates/proto" }
+isonomic-ui = { path = "../isonomic-ui/crates/ui" }
+
+[dev-dependencies]
+isonomic-app = { path = "../isonomic-sdk/crates/app", features = ["test-support"] }
+isonomic-testkit = { path = "../isonomic-sdk/crates/testkit" }
+```
+
+Both repos are sibling checkouts pinned by commit (`SDK_REF`, and the SDK's own `UI_REF` for Isonomic UI). GPUI comes only through `isonomic-ui`; name it nowhere else. Files where GPUI's macros expand (tests with `#[isonomic_ui::test]`, derives) start with `extern crate isonomic_ui as gpui;`.
+
+## 2. The manifest
+
+The manifest says who the app is and what it may reach. The user sees it; the engine derives the app's token from it and refuses every call it does not allow. Ask for the least you need.
+
+```rust
+fn manifest() -> Manifest {
+    Manifest {
+        id: "com.isonomic.hello".into(),     // reverse-DNS, stable forever
+        name: "Hello".into(),
+        version: "0.1.0".into(),             // major.minor.patch
+        icon: "sparkle".into(),              // an Isonomic UI icon name
+        capabilities: Capabilities {
+            models: Some(ModelAccess { any: true, ..Default::default() }),
+            ..Default::default()
+        },
+        schemas: vec![],                     // SQL schemas it creates
+    }
+}
+```
+
+| Capability | Example | Grants |
+| --- | --- | --- |
+| `models` | `ModelAccess { any: true, .. }` or `{ ids: vec!["chat-small".into()], remote: false, .. }` | Those models; remote providers only with `remote` |
+| `sql` | `SqlAccess { schemas: vec!["chat".into()] }` | Reading other apps' schemas (its own are implied) |
+| `blobs` | `BlobAccess { max_bytes: Some(10 << 20) }` | The blob store |
+| `connections` | `vec![ConnectionAccess { provider: "calendar".into() }]` | Linked accounts of that kind |
+| `egress` | `vec!["example.com".into()]` | Outbound HTTP to those hosts, once the user approves |
+| `agents` | — | Reserved; leave it out |
+
+## 3. The trait
+
+```rust
+impl App for Hello {
+    fn manifest() -> Manifest { /* above */ }
+
+    fn build(cx: AppContext, _window: &mut Window, app: &mut gpui::App) -> AnyView {
+        app.new(|view| Hello::new(cx, view)).into()
+    }
+
+    fn open_link(&mut self, url: &str) -> bool { /* isonomic://hello/... */ }
+    fn search(&mut self, q: &str) -> Vec<SearchHit> { /* for the window's search */ }
+    fn on_unload(&mut self) { /* drop caches; the tab is being unloaded */ }
+}
+```
+
+- `build` is called on first open and again after an unload. Return `Entity<Self>` as the root view: the window routes `open_link`, `search` and `on_unload` to it.
+- An app keeps no state the engine does not have. Small machines unload tabs; a reopened tab rebuilds from the engine.
+
+## 4. What the app is given
+
+`AppContext` is cheap to clone; pass it into views.
+
+- `cx.client()`: an `AppClient`. Every call names the app's token. Interfaces hang off it: `cx.client().models()` today; `sql`, `blobs` and `events` as they land (`docs/interfaces/`).
+- `cx.settings()`: the app's own settings, plain JSON values keyed by name. No app sees another's.
+- `cx.set_attention(Attention::Dot)` or `Attention::Count(n)`: the dot on the rail.
+
+Calls are async. The client's connection runs on its own Tokio task; its methods and streams can be awaited from GPUI's executor, so a view does its work in `cx.spawn`:
+
+```rust
+cx.spawn(async move |this, cx| {
+    let models = app.client().models();
+    let list = models.list().await?;
+    let mut stream = models.stream(StreamRequest {
+        messages: vec![Message::user("Say hello")],
+        ..Default::default()
+    }).await?;
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk?;
+        this.update(cx, |view, cx| { view.reply.push_str(&chunk.text); cx.notify(); })?;
+    }
+    anyhow::Ok(())
+}).detach();
+```
+
+Never block the foreground thread, and never poll: await the client, and call `cx.notify()` when state changes. Dropping a `ModelStream` cancels it.
+
+Errors are typed. `ClientError::Engine(error)` carries a stable `error.code` (`capability_denied`, `insufficient_memory`, ...) and a readable `error.message`; `ClientError::Disconnected` means the engine is restarting, and the client reconnects by itself. `cx.client().live()` tells a view when it is back.
+
+## 5. Testing
+
+`isonomic_app::testing` (feature `test-support`) runs the app in a headless window against the in-memory engine, under a token granted from the app's own manifest. The testkit enforces that token exactly as the engine does, so a test fails if the app calls anything its manifest does not allow.
+
+```rust
+extern crate isonomic_ui as gpui;
+
+#[isonomic_ui::test]
+fn it_streams_a_reply(cx: &mut TestAppContext) {
+    let host = TestHost::new();
+    let open = host.open::<Hello>(cx);
+    let hello = open.root::<Hello>(cx);
+    wait_until(cx, &hello, |hello| hello.phase() == &Phase::Done);
+    hello.read_with(cx, |hello, _| assert_eq!(hello.reply(), "You said: Say hello"));
+}
+```
+
+- `host.engine()` scripts the engine: `models().script(..)` with `Step::Chunk`, `Step::Hold(gate)` and `Step::Fail`, `models().refuse(..)` for the memory gate, `go_offline()` and `go_online()`, and `calls()` to see every call the app made.
+- `wait_until` wakes on the view's notifications; it never sleeps on a timer.
+- `open.attention` is what the rail would show.
+- No socket, no engine binary, no network: these tests run anywhere, including CI on Linux.
+
+## 6. Registering it in the window
+
+The window links the crate and registers it:
+
+```rust
+let apps = [isonomic_app::register::<Hello>(), /* ... */];
+```
+
+For each app the window grants a token from the manifest (`client.grant(manifest)`), makes the context (`AppContext::new(id, client.scoped(token), settings)`), and opens the app in a tab (`registration.open(cx, window, app)`, or `Tab::open`). It keeps the `LoadedApp` to route deep links, search and unload, and watches the attention receiver for the rail.
+
+## Checklist
+
+- [ ] The manifest asks for the least it needs, and `Manifest::validate` passes.
+- [ ] No network, file, process or socket code in the crate.
+- [ ] No GPUI version named; GPUI only through `isonomic-ui`.
+- [ ] Every interaction tested against `TestHost`, including refusals and a disconnect.

@@ -2,6 +2,26 @@
 
 Newest first. Each entry names what the engine (isonomic-capsule) and the window (isonomic-desktop) must do when they move `SDK_REF` to it.
 
+## Unreleased: the app crate and hello-app
+
+**Wire:** unchanged.
+
+**New**
+
+- `isonomic-app`: the `App` trait, `AppContext` (scoped `AppClient`, `Settings`, `Attention`), `register` / `Registration` / `LoadedApp` / `Tab` for the window, and `testing::TestHost` (feature `test-support`).
+- `examples/hello-app` and its headless window tests.
+- `UI_REF`: the Isonomic UI commit this repo builds against, checked out as `../isonomic-ui`.
+
+**For the window**
+
+- Link app crates and register them with `isonomic_app::register::<App>()`. Grant each manifest, build `AppContext::new(id, client.scoped(token), settings)`, open with `Registration::open`, and watch the attention receiver for the rail dot (`docs/guide/build-an-app.md`, section 6).
+- Supply a `SettingsStore`; `MemorySettings` will do until the engine stores app settings.
+- Keep `../isonomic-ui` at the commit in this repo's `UI_REF` (W0 pins the same way).
+
+**For the engine:** nothing. `proto`, `client` and `testkit` still build without the UI checkout.
+
+**For CI:** this repo needs the `UI_DEPLOY_KEY` secret (a read-only deploy key on isonomic-ui), and `.github/ci-next.yml` moved to `.github/workflows/ci.yml`. `Cargo.lock` is no longer committed.
+
 ## Unreleased: the `models` interface
 
 **Wire (additive, still version 0)**
