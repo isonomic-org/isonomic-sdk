@@ -1,0 +1,87 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    name: rust (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: isonomic-sdk
+      # Isonomic UI is a sibling checkout pinned to the commit in UI_REF, the
+      # same way the engine and the window pin this repo. It is a private
+      # repo, so this needs a read-only deploy key in UI_DEPLOY_KEY.
+      - name: Read the pinned UI commit
+        id: ui
+        env:
+          KEY: ${{ secrets.UI_DEPLOY_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::Secret UI_DEPLOY_KEY is not set, so the private isonomic-ui repo cannot be checked out."
+            exit 1
+          fi
+          echo "ref=$(tr -d '[:space:]' < isonomic-sdk/UI_REF)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: isonomic-org/isonomic-ui
+          ref: ${{ steps.ui.outputs.ref }}
+          path: isonomic-ui
+          ssh-key: ${{ secrets.UI_DEPLOY_KEY }}
+      - name: System libraries GPUI needs on Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libasound2-dev libvulkan-dev libx11-xcb-dev libxcb1-dev libfontconfig-dev libssl-dev
+      - uses: dtolnay/rust-toolchain@1.97
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: isonomic-sdk
+      - name: Format
+        working-directory: isonomic-sdk
+        run: cargo fmt --all --check
+      - name: Lint
+        working-directory: isonomic-sdk
+        run: cargo clippy --all-targets --all-features -- -D warnings
+      - name: Test
+        working-directory: isonomic-sdk
+        run: cargo test --all-features
+      - name: Frozen fixtures are append-only
+        if: github.event_name == 'pull_request'
+        working-directory: isonomic-sdk
+        shell: bash
+        env:
+          BASE: ${{ github.base_ref }}
+        run: |
+          git fetch -q --depth=1 origin "$BASE"
+          changed=$(git diff --unified=0 FETCH_HEAD HEAD -- crates/proto/fixtures/ | grep -E '^-[^-]' || true)
+          if [ -n "$changed" ]; then
+            echo "::error::An existing fixture line was changed or removed. Shapes are frozen: raise PROTOCOL_VERSION and add fixtures/v<N>/ instead (docs/versioning.md)."
+            echo "$changed"
+            exit 1
+          fi
+      - name: Every source and doc file stays under 20 KB
+        working-directory: isonomic-sdk
+        shell: bash
+        run: |
+          big=$(git ls-files -z -- '*.rs' '*.md' '*.toml' '*.yml' '*.json' | xargs -0 -r ls -l | awk '$5 > 20480 {print $9" ("$5" bytes)"}')
+          if [ -n "$big" ]; then echo "Over 20 KB:"; echo "$big"; exit 1; fi
