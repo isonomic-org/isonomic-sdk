@@ -1,3 +1,5 @@
 /target
 **/*.rs.bk
 .DS_Store
+# Not committed: with GPUI in the tree it is too large for the write tooling.
+/Cargo.lock
