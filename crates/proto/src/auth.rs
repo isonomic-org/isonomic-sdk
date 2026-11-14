@@ -15,6 +15,7 @@ use crate::{Call, ErrorCode, WireError};
 pub enum Interface {
     System,
     Apps,
+    Models,
 }
 
 impl Interface {
@@ -22,6 +23,7 @@ impl Interface {
         match self {
             Interface::System => "system",
             Interface::Apps => "apps",
+            Interface::Models => "models",
         }
     }
 
@@ -54,12 +56,44 @@ fn denied(app: &str, what: impl std::fmt::Display) -> WireError {
 /// call that leaves a choice to the engine (a default model, say) is
 /// checked again by the engine once it has chosen.
 pub fn authorize(caller: Caller<'_>, call: &Call) -> Result<(), WireError> {
-    let Caller::App { id, .. } = caller else {
+    let Caller::App { id, capabilities } = caller else {
         return Ok(());
     };
     let interface = call.interface();
     if interface.shell_only() {
         return Err(denied(id, format_args!("call {}", call.method())));
     }
-    Ok(())
+    match interface {
+        Interface::Models => {
+            let Some(models) = &capabilities.models else {
+                return Err(denied(id, "use models"));
+            };
+            let named = match call {
+                Call::ModelsInfo { model } => Some(model.as_str()),
+                Call::ModelsStream(request) => request.model.as_deref(),
+                Call::ModelsEmbed { model, .. } => model.as_deref(),
+                _ => None,
+            };
+            match named {
+                Some(model) if !models.names(model) => {
+                    Err(denied(id, format_args!("use model {model}")))
+                }
+                _ => Ok(()),
+            }
+        }
+        _ => Ok(()),
+    }
+}
+
+/// The check the engine makes once it knows which model a call runs on:
+/// the default it chose, and whether that model is remote.
+pub fn authorize_model(caller: Caller<'_>, model: &str, remote: bool) -> Result<(), WireError> {
+    let Caller::App { id, capabilities } = caller else {
+        return Ok(());
+    };
+    match &capabilities.models {
+        Some(access) if access.permits(model, remote) => Ok(()),
+        Some(access) if access.names(model) => Err(denied(id, "use remote models")),
+        _ => Err(denied(id, format_args!("use model {model}"))),
+    }
 }

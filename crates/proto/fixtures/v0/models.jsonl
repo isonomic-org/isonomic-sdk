@@ -1,0 +1,26 @@
+{"type":"request","id":20,"token":"tok-hello-1","method":"models.list"}
+{"type":"response","id":20,"result":{"models":[{"id":"chat-small","name":"Chat Small","context_length":8192,"capabilities":["chat"]},{"id":"chat-remote","name":"Chat Remote","context_length":200000,"capabilities":["chat"],"remote":true}]}}
+{"type":"request","id":21,"method":"models.info","params":{"model":"chat-small"}}
+{"type":"response","id":21,"result":{"model":{"id":"chat-small","name":"Chat Small","context_length":8192,"capabilities":["chat"],"size_bytes":2684354560,"license":"Test License","state":"stopped"}}}
+{"type":"request","id":22,"token":"tok-hello-1","method":"models.stream","params":{"model":"chat-small","messages":[{"role":"system","content":"Be brief."},{"role":"user","content":"What time is it in Lisbon?"}],"tools":[{"name":"clock","description":"The time in a city","schema":"{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}}}"}],"temperature":0.5,"max_tokens":512,"reasoning":true}}
+{"type":"response","id":22,"result":{"stream":{"subscription":9,"model":"chat-small"}}}
+{"type":"event","subscription":9,"event":"model_chunk","data":{"reasoning":"The user wants the time."}}
+{"type":"event","subscription":9,"event":"model_chunk","data":{"tool_calls":[{"index":0,"id":"call-1","name":"clock","arguments":"{\"city\":"}]}}
+{"type":"event","subscription":9,"event":"model_chunk","data":{"tool_calls":[{"index":0,"arguments":"\"Lisbon\"}"}]}}
+{"type":"event","subscription":9,"event":"model_chunk","data":{"usage":{"input_tokens":31,"output_tokens":12,"reasoning_tokens":6,"cost_micros":0},"stop":"tool_calls"}}
+{"type":"request","id":23,"token":"tok-hello-1","method":"models.stream","params":{"messages":[{"role":"user","content":"What time is it in Lisbon?"},{"role":"assistant","content":"","tool_calls":[{"id":"call-1","name":"clock","arguments":"{\"city\":\"Lisbon\"}"}]},{"role":"tool","content":"14:05","tool_call_id":"call-1"}]}}
+{"type":"response","id":23,"result":{"stream":{"subscription":10,"model":"chat-small"}}}
+{"type":"event","subscription":10,"event":"model_chunk","data":{"text":"It is 14:05 "}}
+{"type":"request","id":24,"token":"tok-hello-1","method":"models.cancel","params":{"subscription":10}}
+{"type":"response","id":24,"result":{"cancelled":{}}}
+{"type":"event","subscription":10,"event":"model_chunk","data":{"stop":"cancelled"}}
+{"type":"event","subscription":11,"event":"model_chunk","data":{"stop":"error","error":{"code":"model_unavailable","message":"the model worker crashed"}}}
+{"type":"event","subscription":12,"event":"model_chunk","data":{"text":"and","stop":"max_tokens"}}
+{"type":"request","id":25,"method":"models.embed","params":{"input":["blue","green"]}}
+{"type":"response","id":25,"result":{"embeddings":{"model":"embed-small","vectors":[[0.25,-0.5],[0.75,0.0]]}}}
+{"type":"request","id":26,"method":"models.embed","params":{"model":"embed-small","input":["blue"]}}
+{"type":"response","id":27,"error":{"code":"insufficient_memory","message":"not enough free memory to load the model without thrashing; try a smaller model or a remote one","memory":{"required_bytes":21474836480,"available_bytes":6442450944,"reason":"not enough free memory to load the model without thrashing; try a smaller model or a remote one"}}}
+{"type":"response","id":28,"error":{"code":"unknown_model","message":"no model chat-huge"}}
+{"type":"response","id":29,"error":{"code":"remote_disabled","message":"remote models are switched off"}}
+{"type":"response","id":30,"error":{"code":"capability_denied","message":"app com.isonomic.hello may not use models"}}
+{"type":"response","id":31,"error":{"code":"unsupported","message":"model chat-small does not do embeddings"}}

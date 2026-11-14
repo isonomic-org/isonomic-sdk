@@ -188,3 +188,61 @@ fn the_client_can_skip_what_a_newer_engine_sends() {
         FromServer::Message(ServerMessage::Welcome { .. })
     ));
 }
+
+#[test]
+fn model_calls_need_the_models_capability_and_a_named_model() {
+    use crate::auth::authorize_model;
+    let mut bare = hello();
+    bare.capabilities.models = None;
+    let none = Caller::App {
+        id: &bare.id,
+        capabilities: &bare.capabilities,
+    };
+    let stream = |model: Option<&str>| {
+        Call::ModelsStream(StreamRequest {
+            model: model.map(str::to_string),
+            messages: vec![Message::user("hi")],
+            ..Default::default()
+        })
+    };
+    for call in [
+        Call::ModelsList,
+        stream(None),
+        Call::ModelsCancel { subscription: 1 },
+    ] {
+        assert_eq!(
+            authorize(none, &call).unwrap_err().code,
+            ErrorCode::CapabilityDenied
+        );
+    }
+    let mut picky = hello();
+    picky.capabilities.models = Some(ModelAccess {
+        ids: vec!["small".into()],
+        ..Default::default()
+    });
+    let picky = Caller::App {
+        id: &picky.id,
+        capabilities: &picky.capabilities,
+    };
+    assert!(authorize(picky, &stream(Some("small"))).is_ok());
+    assert!(authorize(picky, &stream(None)).is_ok(), "resolved later");
+    assert!(authorize(picky, &stream(Some("large"))).is_err());
+    assert!(authorize_model(picky, "small", false).is_ok());
+    assert!(authorize_model(picky, "small", true).is_err());
+    assert!(authorize_model(picky, "large", false).is_err());
+    assert!(authorize_model(Caller::Shell, "large", true).is_ok());
+}
+
+#[test]
+fn only_the_last_chunk_is_final() {
+    assert!(!Event::ModelChunk(ModelChunk::text("a")).is_final());
+    assert!(Event::ModelChunk(ModelChunk::stop(StopReason::End)).is_final());
+    let reply = Reply::Stream {
+        subscription: 4,
+        model: "m".into(),
+    };
+    assert_eq!(reply.opened_subscription(), Some(4));
+    let newer = r#"{"stop":"paused","text":"x"}"#;
+    let chunk: ModelChunk = serde_json::from_str(newer).unwrap();
+    assert_eq!(chunk.stop, Some(StopReason::Unrecognized));
+}
