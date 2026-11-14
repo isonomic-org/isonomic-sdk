@@ -10,12 +10,18 @@
 //!   nothing polls.
 //! - request methods (`status`, `logs`, `profile`, `shutdown`), which fail
 //!   fast with `Disconnected` while the engine is unreachable.
+//! - `Client::scoped(token)`: an [`AppClient`] that names one app's
+//!   capability token on every call. This is the only client an app sees.
+//! - subscriptions: a call whose reply opens a subscription hands back a
+//!   [`Subscription`] that yields its events. Events are routed before the
+//!   reply is delivered, so none can be missed.
 //!
 //! The background task needs a Tokio runtime. The request methods and the
 //! watch do not, so they can be awaited from any executor, including a UI
 //! framework's own.
 
 mod actor;
+mod scoped;
 
 use std::future::Future;
 use std::io;
@@ -24,7 +30,9 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
-use isonomic_proto::{Call, HardwareProfile, Reply, SystemStatus, WireError};
+use isonomic_proto::{
+    Call, Event, HardwareProfile, Manifest, Reply, SystemStatus, Token, WireError,
+};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::sync::{mpsc, oneshot, watch};
 
@@ -88,9 +96,33 @@ pub enum ClientError {
     UnexpectedReply,
 }
 
+pub use scoped::AppClient;
+
 pub(crate) struct Request {
+    pub(crate) token: Option<Token>,
     pub(crate) call: Call,
     pub(crate) reply: oneshot::Sender<Result<Reply, ClientError>>,
+    /// Where to deliver events if the reply opens a subscription.
+    pub(crate) events: Option<mpsc::UnboundedSender<Event>>,
+}
+
+/// The events of one subscription, in order. Ends (`None`) when the
+/// subscription's last event has arrived or the connection drops.
+#[derive(Debug)]
+pub struct Subscription {
+    id: u64,
+    events: mpsc::UnboundedReceiver<Event>,
+}
+
+impl Subscription {
+    /// The engine's id for this subscription.
+    pub fn id(&self) -> u64 {
+        self.id
+    }
+
+    pub async fn next(&mut self) -> Option<Event> {
+        self.events.recv().await
+    }
 }
 
 /// A handle to the connection. Cheap to clone; the connection closes when
@@ -116,14 +148,65 @@ impl Client {
         self.live.clone()
     }
 
-    /// Make one call and wait for its reply.
+    /// Make one call as the shell and wait for its reply.
     pub async fn call(&self, call: Call) -> Result<Reply, ClientError> {
+        self.send(None, call, None).await
+    }
+
+    /// Make one call as the shell whose reply opens a subscription.
+    pub async fn subscribe(&self, call: Call) -> Result<(Reply, Subscription), ClientError> {
+        self.open(None, call).await
+    }
+
+    /// A client that names `token` on every call: what an app is given.
+    pub fn scoped(&self, token: Token) -> AppClient {
+        AppClient::new(self.clone(), token)
+    }
+
+    /// Shell only: record an app's approved manifest and get its token.
+    pub async fn grant(&self, manifest: Manifest) -> Result<Token, ClientError> {
+        match self
+            .call(Call::AppsGrant {
+                manifest: Box::new(manifest),
+            })
+            .await?
+        {
+            Reply::Granted { token, .. } => Ok(token),
+            _ => Err(ClientError::UnexpectedReply),
+        }
+    }
+
+    pub(crate) async fn send(
+        &self,
+        token: Option<Token>,
+        call: Call,
+        events: Option<mpsc::UnboundedSender<Event>>,
+    ) -> Result<Reply, ClientError> {
         let (reply, answer) = oneshot::channel();
+        let request = Request {
+            token,
+            call,
+            reply,
+            events,
+        };
         self.requests
-            .send(Request { call, reply })
+            .send(request)
             .await
             .map_err(|_| ClientError::Disconnected)?;
         answer.await.map_err(|_| ClientError::Disconnected)?
+    }
+
+    pub(crate) async fn open(
+        &self,
+        token: Option<Token>,
+        call: Call,
+    ) -> Result<(Reply, Subscription), ClientError> {
+        let (sender, events) = mpsc::unbounded_channel();
+        let reply = self.send(token, call, Some(sender)).await?;
+        let id = reply
+            .opened_subscription()
+            .ok_or(ClientError::UnexpectedReply)?;
+        Ok((reply, Subscription { id, events }))
     }
 
     pub async fn status(&self) -> Result<SystemStatus, ClientError> {

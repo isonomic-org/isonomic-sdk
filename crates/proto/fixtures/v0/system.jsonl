@@ -1,0 +1,18 @@
+{"type":"hello","versions":[0],"client":"isonomic-desktop"}
+{"type":"welcome","version":0,"engine":"0.0.1"}
+{"type":"request","id":1,"method":"system.status"}
+{"type":"response","id":1,"result":{"status":{"aggregate":"healthy","services":[{"name":"postgres","tier":1,"state":"healthy","restart_count":2,"last_healthy_unix":1700000000}],"cold_start_ms":180}}}
+{"type":"request","id":2,"method":"system.subscribe"}
+{"type":"response","id":2,"result":{"subscribed":{"subscription":7,"snapshot":{"aggregate":"starting","services":[{"name":"postgres","tier":1,"state":"starting","restart_count":0,"last_healthy_unix":null}],"cold_start_ms":null}}}}
+{"type":"event","subscription":7,"event":"service_status","data":{"name":"postgres","tier":1,"state":"healthy","restart_count":2,"last_healthy_unix":1700000000}}
+{"type":"request","id":3,"method":"system.unsubscribe","params":{"subscription":7}}
+{"type":"response","id":3,"result":{"unsubscribed":{}}}
+{"type":"request","id":4,"method":"system.logs","params":{"service":"postgres","limit":20}}
+{"type":"response","id":4,"result":{"logs":{"service":"postgres","lines":["database system is ready to accept connections"]}}}
+{"type":"response","id":5,"error":{"code":"unknown_service","message":"no service named cache"}}
+{"type":"request","id":6,"method":"system.profile"}
+{"type":"response","id":6,"result":{"profile":{"profile":"standard","total_memory_bytes":17179869184,"available_memory_bytes":8589934592}}}
+{"type":"request","id":7,"method":"system.shutdown"}
+{"type":"response","id":7,"result":{"shutting_down":{}}}
+{"type":"request","id":12,"token":"tok-hello-1","method":"system.shutdown"}
+{"type":"response","id":12,"error":{"code":"capability_denied","message":"app com.isonomic.hello may not call system.shutdown"}}

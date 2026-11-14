@@ -1,0 +1,6 @@
+{"type":"request","id":10,"method":"apps.grant","params":{"manifest":{"id":"com.isonomic.hello","name":"Hello","version":"0.1.0","icon":"sparkle","capabilities":{"models":{"any":true}}}}}
+{"type":"response","id":10,"result":{"granted":{"app":"com.isonomic.hello","token":"tok-hello-1"}}}
+{"type":"request","id":11,"method":"apps.grant","params":{"manifest":{"id":"com.isonomic.notes","name":"Notes","version":"1.2","icon":"document","capabilities":{"sql":{"schemas":["chat"]},"models":{"ids":["chat-small"],"remote":true},"connections":[{"provider":"calendar"}],"egress":["example.com"],"blobs":{"max_bytes":10485760}},"schemas":[{"name":"notes"}]}}}
+{"type":"response","id":11,"error":{"code":"invalid_manifest","message":"version \"1.2\" is not major.minor.patch"}}
+{"type":"response","id":13,"error":{"code":"unknown_token","message":"no app holds this token"}}
+{"type":"response","id":14,"error":{"code":"unknown_method","message":"this engine has no method tables.query"}}

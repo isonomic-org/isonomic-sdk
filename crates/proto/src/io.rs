@@ -7,12 +7,12 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 use crate::frame::{self, FrameError};
 
-/// Read one message. `Ok(None)` means the peer closed the connection cleanly
-/// between frames.
-pub async fn read_message<R, T>(reader: &mut R) -> Result<Option<T>, FrameError>
+/// Read one frame's body without decoding it, so a caller can decode
+/// leniently (see [`crate::lenient`]). `Ok(None)` means the peer closed the
+/// connection cleanly between frames.
+pub async fn read_frame<R>(reader: &mut R) -> Result<Option<Vec<u8>>, FrameError>
 where
     R: AsyncRead + Unpin,
-    T: DeserializeOwned,
 {
     let mut prefix = [0u8; 4];
     match reader.read_exact(&mut prefix).await {
@@ -22,7 +22,20 @@ where
     }
     let mut body = vec![0u8; frame::body_len(prefix)?];
     reader.read_exact(&mut body).await?;
-    frame::decode(&body).map(Some)
+    Ok(Some(body))
+}
+
+/// Read one message. `Ok(None)` means the peer closed the connection cleanly
+/// between frames.
+pub async fn read_message<R, T>(reader: &mut R) -> Result<Option<T>, FrameError>
+where
+    R: AsyncRead + Unpin,
+    T: DeserializeOwned,
+{
+    match read_frame(reader).await? {
+        Some(body) => frame::decode(&body).map(Some),
+        None => Ok(None),
+    }
 }
 
 /// Write one message and flush it.

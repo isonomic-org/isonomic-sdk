@@ -1,0 +1,190 @@
+//! Manifests, tokens, capability checks and lenient decoding.
+
+use super::*;
+use crate::auth::{authorize, Caller};
+use crate::lenient::{decode_client, decode_server, FromClient, FromServer};
+use crate::manifest::{AgentsAccess, ManifestError, ModelAccess, Schema};
+
+pub(crate) fn hello() -> Manifest {
+    Manifest {
+        id: "com.isonomic.hello".into(),
+        name: "Hello".into(),
+        version: "0.1.0".into(),
+        icon: "sparkle".into(),
+        capabilities: Capabilities {
+            models: Some(ModelAccess {
+                any: true,
+                ..Default::default()
+            }),
+            ..Default::default()
+        },
+        schemas: vec![],
+    }
+}
+
+#[test]
+fn a_manifest_omits_what_it_does_not_ask_for() {
+    let json = serde_json::to_string(&hello()).unwrap();
+    assert_eq!(
+        json,
+        r#"{"id":"com.isonomic.hello","name":"Hello","version":"0.1.0","icon":"sparkle","capabilities":{"models":{"any":true}}}"#
+    );
+    let bare = r#"{"id":"com.isonomic.x","name":"X","version":"1.0.0","icon":"x"}"#;
+    let parsed: Manifest = serde_json::from_str(bare).unwrap();
+    assert!(parsed.capabilities.is_empty());
+    assert_eq!(serde_json::to_string(&parsed).unwrap(), bare);
+}
+
+#[test]
+fn a_manifest_from_a_newer_build_still_parses() {
+    let newer = r#"{"id":"com.isonomic.x","name":"X","version":"1.0.0","icon":"x","capabilities":{"telepathy":{}},"colour":"red"}"#;
+    let parsed: Manifest = serde_json::from_str(newer).unwrap();
+    assert!(parsed.capabilities.is_empty());
+}
+
+#[test]
+fn validation_applies_the_engine_rules() {
+    assert_eq!(hello().validate(), Ok(()));
+    let bad = |edit: fn(&mut Manifest)| {
+        let mut manifest = hello();
+        edit(&mut manifest);
+        manifest.validate().unwrap_err()
+    };
+    assert!(matches!(
+        bad(|m| m.id = "hello".into()),
+        ManifestError::BadId(_)
+    ));
+    assert!(matches!(
+        bad(|m| m.id = "com.Isonomic.x".into()),
+        ManifestError::BadId(_)
+    ));
+    assert!(matches!(
+        bad(|m| m.id = "com..x".into()),
+        ManifestError::BadId(_)
+    ));
+    assert!(matches!(
+        bad(|m| m.name = " ".into()),
+        ManifestError::EmptyName(_)
+    ));
+    assert!(matches!(
+        bad(|m| m.version = "1.2".into()),
+        ManifestError::BadVersion(_)
+    ));
+    assert!(matches!(
+        bad(|m| m.schemas = vec![Schema {
+            name: "My-Schema".into()
+        }]),
+        ManifestError::BadSchema(_)
+    ));
+    assert_eq!(
+        bad(|m| m.capabilities.agents = Some(AgentsAccess {})),
+        ManifestError::AgentsReserved
+    );
+}
+
+#[test]
+fn model_access_checks_the_id_and_where_it_runs() {
+    let some = ModelAccess {
+        any: false,
+        ids: vec!["small".into()],
+        remote: false,
+    };
+    assert!(some.permits("small", false));
+    assert!(!some.permits("large", false));
+    assert!(!some.permits("small", true));
+    let any_remote = ModelAccess {
+        any: true,
+        ids: vec![],
+        remote: true,
+    };
+    assert!(any_remote.permits("anything", true));
+    assert!(!ModelAccess::default().names("x"));
+}
+
+#[test]
+fn tokens_never_show_in_debug_output() {
+    let token = Token::new("secret-value");
+    assert_eq!(format!("{token:?}"), "Token(..)");
+    assert_eq!(serde_json::to_string(&token).unwrap(), r#""secret-value""#);
+}
+
+#[test]
+fn the_shell_may_call_anything_and_apps_never_reach_shell_interfaces() {
+    let manifest = hello();
+    let app = Caller::App {
+        id: &manifest.id,
+        capabilities: &manifest.capabilities,
+    };
+    for call in [
+        Call::SystemStatus,
+        Call::SystemShutdown,
+        Call::AppsGrant {
+            manifest: Box::new(hello()),
+        },
+    ] {
+        assert!(authorize(Caller::Shell, &call).is_ok());
+        let error = authorize(app, &call).unwrap_err();
+        assert_eq!(error.code, ErrorCode::CapabilityDenied);
+        assert!(error.message.contains(call.method()), "{}", error.message);
+    }
+}
+
+#[test]
+fn an_unknown_error_code_is_not_fatal() {
+    let wire = r#"{"type":"response","id":3,"error":{"code":"quota_exceeded","message":"later"}}"#;
+    let message: ServerMessage = serde_json::from_str(wire).unwrap();
+    let ServerMessage::Response {
+        outcome: Outcome::Error(error),
+        ..
+    } = message
+    else {
+        panic!("expected an error response");
+    };
+    assert_eq!(error.code, ErrorCode::Unrecognized);
+}
+
+#[test]
+fn the_engine_can_answer_a_method_it_does_not_know() {
+    let unknown = br#"{"type":"request","id":9,"method":"tables.query","params":{}}"#;
+    match decode_client(unknown) {
+        FromClient::Rejected { id, error } => {
+            assert_eq!(id, 9);
+            assert_eq!(error.code, ErrorCode::UnknownMethod);
+        }
+        other => panic!("expected a rejection, got {other:?}"),
+    }
+    let bad_params = br#"{"type":"request","id":4,"method":"system.logs","params":{}}"#;
+    match decode_client(bad_params) {
+        FromClient::Rejected { id, error } => {
+            assert_eq!(id, 4);
+            assert_eq!(error.code, ErrorCode::BadRequest);
+        }
+        other => panic!("expected a rejection, got {other:?}"),
+    }
+    assert!(matches!(decode_client(b"{nope"), FromClient::Garbage(_)));
+    let known = br#"{"type":"request","id":1,"token":"t","method":"system.status"}"#;
+    assert!(matches!(
+        decode_client(known),
+        FromClient::Message(ClientMessage::Request {
+            id: 1,
+            token: Some(_),
+            ..
+        })
+    ));
+}
+
+#[test]
+fn the_client_can_skip_what_a_newer_engine_sends() {
+    let event = br#"{"type":"event","subscription":2,"event":"weather","data":{"sunny":true}}"#;
+    assert!(matches!(decode_server(event), FromServer::Skip));
+    let reply = br#"{"type":"response","id":5,"result":{"forecast":{}}}"#;
+    assert!(matches!(
+        decode_server(reply),
+        FromServer::UnreadableResponse { id: 5 }
+    ));
+    let extra = br#"{"type":"welcome","version":0,"engine":"9","motd":"hi"}"#;
+    assert!(matches!(
+        decode_server(extra),
+        FromServer::Message(ServerMessage::Welcome { .. })
+    ));
+}
