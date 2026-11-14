@@ -86,10 +86,10 @@ fn server_messages_have_a_frozen_shape() {
         (
             ServerMessage::Response {
                 id: 4,
-                outcome: Outcome::Error(WireError {
-                    code: ErrorCode::UnknownService,
-                    message: "no service named cache".into(),
-                }),
+                outcome: Outcome::Error(WireError::new(
+                    ErrorCode::UnknownService,
+                    "no service named cache",
+                )),
             },
             r#"{"type":"response","id":4,"error":{"code":"unknown_service","message":"no service named cache"}}"#
                 .to_string(),

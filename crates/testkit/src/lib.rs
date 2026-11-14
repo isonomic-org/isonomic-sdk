@@ -11,7 +11,10 @@
 //! something its manifest does not allow.
 
 mod conn;
+mod models;
 mod system;
+
+pub use models::{FakeModels, Gate, Step};
 
 use std::collections::HashMap;
 use std::io;
@@ -46,6 +49,8 @@ pub(crate) struct State {
     pub(crate) shutdown_requested: AtomicBool,
     pub(crate) grants: Mutex<HashMap<Token, Grant>>,
     pub(crate) calls: Mutex<Vec<CallRecord>>,
+    pub(crate) models: Mutex<models::ModelsState>,
+    pub(crate) cancels: watch::Sender<u32>,
     next_token: AtomicU64,
 }
 
@@ -111,6 +116,8 @@ impl TestEngine {
                 shutdown_requested: AtomicBool::new(false),
                 grants: Mutex::new(HashMap::new()),
                 calls: Mutex::new(Vec::new()),
+                models: Mutex::new(models::ModelsState::default()),
+                cancels: watch::channel(0).0,
                 next_token: AtomicU64::new(1),
             }),
         }
@@ -163,6 +170,13 @@ impl TestEngine {
     /// A client scoped to a freshly granted token for `manifest`.
     pub fn app_client(&self, manifest: &Manifest) -> AppClient {
         self.client().scoped(self.grant(manifest))
+    }
+
+    /// The fake models: add, script, refuse, fail.
+    pub fn models(&self) -> FakeModels {
+        FakeModels {
+            state: Arc::clone(&self.state),
+        }
     }
 
     /// Withdraw every token, like an engine that lost its grants.

@@ -16,11 +16,15 @@ pub mod io;
 pub mod lenient;
 pub mod locate;
 pub mod manifest;
+pub mod models;
 pub mod system;
 
 use serde::{Deserialize, Serialize};
 
 pub use manifest::{Capabilities, Manifest, Token};
+pub use models::{
+    MemoryRefusal, Message, ModelChunk, ModelDetail, ModelInfo, StopReason, StreamRequest,
+};
 pub use system::{HardwareProfile, ServiceState, ServiceStatus, SystemStatus};
 
 /// The protocol version this crate describes.
@@ -30,7 +34,7 @@ pub const PROTOCOL_VERSION: u32 = 0;
 pub const MAX_FRAME_BYTES: usize = 1 << 20;
 
 /// What a client sends.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ClientMessage {
     /// Must be first. Lists every protocol version the client can speak.
@@ -49,7 +53,7 @@ pub enum ClientMessage {
 
 /// Every method of every interface. Each method is named
 /// `<interface>.<verb>`; new methods are added, never changed.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "method", content = "params")]
 #[non_exhaustive]
 pub enum Call {
@@ -73,6 +77,26 @@ pub enum Call {
     /// Shell only: record an app's approved manifest and issue its token.
     #[serde(rename = "apps.grant")]
     AppsGrant { manifest: Box<Manifest> },
+    /// The models the caller may use.
+    #[serde(rename = "models.list")]
+    ModelsList,
+    #[serde(rename = "models.info")]
+    ModelsInfo { model: String },
+    /// Start a chat completion. The reply names a subscription; its events
+    /// are `model_chunk`s, the last with `stop` set.
+    #[serde(rename = "models.stream")]
+    ModelsStream(StreamRequest),
+    /// Stop a stream. Its last chunk then arrives with `stop: cancelled`.
+    #[serde(rename = "models.cancel")]
+    ModelsCancel { subscription: u64 },
+    /// Embed each input. `model: None` is the user's default embeddings
+    /// model.
+    #[serde(rename = "models.embed")]
+    ModelsEmbed {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        model: Option<String>,
+        input: Vec<String>,
+    },
 }
 
 impl Call {
@@ -85,6 +109,11 @@ impl Call {
         "system.profile",
         "system.shutdown",
         "apps.grant",
+        "models.list",
+        "models.info",
+        "models.stream",
+        "models.cancel",
+        "models.embed",
     ];
 
     /// The method name on the wire, for logs and the Activity tab.
@@ -97,6 +126,11 @@ impl Call {
             Call::SystemProfile => "system.profile",
             Call::SystemShutdown => "system.shutdown",
             Call::AppsGrant { .. } => "apps.grant",
+            Call::ModelsList => "models.list",
+            Call::ModelsInfo { .. } => "models.info",
+            Call::ModelsStream(_) => "models.stream",
+            Call::ModelsCancel { .. } => "models.cancel",
+            Call::ModelsEmbed { .. } => "models.embed",
         }
     }
 
@@ -110,12 +144,17 @@ impl Call {
             | Call::SystemProfile
             | Call::SystemShutdown => Interface::System,
             Call::AppsGrant { .. } => Interface::Apps,
+            Call::ModelsList
+            | Call::ModelsInfo { .. }
+            | Call::ModelsStream(_)
+            | Call::ModelsCancel { .. }
+            | Call::ModelsEmbed { .. } => Interface::Models,
         }
     }
 }
 
 /// What the engine sends.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ServerMessage {
     /// Answer to `hello`.
@@ -132,14 +171,14 @@ pub enum ServerMessage {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Outcome {
     Result(Reply),
     Error(WireError),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum Reply {
@@ -160,6 +199,23 @@ pub enum Reply {
         app: String,
         token: Token,
     },
+    /// Answer to `models.list`.
+    Models(Vec<ModelInfo>),
+    /// Answer to `models.info`.
+    Model(ModelDetail),
+    /// Answer to `models.stream`: chunks follow on `subscription`. `model`
+    /// is the model the engine chose.
+    Stream {
+        subscription: u64,
+        model: String,
+    },
+    /// Answer to `models.cancel`.
+    Cancelled {},
+    /// Answer to `models.embed`: one vector per input, in order.
+    Embeddings {
+        model: String,
+        vectors: Vec<Vec<f32>>,
+    },
 }
 
 impl Reply {
@@ -167,7 +223,9 @@ impl Reply {
     /// follow on the same connection.
     pub fn opened_subscription(&self) -> Option<u64> {
         match self {
-            Reply::Subscribed { subscription, .. } => Some(*subscription),
+            Reply::Subscribed { subscription, .. } | Reply::Stream { subscription, .. } => {
+                Some(*subscription)
+            }
             _ => None,
         }
     }
@@ -179,12 +237,14 @@ impl Reply {
 pub enum Event {
     /// One service changed.
     ServiceStatus(ServiceStatus),
+    /// Part of a model stream.
+    ModelChunk(ModelChunk),
 }
 
 impl Event {
     /// Whether this is the last event of its subscription.
     pub fn is_final(&self) -> bool {
-        false
+        matches!(self, Event::ModelChunk(chunk) if chunk.stop.is_some())
     }
 }
 
@@ -195,6 +255,9 @@ impl Event {
 pub struct WireError {
     pub code: ErrorCode,
     pub message: String,
+    /// With `insufficient_memory`: what the memory gate measured.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory: Option<MemoryRefusal>,
 }
 
 impl WireError {
@@ -202,6 +265,16 @@ impl WireError {
         Self {
             code,
             message: message.into(),
+            memory: None,
+        }
+    }
+
+    /// The memory gate's refusal, with its numbers.
+    pub fn memory(refusal: MemoryRefusal) -> Self {
+        Self {
+            code: ErrorCode::InsufficientMemory,
+            message: refusal.reason.clone(),
+            memory: Some(refusal),
         }
     }
 }
@@ -229,6 +302,16 @@ pub enum ErrorCode {
     CapabilityDenied,
     /// The manifest broke a rule in [`Manifest::validate`].
     InvalidManifest,
+    /// No model with that id, or no default model of the kind asked for.
+    UnknownModel,
+    /// The model cannot do this (embeddings from a chat-only model, say).
+    Unsupported,
+    /// The memory gate refused to load the model; see `WireError::memory`.
+    InsufficientMemory,
+    /// The model's worker is degraded or crashed.
+    ModelUnavailable,
+    /// Remote models are switched off by the user.
+    RemoteDisabled,
     /// A code from a newer engine.
     #[serde(other)]
     Unrecognized,

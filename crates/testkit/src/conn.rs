@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use isonomic_proto::auth::{authorize, Caller};
+use isonomic_proto::auth::{authorize, Caller, Interface};
 use isonomic_proto::io::{read_frame, write_message};
 use isonomic_proto::lenient::{decode_client, FromClient};
 use isonomic_proto::{
@@ -12,15 +12,23 @@ use isonomic_proto::{
     WireError, PROTOCOL_VERSION,
 };
 use tokio::io::DuplexStream;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 use tokio::task::JoinHandle;
 
-use crate::{system, CallRecord, Grant, State};
+use crate::{models, system, CallRecord, Grant, State};
+
+/// One open subscription: the task feeding it, how to stop it gracefully,
+/// and the token it was opened under.
+struct Sub {
+    task: JoinHandle<()>,
+    stop: Option<oneshot::Sender<()>>,
+    owner: Option<Token>,
+}
 
 /// What a connection owns: its outbox and its open subscriptions.
 pub(crate) struct Conn {
     pub(crate) out: mpsc::Sender<ServerMessage>,
-    tasks: HashMap<u64, JoinHandle<()>>,
+    subs: HashMap<u64, Sub>,
     next_subscription: u64,
 }
 
@@ -33,18 +41,39 @@ impl Conn {
     }
 
     /// Keep the task that feeds a subscription, so it can be stopped.
-    pub(crate) fn track(&mut self, subscription: u64, task: JoinHandle<()>) {
-        self.tasks.retain(|_, task| !task.is_finished());
-        self.tasks.insert(subscription, task);
+    pub(crate) fn track(
+        &mut self,
+        subscription: u64,
+        task: JoinHandle<()>,
+        stop: Option<oneshot::Sender<()>>,
+        owner: Option<Token>,
+    ) {
+        self.subs.retain(|_, sub| !sub.task.is_finished());
+        self.subs.insert(subscription, Sub { task, stop, owner });
     }
 
-    /// Stop a subscription's task. `false` if there was none.
+    /// Abort a subscription's task. `false` if there was none.
     pub(crate) fn close(&mut self, subscription: u64) -> bool {
-        match self.tasks.remove(&subscription) {
-            Some(task) => {
-                task.abort();
+        match self.subs.remove(&subscription) {
+            Some(sub) => {
+                sub.task.abort();
                 true
             }
+            None => false,
+        }
+    }
+
+    /// Ask a running subscription to finish, if `token` opened it. Apps
+    /// share the window's connection, so one app must not stop another's.
+    pub(crate) fn cancel(&mut self, subscription: u64, token: Option<&Token>) -> bool {
+        let Some(sub) = self.subs.get_mut(&subscription) else {
+            return false;
+        };
+        if sub.task.is_finished() || sub.owner.as_ref() != token {
+            return false;
+        }
+        match sub.stop.take() {
+            Some(stop) => stop.send(()).is_ok(),
             None => false,
         }
     }
@@ -57,7 +86,7 @@ pub(crate) fn failure(id: u64, error: WireError) -> ServerMessage {
     }
 }
 
-fn result(id: u64, reply: Reply) -> ServerMessage {
+pub(crate) fn result(id: u64, reply: Reply) -> ServerMessage {
     ServerMessage::Response {
         id,
         outcome: Outcome::Result(reply),
@@ -96,6 +125,9 @@ async fn dispatch(
     if let Err(error) = authorize(caller, &call) {
         return Some(failure(id, error));
     }
+    if call.interface() == Interface::Models {
+        return models::dispatch(state, conn, id, caller, token, call).await;
+    }
     Some(match call {
         Call::SystemSubscribe => {
             let subscription = conn.open_subscription();
@@ -123,7 +155,7 @@ async fn dispatch(
                     }
                 }
             });
-            conn.track(subscription, task);
+            conn.track(subscription, task, None, token);
             return None;
         }
         Call::SystemUnsubscribe { subscription } => match conn.close(subscription) {
@@ -157,7 +189,7 @@ pub(crate) async fn serve(stream: DuplexStream, state: Arc<State>) {
     let mut online = state.online.subscribe();
     let mut conn = Conn {
         out,
-        tasks: HashMap::new(),
+        subs: HashMap::new(),
         next_subscription: 1,
     };
     let mut greeted = false;
@@ -201,8 +233,8 @@ pub(crate) async fn serve(stream: DuplexStream, state: Arc<State>) {
             let _ = conn.out.send(reply).await;
         }
     }
-    for task in conn.tasks.into_values() {
-        task.abort();
+    for sub in conn.subs.into_values() {
+        sub.task.abort();
     }
     writing.abort();
 }

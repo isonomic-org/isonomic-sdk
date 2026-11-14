@@ -2,6 +2,29 @@
 
 Newest first. Each entry names what the engine (isonomic-capsule) and the window (isonomic-desktop) must do when they move `SDK_REF` to it.
 
+## Unreleased: the `models` interface
+
+**Wire (additive, still version 0)**
+
+- Methods `models.list`, `models.info`, `models.stream`, `models.cancel`, `models.embed` (`docs/interfaces/models.md`).
+- Replies `models`, `model`, `stream`, `cancelled`, `embeddings`; event `model_chunk` (text, reasoning, tool-call deltas, usage, stop).
+- `error` may carry `memory` (`required_bytes`, `available_bytes`, `reason`) with the new code `insufficient_memory`. Also new: `unknown_model`, `unsupported`, `model_unavailable`, `remote_disabled`.
+
+**Breaking for Rust**
+
+- `Call`, `ClientMessage`, `Reply`, `Outcome` and `ServerMessage` no longer implement `Eq` (temperatures and vectors are floats). `PartialEq` remains.
+- `WireError` has a `memory` field: build errors with `WireError::new(code, message)` or `WireError::memory(refusal)`.
+
+**For the engine** (filed in `isonomic-capsule/docs/requests.md`)
+
+- Implement the five methods in the model gateway. After choosing a default model, call `proto::auth::authorize_model(caller, model, remote)`.
+- Send the `stream` reply before the first chunk, and end every stream with exactly one chunk that has `stop`.
+- Only the token that opened a stream may cancel it (apps share the window's connection).
+
+**For the window**
+
+- `Client::models()` and `AppClient::models()`; `ModelStream` (`next`, `cancel`, `text`; dropping it cancels).
+
 ## Unreleased: capability tokens, `apps.grant`, tolerant decoding
 
 **Wire (additive, still version 0)**

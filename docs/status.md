@@ -2,6 +2,24 @@
 
 Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architecture/sdk/status.md`; this repo's own session owns the SDK from here.
 
+## 2026-11-14 · The `models` interface (S0, PR 2)
+
+**Built**
+
+- `proto::models`: `ModelInfo`, `ModelDetail`, `StreamRequest`, `Message`, `ToolSpec`, `ToolCall`, `ModelChunk`, `ToolCallDelta`, `Usage`, `StopReason`, `MemoryRefusal`. Five methods, five replies, one event, five error codes. Fixtures for all of them.
+- `proto::auth`: the models check, plus `authorize_model` for the engine once it has chosen a default.
+- `client`: `Models` and `ModelStream`; dropping an unfinished stream cancels it.
+- `testkit`: a scriptable fake with two default models, scripted steps with gates, memory refusals, failures, the remote switch, per-token cancel ownership, and request and cancel logs.
+
+**Decisions**
+
+- **Chunks mirror the inference layer's** with app-facing names: `delta` is `text`, `finish_reason` is `stop` (`stop` → `end`, `length` → `max_tokens`). The reasoning field mirrors D4.
+- **Tool schemas and arguments are JSON text**, not objects, so the types stay WIT-ready.
+- **Capabilities in `ModelInfo` are strings**, as in the inference layer, so a newer engine's capabilities never fail to decode.
+- **The memory refusal rides on the error** as an optional `memory` field rather than a new message kind; older clients ignore it.
+- **One app cannot cancel another's stream.** Apps share the window's connection, so subscriptions are owned by the token that opened them.
+- **`models.list` is filtered** to what the caller may use, so an app's model picker never shows a model it would be refused.
+
 ## 2026-11-14 · Tokens, `apps.grant`, tolerant decoding (S0, PR 1)
 
 **Built**
