@@ -4,7 +4,7 @@
 use isonomic_proto::{Call, Reply, Token};
 use tokio::sync::watch;
 
-use crate::{Client, ClientError, Live, Subscription};
+use crate::{Client, ClientError, Live, Models, Subscription};
 
 /// A [`Client`] scoped to one app's capability token. Cheap to clone.
 #[derive(Clone)]
@@ -26,6 +26,11 @@ impl AppClient {
     /// state. Await `changed()` on it; never poll.
     pub fn live(&self) -> watch::Receiver<Live> {
         self.client.live()
+    }
+
+    /// The `models` interface, under this app's token.
+    pub fn models(&self) -> Models {
+        Models::new(self.client.clone(), Some(self.token.clone()))
     }
 
     /// Make one call under this app's token.

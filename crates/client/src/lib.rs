@@ -21,6 +21,7 @@
 //! framework's own.
 
 mod actor;
+mod models;
 mod scoped;
 
 use std::future::Future;
@@ -96,6 +97,7 @@ pub enum ClientError {
     UnexpectedReply,
 }
 
+pub use models::{ModelStream, Models};
 pub use scoped::AppClient;
 
 pub(crate) struct Request {
@@ -158,6 +160,11 @@ impl Client {
         self.open(None, call).await
     }
 
+    /// The `models` interface, as the shell.
+    pub fn models(&self) -> Models {
+        Models::new(self.clone(), None)
+    }
+
     /// A client that names `token` on every call: what an app is given.
     pub fn scoped(&self, token: Token) -> AppClient {
         AppClient::new(self.clone(), token)
@@ -207,6 +214,18 @@ impl Client {
             .opened_subscription()
             .ok_or(ClientError::UnexpectedReply)?;
         Ok((reply, Subscription { id, events }))
+    }
+
+    /// Queue a call without waiting, where awaiting is impossible (a
+    /// `Drop`). Lost if the queue is full or the client is gone.
+    pub(crate) fn send_now(&self, token: Option<Token>, call: Call) {
+        let (reply, _) = oneshot::channel();
+        let _ = self.requests.try_send(Request {
+            token,
+            call,
+            reply,
+            events: None,
+        });
     }
 
     pub async fn status(&self) -> Result<SystemStatus, ClientError> {
