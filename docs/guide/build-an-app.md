@@ -42,8 +42,9 @@ fn manifest() -> Manifest {
 | Capability | Example | Grants |
 | --- | --- | --- |
 | `models` | `ModelAccess { any: true, .. }` or `{ ids: vec!["chat-small".into()], remote: false, .. }` | Those models; remote providers only with `remote` |
-| `sql` | `SqlAccess { schemas: vec!["chat".into()] }` | Reading other apps' schemas (its own are implied) |
+| `sql` | `SqlAccess { schemas: vec!["contacts".into()] }` | Its own `schemas`, read and write; reading the schemas listed here |
 | `blobs` | `BlobAccess { max_bytes: Some(10 << 20) }` | The blob store |
+| `events` | none needed | Its own scope's events, always; never another app's |
 | `connections` | `vec![ConnectionAccess { provider: "calendar".into() }]` | Linked accounts of that kind |
 | `egress` | `vec!["example.com".into()]` | Outbound HTTP to those hosts, once the user approves |
 | `agents` | — | Reserved; leave it out |
@@ -71,7 +72,14 @@ impl App for Hello {
 
 `AppContext` is cheap to clone; pass it into views.
 
-- `cx.client()`: an `AppClient`. Every call names the app's token. Interfaces hang off it: `cx.client().models()` today; `sql`, `blobs` and `events` as they land (`docs/interfaces/`).
+- `cx.client()`: an `AppClient`. Every call names the app's token. The interfaces hang off it; each is specified in `docs/interfaces/<name>.md`:
+
+  | Interface | From the client | For |
+  | --- | --- | --- |
+  | `models` | `.models()` | Listing models, streaming a chat reply, embeddings |
+  | `sql` | `.sql()` | The app's own schemas: queries, writes, batches, live queries |
+  | `blobs` | `.blobs()` | Bytes by handle: attachments, images, exports |
+  | `events` | `.events()` | Live messages between the app's own tabs and windows |
 - `cx.settings()`: the app's own settings, plain JSON values keyed by name. No app sees another's.
 - `cx.set_attention(Attention::Dot)` or `Attention::Count(n)`: the dot on the rail.
 
@@ -93,7 +101,28 @@ cx.spawn(async move |this, cx| {
 }).detach();
 ```
 
-Never block the foreground thread, and never poll: await the client, and call `cx.notify()` when state changes. Dropping a `ModelStream` cancels it.
+The other interfaces work the same way:
+
+```rust
+// A thread list that follows the database.
+let sql = app.client().sql();
+let mut threads = sql.live("select id, title from threads order by updated desc", vec![]).await?;
+let rows = threads.rows().clone();
+this.update(cx, |view, cx| { view.threads = rows; cx.notify(); })?;
+while let Some(rows) = threads.changed().await {
+    let rows = rows.clone();
+    this.update(cx, |view, cx| { view.threads = rows; cx.notify(); })?;
+}
+
+// An attachment: keep the handle, not the bytes.
+let stored = app.client().blobs().put("image/png", &bytes).await?;
+
+// Tell the app's other tabs; each skips events carrying its own sender.
+let data = Json::new(&json!({ "thread": 42 }))?;
+app.client().events().publish("chat.thread-renamed", data, Some(&tab_id)).await?;
+```
+
+Never block the foreground thread, and never poll: await the client, and call `cx.notify()` when state changes. Dropping a `ModelStream` cancels it; dropping a `LiveQuery` or an `EventStream` unsubscribes. Copy what you need out of `client().live()` and drop the borrow at once: while one is held, the client cannot update the view.
 
 Errors are typed. `ClientError::Engine(error)` carries a stable `error.code` (`capability_denied`, `insufficient_memory`, ...) and a readable `error.message`; `ClientError::Disconnected` means the engine is restarting, and the client reconnects by itself. `cx.client().live()` tells a view when it is back.
 
@@ -115,6 +144,9 @@ fn it_streams_a_reply(cx: &mut TestAppContext) {
 ```
 
 - `host.engine()` scripts the engine: `models().script(..)` with `Step::Chunk`, `Step::Hold(gate)` and `Step::Fail`, `models().refuse(..)` for the memory gate, `go_offline()` and `go_online()`, and `calls()` to see every call the app made.
+- `sql()` is a scripted database that runs no SQL: `respond(schema, sql, rows)` sets a query's result (and pushes it to every live query on it), `affect` sets a write's row count, `fail` makes a statement fail, and `statements()` lists what the app ran.
+- `blobs()` is an in-memory store: `stored(handle)`, `count()`, `set_limit(bytes)`. Events need no script; publish from a second client.
+- `slow(interface, delay)`, `fail(interface, error)` and `recover(interface)` make any interface slow or failing, to test spinners and error states.
 - `wait_until` wakes on the view's notifications; it never sleeps on a timer.
 - `open.attention` is what the rail would show.
 - No socket, no engine binary, no network: these tests run anywhere, including CI on Linux.
@@ -135,3 +167,4 @@ For each app the window grants a token from the manifest (`client.grant(manifest
 - [ ] No network, file, process or socket code in the crate.
 - [ ] No GPUI version named; GPUI only through `isonomic-ui`.
 - [ ] Every interaction tested against `TestHost`, including refusals and a disconnect.
+- [ ] Live queries and event streams belong to a view and are dropped with it.
