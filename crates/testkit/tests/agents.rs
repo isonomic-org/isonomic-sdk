@@ -389,3 +389,49 @@ async fn equal_approval_ids_in_two_apps_stay_apart() {
         "the other app's waits"
     );
 }
+
+#[tokio::test]
+async fn a_session_may_name_a_model_its_app_may_use() {
+    use isonomic_proto::agents::CreateSession;
+    use isonomic_proto::manifest::ModelAccess;
+    let engine = TestEngine::new();
+    let mut chat = manifest("com.isonomic.chat", true);
+    chat.capabilities.models = Some(ModelAccess {
+        ids: vec![
+            "chat-small".into(),
+            "chat-huge".into(),
+            "embed-small".into(),
+        ],
+        ..Default::default()
+    });
+    let agents = engine.client().scoped(engine.grant(&chat)).agents();
+    let on = |model: &str| CreateSession {
+        preset: "test".into(),
+        title: None,
+        location_opt_in: false,
+        model: Some(model.into()),
+    };
+    agents.create_with(on("chat-small")).await.unwrap();
+    assert_eq!(
+        code(agents.create_with(on("chat-large")).await),
+        ErrorCode::CapabilityDenied
+    );
+    assert_eq!(
+        code(agents.create_with(on("chat-huge")).await),
+        ErrorCode::UnknownModel
+    );
+    assert_eq!(
+        code(agents.create_with(on("embed-small")).await),
+        ErrorCode::Unsupported
+    );
+    engine.models().uninstall("chat-small");
+    assert_eq!(
+        code(agents.create_with(on("chat-small")).await),
+        ErrorCode::ModelUnavailable
+    );
+    let plain = app(&engine, "com.isonomic.notes").agents();
+    assert_eq!(
+        code(plain.create_with(on("chat-small")).await),
+        ErrorCode::CapabilityDenied
+    );
+}

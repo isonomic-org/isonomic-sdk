@@ -59,6 +59,10 @@ pub struct CreateSession {
     /// The person opted in to sharing a location with this session.
     #[serde(default, skip_serializing_if = "no")]
     pub location_opt_in: bool,
+    /// Run on this model in place of the preset's. An app may name only a
+    /// model its `models` capability allows, as for `models.stream`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
 }
 
 /// `sessions.list`. Every field narrows; none means all of the caller's.

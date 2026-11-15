@@ -366,6 +366,28 @@ fn resolve(
     Ok((model.info.clone(), model.script.clone()))
 }
 
+/// May a session run on `id` for this caller? The checks `models.stream`
+/// makes, for `sessions.create { model }`.
+pub(crate) fn session_model(state: &State, caller: Caller<'_>, id: &str) -> Result<(), WireError> {
+    let models = state.models.lock().unwrap();
+    let Some(model) = models.models.iter().find(|m| m.info.id == id) else {
+        return Err(WireError::new(
+            ErrorCode::UnknownModel,
+            format!("no model {id}"),
+        ));
+    };
+    authorize_model(caller, &model.info.id, model.info.remote)?;
+    if !model.info.supports("chat") {
+        let message = format!("model {id} does not do chat");
+        return Err(WireError::new(ErrorCode::Unsupported, message));
+    }
+    if !model.installed {
+        let message = format!("model {id} is not installed; download it first");
+        return Err(WireError::new(ErrorCode::ModelUnavailable, message));
+    }
+    Ok(())
+}
+
 /// Answer one `models.*` call. `None` when the answer was already sent.
 pub(crate) async fn dispatch(
     state: &Arc<State>,

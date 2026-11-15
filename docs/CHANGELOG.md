@@ -2,6 +2,20 @@
 
 Newest first. Each entry names what the engine (isonomic-capsule) and the window (isonomic-desktop) must do when they move `SDK_REF` to it.
 
+
+## Unreleased: the model picker (for Chat)
+
+**Wire (additive, still version 0)**
+
+- `ModelInfo.recommended` (omitted when false) marks the model the engine recommends for the machine's profile, in `models.list` and `models.info`. No auth change: an app sees it on the models it may already list.
+- `sessions.create` takes an optional `model`: the session runs on that model in place of the preset's. An app may name only a model its `models` capability allows, checked in `proto::auth` as for `models.stream`.
+
+**For the engine:**
+- Set `recommended` on the model `models.recommended` would name for the machine's profile.
+- On `sessions.create { model }`: answer `unknown_model`, `unsupported` (not a chat model), `model_unavailable` (not installed), or `capability_denied` for a remote model without `remote`. Otherwise pass the model to the host's create-time override.
+
+**For apps:** `Agents::create_with(CreateSession { model: Some(..), .. })`. The testkit checks the model; until the harness's create-time override is pinned, the session still runs on the preset's model there.
+
 ## Unreleased: Isonomic UI's features through the SDK (isonomic-sdk #27, isonomic-chat O8)
 
 **Wire:** no change.

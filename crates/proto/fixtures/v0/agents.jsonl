@@ -74,3 +74,11 @@
 {"type":"response","id":113,"error":{"code":"capability_denied","message":"app com.isonomic.notes may not reach the agent sessions of com.isonomic.chat"}}
 {"type":"request","id":114,"method":"sessions.purge","params":{}}
 {"type":"response","id":114,"error":{"code":"bad_request","message":"the shell must name the app whose sessions to purge"}}
+{"type":"request","id":115,"token":"tok-chat-1","method":"sessions.create","params":{"preset":"chat","model":"chat-small"}}
+{"type":"response","id":115,"result":{"session_created":{"session":"s-6"}}}
+{"type":"request","id":116,"token":"tok-chat-1","method":"sessions.create","params":{"preset":"chat","model":"chat-large"}}
+{"type":"response","id":116,"error":{"code":"capability_denied","message":"app com.isonomic.chat may not use model chat-large"}}
+{"type":"request","id":117,"token":"tok-chat-1","method":"sessions.create","params":{"preset":"chat","model":"chat-huge"}}
+{"type":"response","id":117,"error":{"code":"unknown_model","message":"no model chat-huge"}}
+{"type":"request","id":118,"token":"tok-chat-1","method":"sessions.create","params":{"preset":"chat","model":"chat-medium"}}
+{"type":"response","id":118,"error":{"code":"model_unavailable","message":"model chat-medium is not installed; download it first"}}

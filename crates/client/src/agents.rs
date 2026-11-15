@@ -43,6 +43,7 @@ impl Agents {
             preset: PresetId::new(preset),
             title: None,
             location_opt_in: false,
+            model: None,
         })
         .await
     }

@@ -71,6 +71,7 @@ pub async fn registry(target: Target) -> Outcome {
         preset: PRESET.into(),
         title: Some("Conformance".into()),
         location_opt_in: false,
+        model: None,
     };
     let session = ok(agents.create_with(request).await, "sessions.create")?;
     let result = async {

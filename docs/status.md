@@ -4,6 +4,18 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
+
+## 2026-11-15 · Wire follow-ups (needs-master, in progress)
+
+**Built so far:**
+- `lib.rs` split: `reply.rs` holds `Reply` and `Event`, `error.rs` holds `WireError` and `ErrorCode`. Paths are unchanged.
+- `ModelInfo.recommended`.
+- `sessions.create { model? }`, with fixtures for each refusal.
+
+**Follow-up:** the testkit passes the session model on to the host once harness-host has the create-time override (marked FOLLOW-UP in `testkit/src/agents.rs`).
+
+**Next in this pull request:** an end-of-stream event for session streams, a call that gets the user-action token (with `session`), chunked `artifacts.get`, and sequence continuity in `SessionStream`.
+
 ## 2026-11-15 · Requests from other sessions
 
 `docs/requests.md` collects them. Open there:
