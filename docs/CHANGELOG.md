@@ -2,6 +2,25 @@
 
 Newest first. Each entry names what the engine (isonomic-capsule) and the window (isonomic-desktop) must do when they move `SDK_REF` to it.
 
+## Unreleased: the `blobs` interface
+
+**Wire (additive, still version 0)**
+
+- Methods `blobs.put`, `blobs.create`, `blobs.write`, `blobs.get`, `blobs.info`, `blobs.delete` (`docs/interfaces/blobs.md`). Bytes travel as base64, at most `CHUNK_BYTES` (512 KiB) per call.
+- Replies `blob`, `blob_data`, `deleted`. Error codes `unknown_blob`, `too_large`, `incomplete`.
+
+**For the engine** (filed in isonomic-capsule `docs/requests.md`, R3)
+
+- Store blobs per app; another app's handle answers `unknown_blob`. The shell reads all.
+- `proto::auth::authorize` already refuses apps without the capability and blobs over the manifest's `max_bytes`; apply the engine's own limit too (`auth::too_large`).
+- Writes are append-only: `offset` must equal the bytes written so far. A blob is readable once complete.
+
+**For the window**
+
+- `Client::blobs()` and `AppClient::blobs()`: `put`, `get`, `info`, `delete`, with chunking done for you.
+
+**For tests:** `TestEngine::blobs()`, and `slow` / `fail` / `recover` for any interface.
+
 ## Unreleased: the app crate and hello-app
 
 **Wire:** unchanged.

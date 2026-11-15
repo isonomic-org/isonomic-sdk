@@ -21,6 +21,7 @@
 //! framework's own.
 
 mod actor;
+mod blobs;
 mod models;
 mod scoped;
 
@@ -97,6 +98,7 @@ pub enum ClientError {
     UnexpectedReply,
 }
 
+pub use blobs::Blobs;
 pub use models::{ModelStream, Models};
 pub use scoped::AppClient;
 
@@ -163,6 +165,11 @@ impl Client {
     /// The `models` interface, as the shell.
     pub fn models(&self) -> Models {
         Models::new(self.clone(), None)
+    }
+
+    /// The `blobs` interface, as the shell.
+    pub fn blobs(&self) -> Blobs {
+        Blobs::new(self.clone(), None)
     }
 
     /// A client that names `token` on every call: what an app is given.

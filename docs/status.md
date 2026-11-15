@@ -2,6 +2,23 @@
 
 Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architecture/sdk/status.md`; this repo's own session owns the SDK from here.
 
+## 2026-11-15 · The `blobs` interface (S0)
+
+**Built**
+
+- `proto::blobs`: `BlobInfo`, `Bytes` (base64 on the wire, with its own encoder so `proto` gains no dependency), `CHUNK_BYTES`. Six methods, three replies, three error codes, 20 fixture lines.
+- `proto::auth`: the blobs check, including the manifest's `max_bytes`.
+- `client`: `Blobs` (`put`, `get`, `info`, `delete`) splits and joins chunks.
+- `testkit`: an in-memory blob store, and per-interface `slow`, `fail` and `recover` for every interface.
+
+**Verified:** fmt, clippy `-D warnings`, 8 new integration tests and 2 unit tests; 61 tests in all.
+
+**Decisions**
+
+- **Chunked, append-only writes.** A frame is 1 MiB, so one call carries 512 KiB at most; larger blobs are created with their size and written in order. Sequential offsets make a retried or lost write visible instead of silently corrupting the blob.
+- **A handle belongs to its app.** Another app's handle answers `unknown_blob`, not `capability_denied`, so handles reveal nothing. The shell reads all blobs, to render them in the window.
+- **Limits live in two places:** the manifest's `max_bytes`, checked in `proto::auth` so the testkit and the engine agree, and the engine's own limit on top.
+
 ## 2026-11-14 · The app crate and hello-app (S0, PR 3)
 
 **Built**
