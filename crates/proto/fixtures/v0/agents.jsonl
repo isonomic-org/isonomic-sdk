@@ -16,7 +16,7 @@
 {"type":"response","id":87,"error":{"code":"continue_refused","message":"There is no partial reply to continue."}}
 {"type":"request","id":88,"token":"tok-chat-1","method":"sessions.cancel","params":{"session":"s-1"}}
 {"type":"response","id":88,"result":{"done":{}}}
-{"type":"request","id":89,"token":"tok-chat-1","method":"sessions.purge"}
+{"type":"request","id":89,"token":"tok-chat-1","method":"sessions.purge","params":{}}
 {"type":"response","id":89,"result":{"purged":{"sessions":3,"events":140,"blobs":2}}}
 {"type":"request","id":90,"token":"tok-chat-1","method":"sessions.subscribe","params":{"session":"s-1","from_seq":10}}
 {"type":"response","id":90,"result":{"session_stream":{"subscription":21}}}
@@ -26,19 +26,19 @@
 {"type":"event","subscription":21,"event":"session_event","data":{"session":"s-1","seq":14,"at":1700000000014,"turn":"t-3","step":"p-1","type":"approval.request","approval":"a-1","call":"c-5","summary":"Send an email to Ana","rule":"acts_outward","effects":["acts_outward"]}}
 {"type":"request","id":91,"token":"tok-chat-1","method":"sessions.unsubscribe","params":{"subscription":21}}
 {"type":"response","id":91,"result":{"unsubscribed":{}}}
-{"type":"request","id":92,"token":"tok-chat-1","method":"approvals.list"}
+{"type":"request","id":92,"token":"tok-chat-1","method":"approvals.list","params":{}}
 {"type":"response","id":92,"result":{"approvals":[{"session":"s-1","app":"com.isonomic.chat","request":{"approval":"a-1","call":"c-5","summary":"Send an email to Ana","rule":"acts_outward","effects":["acts_outward"]}}]}}
-{"type":"request","id":93,"token":"tok-chat-1","method":"approvals.decide","params":{"approval":"a-1","decision":"allow","user_action":"ua-77"}}
+{"type":"request","id":93,"token":"tok-chat-1","method":"approvals.decide","params":{"session":"s-1","approval":"a-1","decision":"allow","user_action":"ua-77"}}
 {"type":"response","id":93,"result":{"done":{}}}
-{"type":"request","id":94,"token":"tok-chat-1","method":"approvals.decide","params":{"approval":"a-2","decision":{"text":"maybe later"}}}
+{"type":"request","id":94,"token":"tok-chat-1","method":"approvals.decide","params":{"session":"s-1","approval":"a-2","decision":{"text":"maybe later"}}}
 {"type":"response","id":94,"error":{"code":"missing_user_action","message":"Deciding an approval needs a user action."}}
-{"type":"request","id":95,"token":"tok-chat-1","method":"questions.answer","params":{"question":"q-1","selected":["morning"]}}
+{"type":"request","id":95,"token":"tok-chat-1","method":"questions.answer","params":{"session":"s-1","question":"q-1","selected":["morning"]}}
 {"type":"response","id":95,"result":{"done":{}}}
 {"type":"request","id":96,"token":"tok-chat-1","method":"tools.register_client","params":{"session":"s-1","specs":[{"name":"open_map","description":"Show a place on the map","input_schema":{"type":"object"},"kind":"client","concurrency":"parallel"}]}}
 {"type":"response","id":96,"result":{"done":{}}}
-{"type":"request","id":97,"token":"tok-chat-1","method":"tools.result","params":{"call":"c-6","content":[{"type":"text","text":"Shown"}]}}
+{"type":"request","id":97,"token":"tok-chat-1","method":"tools.result","params":{"session":"s-1","call":"c-6","content":[{"type":"text","text":"Shown"}]}}
 {"type":"response","id":97,"result":{"done":{}}}
-{"type":"request","id":98,"token":"tok-chat-1","method":"presets.list"}
+{"type":"request","id":98,"token":"tok-chat-1","method":"presets.list","params":{}}
 {"type":"response","id":98,"result":{"presets":[{"reference":{"id":"chat","version":1},"name":"Chat"}]}}
 {"type":"request","id":99,"token":"tok-chat-1","method":"presets.get","params":{"preset":"travel"}}
 {"type":"response","id":99,"result":{"preset":{"reference":{"id":"travel","version":2},"owner":"com.isonomic.chat","text":"name = \"Travel\"\n","diagnostics":[{"severity":"warning","at":"policy.autonomy","message":"Defaults to ask."}]}}}
@@ -51,3 +51,22 @@
 {"type":"request","id":103,"token":"tok-chat-1","method":"sessions.open","params":{"session":"s-from-another-app"}}
 {"type":"response","id":103,"error":{"code":"not_found","message":"no such session"}}
 {"type":"event","subscription":21,"event":"session_event","data":{"session":"s-1","seq":15,"at":1700000000015,"turn":"t-3","type":"reaction","emoji":"thumbs_up","to_seq":13}}
+{"type":"welcome","version":0,"engine":"isonomic-engine","schema":{"version":1,"revision":2}}
+{"type":"request","id":104,"method":"sessions.purge","params":{"scope":"com.isonomic.chat"}}
+{"type":"response","id":104,"result":{"purged":{"sessions":1,"events":12,"blobs":0}}}
+{"type":"request","id":105,"method":"approvals.list","params":{"scope":"com.isonomic.chat"}}
+{"type":"response","id":105,"result":{"approvals":[]}}
+{"type":"request","id":106,"token":"tok-chat-1","method":"presets.put","params":{"text":"name = 3\n"}}
+{"type":"response","id":106,"error":{"code":"invalid_preset","message":"name: expected a string"}}
+{"type":"request","id":107,"token":"tok-chat-1","method":"sessions.create","params":{"preset":"nightly-digest"}}
+{"type":"response","id":107,"error":{"code":"class_not_supported","message":"Autonomous sessions are not run yet."}}
+{"type":"request","id":108,"token":"tok-chat-1","method":"sessions.fork","params":{"session":"s-1","at":{"after_turn":"t-3"}}}
+{"type":"response","id":108,"error":{"code":"not_at_turn_boundary","message":"Turn t-3 is still open."}}
+{"type":"request","id":109,"token":"tok-view-1","method":"approvals.decide","params":{"session":"s-4","approval":"a-3","decision":"allow","user_action":"ua-78"}}
+{"type":"response","id":109,"error":{"code":"not_allowed_to_decide","message":"Views may request approvals but not decide them."}}
+{"type":"request","id":110,"token":"tok-chat-1","method":"approvals.decide","params":{"session":"s-1","approval":"a-1","decision":"deny","user_action":"ua-79"}}
+{"type":"response","id":110,"error":{"code":"already_decided","message":"This approval was already decided."}}
+{"type":"request","id":111,"token":"tok-chat-1","method":"sessions.send","params":{"session":"s-5","content":[{"type":"text","text":"Still there?"}]}}
+{"type":"response","id":111,"error":{"code":"session_failed","message":"The session failed and takes no more input."}}
+{"type":"request","id":112,"token":"tok-chat-1","method":"tools.register_client","params":{"session":"s-1","specs":[{"name":"open_map","description":"Show a place on the map","input_schema":{"type":"object"},"kind":"engine","concurrency":"parallel"}]}}
+{"type":"response","id":112,"error":{"code":"invalid_tools","message":"open_map is not a client tool."}}

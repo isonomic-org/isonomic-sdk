@@ -215,13 +215,13 @@ pub enum Call {
     SessionsCancel(agents::SessionRef),
     /// Delete every session of the calling app, and what they own.
     #[serde(rename = "sessions.purge")]
-    SessionsPurge,
+    SessionsPurge(agents::PurgeSessions),
     #[serde(rename = "sessions.subscribe")]
     SessionsSubscribe(agents::SubscribeSession),
     #[serde(rename = "sessions.unsubscribe")]
     SessionsUnsubscribe { subscription: u64 },
     #[serde(rename = "approvals.list")]
-    ApprovalsList,
+    ApprovalsList(agents::ListApprovals),
     #[serde(rename = "approvals.decide")]
     ApprovalsDecide(agents::DecideApproval),
     #[serde(rename = "questions.answer")]
@@ -231,7 +231,7 @@ pub enum Call {
     #[serde(rename = "tools.result")]
     ToolsResult(agents::ClientToolResult),
     #[serde(rename = "presets.list")]
-    PresetsList,
+    PresetsList(agents::ListPresets),
     #[serde(rename = "presets.get")]
     PresetsGet(agents::GetPreset),
     #[serde(rename = "presets.put")]

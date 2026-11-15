@@ -95,15 +95,15 @@ impl Call {
             Call::SessionsSend(_) => "sessions.send",
             Call::SessionsContinue(_) => "sessions.continue",
             Call::SessionsCancel(_) => "sessions.cancel",
-            Call::SessionsPurge => "sessions.purge",
+            Call::SessionsPurge(_) => "sessions.purge",
             Call::SessionsSubscribe(_) => "sessions.subscribe",
             Call::SessionsUnsubscribe { .. } => "sessions.unsubscribe",
-            Call::ApprovalsList => "approvals.list",
+            Call::ApprovalsList(_) => "approvals.list",
             Call::ApprovalsDecide(_) => "approvals.decide",
             Call::QuestionsAnswer(_) => "questions.answer",
             Call::ToolsRegisterClient(_) => "tools.register_client",
             Call::ToolsResult(_) => "tools.result",
-            Call::PresetsList => "presets.list",
+            Call::PresetsList(_) => "presets.list",
             Call::PresetsGet(_) => "presets.get",
             Call::PresetsPut(_) => "presets.put",
             Call::ArtifactsGet(_) => "artifacts.get",
@@ -150,15 +150,15 @@ impl Call {
             | Call::SessionsSend(_)
             | Call::SessionsContinue(_)
             | Call::SessionsCancel(_)
-            | Call::SessionsPurge
+            | Call::SessionsPurge(_)
             | Call::SessionsSubscribe(_)
             | Call::SessionsUnsubscribe { .. }
-            | Call::ApprovalsList
+            | Call::ApprovalsList(_)
             | Call::ApprovalsDecide(_)
             | Call::QuestionsAnswer(_)
             | Call::ToolsRegisterClient(_)
             | Call::ToolsResult(_)
-            | Call::PresetsList
+            | Call::PresetsList(_)
             | Call::PresetsGet(_)
             | Call::PresetsPut(_)
             | Call::ArtifactsGet(_)

@@ -78,6 +78,27 @@ pub struct ListSessions {
     pub limit: u32,
 }
 
+/// `sessions.purge`: the caller's own sessions unless a scope is named.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PurgeSessions {
+    /// One app's sessions. Only the shell names another app; an app may
+    /// name only itself.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<AppId>,
+}
+
+/// `approvals.list`: every approval the caller may see, or one app's.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ListApprovals {
+    /// One app's approvals, for the shell's sheet.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<AppId>,
+}
+
+/// `presets.list`. No filter yet; a struct so one can be added.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ListPresets {}
+
 /// One session, for `sessions.open`, `continue` and `cancel`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SessionRef {
@@ -147,6 +168,8 @@ pub enum DecisionInput {
 /// `approvals.decide`. Needs a user-action token from the window.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DecideApproval {
+    /// Ids are minted per session, so the session names the target too.
+    pub session: SessionId,
     pub approval: ApprovalId,
     pub decision: DecisionInput,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -156,6 +179,7 @@ pub struct DecideApproval {
 /// `questions.answer`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AnswerQuestion {
+    pub session: SessionId,
     pub question: QuestionId,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub selected: Vec<String>,
@@ -175,6 +199,7 @@ pub struct RegisterClientTools {
 /// `tools.result`: what a client tool returned. `error` means it failed.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ClientToolResult {
+    pub session: SessionId,
     pub call: CallId,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub content: Vec<Block>,

@@ -139,7 +139,7 @@ impl Agents {
 
     /// Delete every session of this app, and what they own.
     pub async fn purge(&self) -> Result<PurgeReport, ClientError> {
-        match self.call(Call::SessionsPurge).await? {
+        match self.call(Call::SessionsPurge(Default::default())).await? {
             Reply::Purged(report) => Ok(report),
             _ => Err(ClientError::UnexpectedReply),
         }
@@ -170,21 +170,24 @@ impl Agents {
 
     /// Approvals waiting for a decision in the caller's sessions.
     pub async fn approvals(&self) -> Result<Vec<PendingApproval>, ClientError> {
-        match self.call(Call::ApprovalsList).await? {
+        match self.call(Call::ApprovalsList(Default::default())).await? {
             Reply::Approvals(pending) => Ok(pending),
             _ => Err(ClientError::UnexpectedReply),
         }
     }
 
-    /// Decide an approval. `user_action` is the token the window minted when
+    /// Decide an approval in `session` (approval ids are per session).
+    /// `user_action` is the token the window minted when
     /// the person acted; without it the engine refuses.
     pub async fn decide(
         &self,
+        session: &SessionId,
         approval: &ApprovalId,
         decision: DecisionInput,
         user_action: Option<&str>,
     ) -> Result<(), ClientError> {
         let call = Call::ApprovalsDecide(DecideApproval {
+            session: session.clone(),
             approval: approval.clone(),
             decision,
             user_action: user_action.map(str::to_string),
@@ -218,7 +221,7 @@ impl Agents {
 
     /// The app's presets and the built-ins.
     pub async fn presets(&self) -> Result<Vec<PresetSummary>, ClientError> {
-        match self.call(Call::PresetsList).await? {
+        match self.call(Call::PresetsList(Default::default())).await? {
             Reply::Presets(presets) => Ok(presets),
             _ => Err(ClientError::UnexpectedReply),
         }

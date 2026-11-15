@@ -23,15 +23,15 @@ Arguments and results (`CreateSession`, `SessionSummary`, `PendingApproval`, …
 | `sessions.send` | `{ session, content: [Block], client_ref? }` | `accepted { queued }` |
 | `sessions.continue` | `{ session }` | `done {}`; extends the last sealed partial reply |
 | `sessions.cancel` | `{ session }` | `done {}`; safe to repeat |
-| `sessions.purge` | — | `purged { sessions, events, blobs }`: every session of the calling app |
+| `sessions.purge` | `{ scope? }` | `purged { sessions, events, blobs }`: every session of the calling app, or of the app the shell names in `scope` |
 | `sessions.subscribe` | `{ session, from_seq? }` | `session_stream { subscription }`, then `session_event` and `live_delta` events |
 | `sessions.unsubscribe` | `{ subscription }` | `unsubscribed {}` |
-| `approvals.list` | — | `approvals [{ session, app, request }]` |
-| `approvals.decide` | `{ approval, decision: allow\|deny\|{text}, user_action? }` | `done {}` |
-| `questions.answer` | `{ question, selected?, text?, skipped? }` | `done {}` |
+| `approvals.list` | `{ scope? }` | `approvals [{ session, app, request }]`; the shell may name one app in `scope` |
+| `approvals.decide` | `{ session, approval, decision: allow\|deny\|{text}, user_action? }` | `done {}` |
+| `questions.answer` | `{ session, question, selected?, text?, skipped? }` | `done {}` |
 | `tools.register_client` | `{ session, specs: [ToolSpec] }` | `done {}`; replaces the app's client tools for that session |
-| `tools.result` | `{ call, content?, error? }` | `done {}` |
-| `presets.list` | — | `presets [{ reference, owner?, name, diagnostics }]` |
+| `tools.result` | `{ session, call, content?, error? }` | `done {}` |
+| `presets.list` | `{}` | `presets [{ reference, owner?, name, diagnostics }]` |
 | `presets.get` | `{ preset }` | `preset { reference, owner?, text, diagnostics }` |
 | `presets.put` | `{ text }` (TOML) | `preset_saved { reference }` |
 | `artifacts.get` | `{ artifact, version? }` | `artifact { meta, bytes }` (bytes in base64) |
@@ -42,6 +42,8 @@ Arguments and results (`CreateSession`, `SessionSummary`, `PendingApproval`, …
 {"type":"response","id":86,"result":{"accepted":{"queued":false}}}
 {"type":"event","subscription":21,"event":"live_delta","data":{"session":"s-1","turn":"t-3","step":"p-1","after_seq":12,"block":0,"kind":"text","text":"Sintra is "}}
 ```
+
+Approval, question and call ids are minted per session, so two sessions can each hold an `a-1`. The calls that answer one name the session as well: the target is (session, id). Calls without parameters still take `params: {}`, so a filter can be added later without a new method.
 
 ## Events
 

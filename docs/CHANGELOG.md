@@ -9,6 +9,7 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 **Wire (additive, still version 0)**
 
 - 22 methods in `sessions.*`, `approvals.*`, `questions.answer`, `tools.*`, `presets.*` and `artifacts.*` (`docs/interfaces/agents.md`); replies `session_created`, `sessions`, `session_snapshot`, `done`, `accepted`, `purged`, `session_stream`, `approvals`, `presets`, `preset`, `preset_saved`, `artifact`, `artifacts`; events `session_event` and `live_delta`; error codes `not_found`, `invalid_preset`, `class_not_supported`, `not_at_turn_boundary`, `continue_refused`, `not_allowed_to_decide`, `missing_user_action`, `already_decided`, `session_failed`, `invalid_tools`.
+- `approvals.decide`, `questions.answer` and `tools.result` name the session as well as the id: ids are minted per session. `sessions.purge`, `approvals.list` and `presets.list` take `params` (`{}` is fine); purge and approvals.list take an optional `scope`, an app id only the shell may name.
 - `welcome` gains `schema { version, revision }`, the session event schema the engine writes. Optional: an older engine or client simply leaves it out.
 - The `agents` capability is open: a manifest may set it (`AgentsAccess {}`), and `ManifestError::AgentsReserved` is gone.
 
