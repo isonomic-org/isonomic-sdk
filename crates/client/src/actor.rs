@@ -4,6 +4,7 @@
 
 use std::collections::HashMap;
 
+use isonomic_proto::agents::SchemaVersion;
 use isonomic_proto::io::{read_frame, write_message};
 use isonomic_proto::lenient::{decode_server, FromServer};
 use isonomic_proto::{Call, ClientMessage, Event, Outcome, Reply, ServerMessage, PROTOCOL_VERSION};
@@ -29,7 +30,7 @@ struct Routes {
 }
 
 /// Connect and complete the version handshake.
-async fn open(connector: &Connector, name: &str) -> Option<(BoxedStream, String)> {
+async fn open(connector: &Connector, name: &str) -> Option<(BoxedStream, Welcome)> {
     let mut stream = connector().await.ok()?;
     let hello = ClientMessage::Hello {
         versions: vec![PROTOCOL_VERSION],
@@ -41,7 +42,9 @@ async fn open(connector: &Connector, name: &str) -> Option<(BoxedStream, String)
         .ok()?
         .map(|body| decode_server(&body))
     {
-        Some(FromServer::Message(ServerMessage::Welcome { engine, .. })) => Some((stream, engine)),
+        Some(FromServer::Message(ServerMessage::Welcome { engine, schema, .. })) => {
+            Some((stream, Welcome { engine, schema }))
+        }
         _ => None,
     }
 }
@@ -124,11 +127,17 @@ fn route(incoming: FromServer, routes: &mut Routes, live: &watch::Sender<Live>) 
     }
 }
 
+/// What the engine said in `welcome`.
+struct Welcome {
+    engine: String,
+    schema: Option<SchemaVersion>,
+}
+
 /// Run one connection until it drops. Returns `true` when every `Client`
 /// handle is gone and the task should end.
 async fn serve(
     stream: BoxedStream,
-    engine: String,
+    welcome: Welcome,
     inbox: &mut mpsc::Receiver<Request>,
     live: &watch::Sender<Live>,
 ) -> bool {
@@ -144,7 +153,8 @@ async fn serve(
     let mut incoming = spawn_reader(reader);
     live.send_modify(|view| {
         view.connected = true;
-        view.engine = Some(engine);
+        view.engine = Some(welcome.engine);
+        view.schema = welcome.schema;
     });
 
     let mut routes = Routes::default();
@@ -184,9 +194,9 @@ pub(crate) async fn run(
 ) {
     let mut delay = options.reconnect_min;
     loop {
-        if let Some((stream, engine)) = open(&connector, &options.name).await {
+        if let Some((stream, welcome)) = open(&connector, &options.name).await {
             delay = options.reconnect_min;
-            if serve(stream, engine, &mut inbox, &live).await {
+            if serve(stream, welcome, &mut inbox, &live).await {
                 return;
             }
             live.send_modify(|view| {

@@ -21,6 +21,7 @@
 //! framework's own.
 
 mod actor;
+mod agents;
 mod blobs;
 mod events;
 mod models;
@@ -34,6 +35,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
+use isonomic_proto::agents::SchemaVersion;
 use isonomic_proto::{
     Call, Event, HardwareProfile, Manifest, Reply, SystemStatus, Token, WireError,
 };
@@ -88,6 +90,9 @@ pub struct Live {
     pub engine: Option<String>,
     /// `None` while disconnected or before the first snapshot arrives.
     pub system: Option<SystemStatus>,
+    /// The agent session event schema the engine writes, from `welcome`.
+    /// A newer revision still renders: unknown events decode as unknown.
+    pub schema: Option<SchemaVersion>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -100,6 +105,7 @@ pub enum ClientError {
     UnexpectedReply,
 }
 
+pub use agents::{Agents, SessionStream, SessionUpdate};
 pub use blobs::Blobs;
 pub use events::{EventStream, Events};
 pub use models::{ModelStream, Models};
@@ -186,6 +192,11 @@ impl Client {
     /// The `sql` interface, as the shell (which must name each schema).
     pub fn sql(&self) -> Sql {
         Sql::new(self.clone(), None)
+    }
+
+    /// The agents interface, as the shell: every app's sessions.
+    pub fn agents(&self) -> Agents {
+        Agents::new(self.clone(), None)
     }
 
     /// A client that names `token` on every call: what an app is given.
