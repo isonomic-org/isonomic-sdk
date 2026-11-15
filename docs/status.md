@@ -2,6 +2,12 @@
 
 Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architecture/sdk/status.md`; this repo's own session owns the SDK from here.
 
+## 2026-11-15 · `system.retry` (Desktop request #14)
+
+**Built:** `system.retry { service }` → `retrying {}`, error `not_degraded`; `Client::retry`; the testkit records retries (`retries()`) and scripts their outcome (`on_retry`). Three fixture pairs; 3 new tests; 83 in all. Conformance covers the app-token refusal through the fixture.
+
+**Decision:** retrying a service that is not degraded is refused with `not_degraded`, not answered as a no-op, so a stale Retry button shows an honest error.
+
 ## 2026-11-15 · Conformance (S0)
 
 **Built:** `isonomic-conformance`: 22 checks over the wire (handshake and tolerance, tokens, blobs, events, subscriptions, sql schemas), `run`, `run_only` and a `Report`. The testkit passes all 22. A proxy that strips tokens fails every token, privacy and scope check, so the checks bite. 4 integration tests and a doctest; 80 in all.
