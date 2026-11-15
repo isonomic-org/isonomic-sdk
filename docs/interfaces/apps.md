@@ -29,7 +29,7 @@ Granting the same app again replaces its manifest and keeps its earlier tokens v
 | `connections` | `[{"provider":"calendar"}]` | Linked accounts of those providers |
 | `egress` | `["example.com"]` | Outbound HTTP to those hosts, once the user approves |
 | `blobs` | `{"max_bytes":10485760}` | The blob store, up to that size per blob |
-| `agents` | — | Reserved. A manifest that sets it is refused |
+| `agents` | `AgentsAccess {}` | Its own agent sessions, presets and artifacts (`docs/interfaces/agents.md`) |
 
 ## Errors
 
