@@ -29,5 +29,5 @@ Template:
 - Why: the engine will decide every call with the check function, which
   answers allow, deny or ask, with a reason. An app should be able to tell
   "not allowed" from "waiting for the person". Spec: isonomic-id
-  `docs/spec.md` at `c67932dffd4c776988cdeb5d0d87870a32c0ad16`; the engine side is isonomic-capsule R7.
+  `docs/spec.md` at `d39a507e2902b0b5d3de3cbe096f278ba77a5396`; the engine side is isonomic-capsule R7.
 - Status: open
