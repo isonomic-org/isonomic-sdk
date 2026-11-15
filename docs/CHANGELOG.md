@@ -2,6 +2,20 @@
 
 Newest first. Each entry names what the engine (isonomic-capsule) and the window (isonomic-desktop) must do when they move `SDK_REF` to it.
 
+## Unreleased: the `agents` interface (wire and client)
+
+**Build:** the proto now depends on `harness-core` (isonomic-harness, pinned by commit in the workspace `Cargo.toml`) for the agent session event types it re-exports. Cargo fetches it over SSH. Every repository that builds the proto needs read access to isonomic-harness: in CI, add `harness: true` to the shared workflow call (needs the `HARNESS_DEPLOY_KEY` org secret).
+
+**Wire (additive, still version 0)**
+
+- 22 methods in `sessions.*`, `approvals.*`, `questions.answer`, `tools.*`, `presets.*` and `artifacts.*` (`docs/interfaces/agents.md`); replies `session_created`, `sessions`, `session_snapshot`, `done`, `accepted`, `purged`, `session_stream`, `approvals`, `presets`, `preset`, `preset_saved`, `artifact`, `artifacts`; events `session_event` and `live_delta`; error codes `not_found`, `invalid_preset`, `class_not_supported`, `not_at_turn_boundary`, `continue_refused`, `not_allowed_to_decide`, `missing_user_action`, `already_decided`, `session_failed`, `invalid_tools`.
+- `welcome` gains `schema { version, revision }`, the session event schema the engine writes. Optional: an older engine or client simply leaves it out.
+- The `agents` capability is open: a manifest may set it (`AgentsAccess {}`), and `ManifestError::AgentsReserved` is gone.
+
+**For the engine** (Part A of the agents brief): serve each method by calling harness-host after checking the token, mapping the SDK's argument and result types to the host's and `HostError` to the error codes above (`Unauthorized` → `capability_denied`, `Store` → `internal`, `Model` → `model_unavailable`). Put `SchemaVersion::CURRENT` in `welcome`.
+
+**For the window:** `Client::agents()` and `AppClient::agents()`: every call, and `subscribe` → `SessionStream` (`next`, `last_seq`), which unsubscribes when dropped. `Live::schema`. `Reply::SessionSnapshot`, `Reply::Preset` and `Reply::Artifact` are boxed.
+
 ## Unreleased: Isonomic UI at 4c912f6
 
 **Wire:** no change.
