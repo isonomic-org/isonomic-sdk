@@ -12,10 +12,9 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use harness_host::{
-    AppKind, Caller as HostCaller, CapabilityToken, HostError, MemoryHost, UserActionToken,
+    AppKind, Caller as HostCaller, CapabilityToken, HostError, MemoryHost, Update, UserActionToken,
 };
-use isonomic_proto::agents::schema::Event as LogEvent;
-use isonomic_proto::agents::{AppId, ApprovalId, ForkReason, SessionEvent, SessionId};
+use isonomic_proto::agents::{ApprovalId, ForkReason, SessionEvent, SessionId};
 use isonomic_proto::auth::Caller;
 use isonomic_proto::{Call, ErrorCode, Event, Reply, ServerMessage, Token, WireError};
 
@@ -66,27 +65,6 @@ fn run<T>(
     memory.block_on(call)
 }
 
-/// Ids are minted per session, and the call named another session.
-fn not_in_session(what: &str) -> WireError {
-    let message = format!("no such {what} in this session");
-    WireError::new(ErrorCode::NotFound, message)
-}
-
-/// The caller a call naming an app acts as. `proto::auth` has already
-/// refused an app naming another app, and the shell's unnamed purge; the
-/// shell acts for the app it names.
-fn scoped(caller: &HostCaller, scope: Option<&AppId>) -> Result<HostCaller, WireError> {
-    match (scope, caller.scope.app()) {
-        (None, _) => Ok(caller.clone()),
-        (Some(app), Some(own)) if app == own => Ok(caller.clone()),
-        (Some(_), Some(_)) => Err(WireError::new(
-            ErrorCode::NotFound,
-            "no such app for this caller",
-        )),
-        (Some(app), None) => Ok(HostCaller::app(&app.to_string(), AppKind::FirstParty)),
-    }
-}
-
 fn answer(memory: &MemoryHost, caller: &HostCaller, call: Call) -> Result<Reply, WireError> {
     let host = &memory.host;
     let done = |r: Result<(), HostError>| r.map(|()| Reply::Done {});
@@ -125,13 +103,14 @@ fn answer(memory: &MemoryHost, caller: &HostCaller, call: Call) -> Result<Reply,
         }
         Call::SessionsContinue(r) => done(run(memory, host.continue_reply(caller, &r.session))),
         Call::SessionsCancel(r) => done(run(memory, host.cancel(caller, &r.session))),
+        // `proto::auth` has refused another app's name, and the shell's
+        // purge without one; an app's `{}` is its own.
         Call::SessionsPurge(r) => {
-            let caller = scoped(caller, r.app.as_ref())?;
-            run(memory, host.purge(&caller)).map(|r| Reply::Purged(map::purged(r)))
+            let app = r.app.unwrap_or_else(|| caller.owner());
+            run(memory, host.purge(caller, &app)).map(|r| Reply::Purged(map::purged(r)))
         }
         Call::ApprovalsList(r) => {
             let scope = r.app;
-            scoped(caller, scope.as_ref())?;
             run(memory, host.list_approvals(caller)).map(|list| {
                 let list = list
                     .into_iter()
@@ -140,49 +119,24 @@ fn answer(memory: &MemoryHost, caller: &HostCaller, call: Call) -> Result<Reply,
             })
         }
         Call::ApprovalsDecide(r) => {
-            run(memory, host.open_session(caller, &r.session)).map_err(map::error)?;
-            let asked = memory.log(&r.session).iter().any(
-                |e| matches!(&e.event, LogEvent::ApprovalRequest(a) if a.approval == r.approval),
-            );
-            if !asked {
-                return Err(not_in_session("approval"));
-            }
             let token = r.user_action.map(UserActionToken);
             let decision = map::decision(r.decision);
-            done(run(
-                memory,
-                host.decide_approval(caller, &r.approval, decision, token),
-            ))
+            let decide = host.decide_approval(caller, &r.session, &r.approval, decision, token);
+            done(run(memory, decide))
         }
         Call::QuestionsAnswer(r) => {
-            let open = run(memory, host.open_session(caller, &r.session)).map_err(map::error)?;
-            if !open.questions.contains(&r.question) {
-                return Err(not_in_session("question"));
-            }
-            let question = r.question.clone();
-            done(run(
-                memory,
-                host.answer_question(caller, &question, map::answer(r)),
-            ))
+            let (session, question) = (r.session.clone(), r.question.clone());
+            let answer = host.answer_question(caller, &session, &question, map::answer(r));
+            done(run(memory, answer))
         }
         Call::ToolsRegisterClient(r) => done(run(
             memory,
             host.register_client_tools(caller, &r.session, r.specs),
         )),
         Call::ToolsResult(r) => {
-            run(memory, host.open_session(caller, &r.session)).map_err(map::error)?;
-            let asked = memory
-                .log(&r.session)
-                .iter()
-                .any(|e| matches!(&e.event, LogEvent::ToolCall(c) if c.call == r.call));
-            if !asked {
-                return Err(not_in_session("tool call"));
-            }
-            let call = r.call.clone();
-            done(run(
-                memory,
-                host.client_tool_result(caller, &call, map::outcome(r)),
-            ))
+            let (session, call) = (r.session.clone(), r.call.clone());
+            let result = host.client_tool_result(caller, &session, &call, map::outcome(r));
+            done(run(memory, result))
         }
         Call::PresetsList(_) => run(memory, host.list_presets(caller))
             .map(|list| Reply::Presets(list.into_iter().map(map::preset_summary).collect())),
@@ -231,30 +185,18 @@ pub(crate) async fn dispatch(
             let _ = conn.out.send(reply).await;
             let out = conn.out.clone();
             let task = tokio::spawn(async move {
-                while let Some(event) = feed.next().await {
-                    // Deltas stream ahead of the event that makes them final.
-                    for delta in feed.deltas() {
-                        let event = Event::LiveDelta(delta);
-                        if out
-                            .send(ServerMessage::Event {
-                                subscription,
-                                event,
-                            })
-                            .await
-                            .is_err()
-                        {
-                            return;
-                        }
-                    }
-                    let event = Event::SessionEvent(Box::new(event));
-                    if out
-                        .send(ServerMessage::Event {
-                            subscription,
-                            event,
-                        })
-                        .await
-                        .is_err()
-                    {
+                // Deltas wake the subscriber as they come, ahead of the
+                // durable event that makes them final.
+                while let Some(update) = feed.next_update().await {
+                    let event = match update {
+                        Update::Event(event) => Event::SessionEvent(Box::new(event)),
+                        Update::Delta(delta) => Event::LiveDelta(delta),
+                    };
+                    let message = ServerMessage::Event {
+                        subscription,
+                        event,
+                    };
+                    if out.send(message).await.is_err() {
                         return;
                     }
                 }
@@ -311,15 +253,20 @@ impl FakeAgents {
     }
 
     /// A user-action token, as the window mints one when a person acts on
-    /// `approval`, for the app `app` (the shell when `None`). Pass it to
-    /// `Agents::decide`.
-    pub fn user_action(&self, app: Option<&str>, approval: &ApprovalId) -> String {
+    /// `approval` in `session`, for the app `app` (the shell when `None`).
+    /// Pass it to `Agents::decide`.
+    pub fn user_action(
+        &self,
+        app: Option<&str>,
+        session: &SessionId,
+        approval: &ApprovalId,
+    ) -> String {
         let mut agents = self.state.agents.lock().unwrap();
         let caller = match app {
             None => HostCaller::shell(),
             Some(app) => agents.app(app),
         };
-        agents.memory.user_action(&caller, approval).0
+        agents.memory.user_action(&caller, session, approval).0
     }
 
     /// The app goes away: its open client tool calls wait for it, and its

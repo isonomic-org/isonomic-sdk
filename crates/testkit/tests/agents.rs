@@ -173,7 +173,7 @@ async fn an_approval_needs_the_persons_user_action() {
         .decide(&session, &approval, DecisionInput::Allow, Some("forged"))
         .await;
     assert_eq!(code(forged), ErrorCode::MissingUserAction);
-    let person = engine.agents().user_action(Some(id), &approval);
+    let person = engine.agents().user_action(Some(id), &session, &approval);
     agents
         .decide(
             &session,
@@ -289,7 +289,7 @@ async fn an_approval_is_named_by_its_session_as_well_as_its_id() {
         .request
         .approval
         .clone();
-    let person = engine.agents().user_action(Some(id), &approval);
+    let person = engine.agents().user_action(Some(id), &held, &approval);
     let elsewhere = agents
         .decide(
             &other,
@@ -345,4 +345,47 @@ async fn only_the_shell_names_another_app() {
     assert_eq!(code(chat.agents().open(&mine).await), ErrorCode::NotFound);
     let (left, _) = shell.agents().list(Default::default()).await.unwrap();
     assert_eq!(left.len(), 1, "the other app's session stays");
+}
+
+#[tokio::test]
+async fn equal_approval_ids_in_two_apps_stay_apart() {
+    let engine = TestEngine::new();
+    let (chat_id, notes_id) = ("com.isonomic.chat", "com.isonomic.notes");
+    let mut pending = vec![];
+    for id in [chat_id, notes_id] {
+        let agents = app(&engine, id).agents();
+        let session = agents.create("test").await.unwrap();
+        let specs = vec![tool("post", vec![Effect::ActsOutward])];
+        agents.register_client_tools(&session, specs).await.unwrap();
+        engine
+            .agents()
+            .with(|host| host.model.calls(&[("post", "{}")]));
+        agents.send_text(&session, "Post.").await.unwrap();
+        let approval = agents.approvals(None).await.unwrap()[0]
+            .request
+            .approval
+            .clone();
+        pending.push((agents, session, approval));
+    }
+    assert_eq!(pending[0].2, pending[1].2, "ids are minted per session");
+    let (all, _) = (engine.client().agents().approvals(None).await.unwrap(), ());
+    assert_eq!(all.len(), 2, "the shell sees both");
+    let (chat, session, approval) = &pending[0];
+    let person = engine
+        .agents()
+        .user_action(Some(chat_id), session, approval);
+    chat.decide(
+        session,
+        approval,
+        DecisionInput::Allow,
+        Some(person.as_str()),
+    )
+    .await
+    .unwrap();
+    let (notes, _, _) = &pending[1];
+    assert_eq!(
+        notes.approvals(None).await.unwrap().len(),
+        1,
+        "the other app's waits"
+    );
 }

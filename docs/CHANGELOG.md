@@ -2,6 +2,21 @@
 
 Newest first. Each entry names what the engine (isonomic-capsule) and the window (isonomic-desktop) must do when they move `SDK_REF` to it.
 
+
+## Unreleased: harness at f061211
+
+**Wire:** no change; the session event schema is the same.
+
+**Build:** `harness-core` and `harness-host` move to isonomic-harness `f0612113f6dcc8e11528642137e6dd9b24f48165`. It brings continue after a title step, live deltas that wake subscribers, `Subscription::next_update()`, and a host keyed by (session, id) for approvals, questions and client tool calls. Every consumer declares harness with exactly this URL and rev, or cargo builds two copies of harness-core:
+
+```toml
+harness-core = { git = "ssh://git@github.com/isonomic-org/isonomic-harness.git", rev = "f0612113f6dcc8e11528642137e6dd9b24f48165" }
+```
+
+**For the engine:** the host calls take the session before the id: `decide_approval(caller, session, id, decision, token)`, `answer_question(caller, session, id, answer)` and `client_tool_result(caller, session, call, outcome)`. `purge(caller, app)` takes the wire's `app`, which is the caller's own when absent. Stream with `next_update()` to send `live_delta`s as they come.
+
+**For apps' tests:** `FakeAgents::user_action(app, session, approval)` takes the session. The testkit streams deltas as they arrive, no longer held until the next durable event.
+
 ## Unreleased: installing local models (isonomic-sdk #21)
 
 **Wire (additive, still version 0):** methods `models.download { model }` → `downloading { subscription, model, total_bytes? }` with `download_progress { model, received_bytes, total_bytes?, outcome?, error? }` events, `models.download_cancel { model }` → `cancelled {}` (or `not_downloading`, a new error code), and `models.recommended { profile? }` → `recommended { model, profile, size_bytes? }`. Sizes are absent when unknown, never 0. `ModelState` gains `not_installed` and `downloading`. All three methods are shell only.

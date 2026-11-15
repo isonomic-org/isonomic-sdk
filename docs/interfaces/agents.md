@@ -83,12 +83,12 @@ The testkit serves every agents call with harness-host's `MemoryHost` (at the co
 
 - `reply(text)` queues the model's next reply. With nothing queued it answers "OK.". `with(|host| ..)` reaches the rest of the host: `host.model.calls(..)` for tool calls, `host.model.push(..)` for any model events.
 - Each call runs what it started to completion before it answers, so a scripted turn has ended by the time `sessions.send` replies. The clock moves only with `advance(ms)`, which also runs timers, timeouts and the watchdog.
-- `user_action(app, approval)` mints the token the window would when the person acts; pass it to `decide`.
+- `user_action(app, session, approval)` mints the token the window would when the person acts; pass it to `decide`.
 - `disconnect(app)` and `reconnect(app)` take an app's client tools away and bring them back.
 - `log(session)` reads the events the host stored.
 
 A purged session's stream sends nothing more; the wire has no end-of-stream event for it.
 
-The host still indexes approval, question and call ids across sessions (isonomic-harness #30). Until it takes the session, the testkit checks that the named session holds the approval, question or call, and answers `not_found` otherwise. For `app` on `sessions.purge` and `approvals.list`, `proto::auth` refuses what the rule above forbids before the host sees the call. The shell's purge acts for the app it names.
+The host keys approvals, questions and client tool calls by (session, id), so equal ids in two sessions never meet; a call naming the wrong session answers `not_found`. For `app` on `sessions.purge` and `approvals.list`, `proto::auth` refuses what the rule above forbids before the host sees the call. The shell's purge acts for the app it names.
 
 The conformance suite's `agents.` group runs against this host and the engine's (`docs/conformance.md`).
