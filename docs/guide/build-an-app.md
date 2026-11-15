@@ -47,7 +47,7 @@ fn manifest() -> Manifest {
 | `events` | none needed | Its own scope's events, always; never another app's |
 | `connections` | `vec![ConnectionAccess { provider: "calendar".into() }]` | Linked accounts of that kind |
 | `egress` | `vec!["example.com".into()]` | Outbound HTTP to those hosts, once the user approves |
-| `agents` | — | Reserved; leave it out |
+| `agents` | `AgentsAccess {}` | Its own agent sessions, presets and artifacts |
 
 ## 3. The trait
 
@@ -126,7 +126,33 @@ Never block the foreground thread, and never poll: await the client, and call `c
 
 Errors are typed. `ClientError::Engine(error)` carries a stable `error.code` (`capability_denied`, `insufficient_memory`, ...) and a readable `error.message`; `ClientError::Disconnected` means the engine is restarting, and the client reconnects by itself. `cx.client().live()` tells a view when it is back.
 
-## 5. Testing
+## 5. Agent sessions
+
+With the `agents` capability, `cx.client().agents()` runs agent sessions in the engine's host: create one from a preset, send input, and follow its events. Every method and rule is in `docs/interfaces/agents.md`; the event types are harness-core's, under `isonomic_proto::agents::schema`.
+
+```rust
+let agents = app.client().agents();
+let session = agents.create("chat").await?;
+let mut stream = agents.subscribe(&session, 0).await?;
+agents.send_text(&session, "Plan three days in Lisbon").await?;
+while let Some(update) = stream.next().await {
+    match update {
+        SessionUpdate::Delta(delta) => { /* append delta.text to the reply in progress */ }
+        SessionUpdate::Event(event) => match &event.event {
+            schema::Event::Assistant(reply) => { /* the finished reply: replace the deltas */ }
+            schema::Event::TurnEnd(_) => break,
+            _ => { /* user, tool calls, approvals, unknown events: render generically */ }
+        },
+    }
+}
+```
+
+- **Resume, don't restart.** After a reconnect, subscribe from `stream.last_seq()`: no event is missed or repeated.
+- **Deltas are a preview.** They may be dropped under load; the `assistant` event is the truth.
+- **Approvals belong to the person.** `decide` needs the user-action token the window gives you when the person clicks; without it the engine refuses.
+- **Client tools** (`register_client_tools`) arrive as `tool.call` events with `kind: client`; answer each with `tool_result`.
+
+## 6. Testing
 
 `isonomic_app::testing` (feature `test-support`) runs the app in a headless window against the in-memory engine, under a token granted from the app's own manifest. The testkit enforces that token exactly as the engine does, so a test fails if the app calls anything its manifest does not allow.
 
@@ -151,7 +177,7 @@ fn it_streams_a_reply(cx: &mut TestAppContext) {
 - `open.attention` is what the rail would show.
 - No socket, no engine binary, no network: these tests run anywhere, including CI on Linux.
 
-## 6. Registering it in the window
+## 7. Registering it in the window
 
 The window links the crate and registers it:
 
