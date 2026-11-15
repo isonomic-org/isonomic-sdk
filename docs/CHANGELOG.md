@@ -2,6 +2,17 @@
 
 Newest first. Each entry names what the engine (isonomic-capsule) and the window (isonomic-desktop) must do when they move `SDK_REF` to it.
 
+## Unreleased: Isonomic UI through the SDK
+
+**Wire:** no change.
+
+**For apps and the window:** Isonomic UI now comes through the SDK, as `isonomic_app::ui`, at the commit in the SDK's `UI_REF` (4c912f6), compiled into the window once.
+
+- Drop `isonomic-ui` from your dependencies and delete your own `UI_REF`.
+- Write `use isonomic_app::ui as gpui;` where you had `extern crate isonomic_ui as gpui;`, and `gpui::` where you wrote `isonomic_ui::`. The `use` goes in every module that derives a component or runs `#[gpui::test]`.
+- Keep the `../isonomic-ui` checkout, but at the SDK's `UI_REF`, and keep the `[patch.crates-io] gpui-pre-macros` line in your workspace root.
+- `isonomic-app` features `editor` and `node-graph` reserve `isonomic_app::editor` and `isonomic_app::node_graph` for the shared toolkits; both are empty for now.
+
 ## Unreleased: `test-support` builds outside this workspace
 
 **Wire:** no change.

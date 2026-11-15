@@ -32,6 +32,6 @@ cargo test --all-features
 
 `isonomic-capsule` and `isonomic-desktop` use this repo as a sibling checkout (`../isonomic-sdk`). Their CI checks it out at the commit in their `SDK_REF` file.
 
-This repo pins Isonomic UI the same way: a sibling checkout (`../isonomic-ui`) at the commit in `UI_REF`. Only the app crate and the example need it; the engine builds `proto`, `client` and `testkit` without it. On Linux, GPUI needs the system packages listed in `.github/workflows/ci.yml`.
+This repo pins Isonomic UI the same way: a sibling checkout (`../isonomic-ui`) at the commit in `UI_REF`, the one UI pin for every app. `isonomic-app` re-exports it as `isonomic_app::ui`, so apps and the window take components from the SDK and never depend on isonomic-ui themselves. Only the app crate and the example need it; the engine builds `proto`, `client` and `testkit` without it. On Linux, GPUI needs the system packages listed in `.github/workflows/ci.yml`.
 
 The proto depends on `harness-core` from the private `isonomic-harness` repo, pinned by commit in the workspace `Cargo.toml`, for the agent session event types it re-exports. Cargo fetches it over SSH, so a build needs read access to that repo: in CI, the shared workflow's `harness: true` input with the `HARNESS_DEPLOY_KEY` secret. Every repository that builds the proto needs the same.

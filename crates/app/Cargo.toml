@@ -6,6 +6,9 @@ edition.workspace = true
 publish.workspace = true
 
 [features]
+# The shared toolkits, reached through the SDK; reserved, empty for now.
+editor = []
+node-graph = []
 # A headless host for app tests: an in-memory engine, a granted token, and
 # GPUI's test harness.
 test-support = ["dep:isonomic-testkit", "isonomic-ui/test-support", "tokio/rt-multi-thread"]

@@ -17,8 +17,11 @@
 //! }
 //! ```
 //!
-//! This is the only SDK crate that depends on Isonomic UI: [`App::build`]
-//! returns a GPUI view, and GPUI comes only through Isonomic UI.
+//! This is the only SDK crate that depends on Isonomic UI, and it hands it
+//! on as [`ui`]: apps and the window take every component from there and
+//! never depend on isonomic-ui themselves. The SDK's `UI_REF` is the one pin.
+//! The shared toolkits ride the same way: [`editor`] and [`node_graph`],
+//! behind features of those names.
 
 mod context;
 mod host;
@@ -26,6 +29,32 @@ mod host;
 pub mod testing;
 
 use isonomic_ui as gpui;
+
+/// Isonomic UI, the components every app's front end is made of, at the
+/// commit in the SDK's `UI_REF`. Import it under the name `gpui`, which its
+/// macros expand to:
+///
+/// ```ignore
+/// use isonomic_app::ui as gpui;
+/// use gpui::{div, IntoElement, ParentElement, Render};
+///
+/// #[derive(IntoElement)]
+/// struct Badge;
+/// ```
+///
+/// Put that `use` in every module that derives a component or runs
+/// `#[gpui::test]`.
+pub use isonomic_ui as ui;
+
+/// The editor toolkit, reached through the SDK. Reserved: empty until the
+/// toolkit exists, so turning the feature on later breaks no app.
+#[cfg(feature = "editor")]
+pub mod editor {}
+
+/// The node-graph toolkit, reached through the SDK. Reserved: empty until
+/// the toolkit exists, so turning the feature on later breaks no app.
+#[cfg(feature = "node-graph")]
+pub mod node_graph {}
 
 pub use context::{AppContext, Attention, MemorySettings, Settings, SettingsStore};
 pub use host::{register, LoadedApp, Registration, Tab};

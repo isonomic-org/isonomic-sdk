@@ -1,15 +1,15 @@
 //! Hello in a headless window, against the in-memory engine.
 
-extern crate isonomic_ui as gpui;
+use isonomic_app::ui as gpui;
 
+use gpui::TestAppContext;
 use hello_app::{Hello, Phase};
 use isonomic_app::testing::{wait_until, TestHost};
 use isonomic_app::Attention;
 use isonomic_proto::{ErrorCode, ModelChunk, WireError};
 use isonomic_testkit::Step;
-use isonomic_ui::TestAppContext;
 
-#[isonomic_ui::test]
+#[gpui::test]
 fn it_lists_the_models_and_streams_one_reply(cx: &mut TestAppContext) {
     let host = TestHost::new();
     let open = host.open::<Hello>(cx);
@@ -37,7 +37,7 @@ fn it_lists_the_models_and_streams_one_reply(cx: &mut TestAppContext) {
     assert_eq!(mine, ["models.list", "models.stream"]);
 }
 
-#[isonomic_ui::test]
+#[gpui::test]
 fn the_reply_arrives_chunk_by_chunk_and_failures_show(cx: &mut TestAppContext) {
     let host = TestHost::new();
     let crashed = WireError::new(ErrorCode::ModelUnavailable, "the model worker crashed");
@@ -59,7 +59,7 @@ fn the_reply_arrives_chunk_by_chunk_and_failures_show(cx: &mut TestAppContext) {
     });
 }
 
-#[isonomic_ui::test]
+#[gpui::test]
 fn the_window_routes_search_and_deep_links_to_the_app(cx: &mut TestAppContext) {
     let host = TestHost::new();
     let open = host.open::<Hello>(cx);
@@ -78,7 +78,7 @@ fn the_window_routes_search_and_deep_links_to_the_app(cx: &mut TestAppContext) {
     });
 }
 
-#[isonomic_ui::test]
+#[gpui::test]
 fn settings_are_kept_per_app(cx: &mut TestAppContext) {
     let host = TestHost::new();
     let (hello, _) = host.context::<Hello>();
