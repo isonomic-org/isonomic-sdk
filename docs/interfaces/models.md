@@ -59,7 +59,7 @@ The window's first run, V1 local models only. All three calls are the shell's: `
 
 - **State.** `models.info` says `not_installed` for a local model whose file is not on the machine yet, and `downloading` while it is fetched; `size_bytes` is the size to show before starting. A model that is not installed refuses streams and embeddings with `model_unavailable`.
 - **The first model.** `models.recommended {}` names the model for this machine's profile (`system.profile`), or for the `profile` asked about. Below every local model's needs (V1's floor is 16 GiB) it answers `insufficient_memory`, with `required_bytes` (the floor) and `available_bytes`. Here `available_bytes` is the machine's **total physical memory**, not what is free now: the floor is about the machine, not the moment.
-- **The download is the engine's.** `models.download` starts it, or attaches to it if it is already running. The first event says where it stands, so a window that closed and came back calls `models.download` again and carries on. Dropping a `DownloadStream` only stops following it. An installed model answers with one final `installed` event.
+- **The download is the engine's.** `models.download` starts it, or attaches to it if it is already running. The first event says where it stands, so a window that closed and came back calls `models.download` again and carries on. Dropping a `DownloadStream` only stops following it. An installed model answers with one final `installed` event; its `received_bytes` is the file size, or 0 when the size is unknown.
 - **Sizes may be unknown.** `total_bytes` and `size_bytes` are absent, never 0, when the engine does not know the size yet; show bytes received instead of a percentage.
 - **Progress.** `download_progress { model, received_bytes, total_bytes? }`. The last event has `outcome`: `installed` (the model is then `stopped`, ready to load), `failed` (with `error`), or `cancelled`.
 - **Cancel** names the model, since several windows may follow one download. `not_downloading` when none is running. A remote model answers `unsupported`; there is nothing to download.
@@ -79,7 +79,7 @@ The window's first run, V1 local models only. All three calls are the shell's: `
 | `unknown_model` | No such model, or no default of the kind asked for |
 | `unsupported` | The model cannot do this (embeddings from a chat model) |
 | `insufficient_memory` | The memory gate refused; `memory` carries `required_bytes`, `available_bytes` and `reason` |
-| `model_unavailable` | The worker is degraded or crashed |
+| `model_unavailable` | The worker is degraded or crashed, or the model is not installed (download it first) |
 | `remote_disabled` | The model is remote and the user's switch is off |
 | `unknown_subscription` | `models.cancel` for a stream that ended or is not the caller's |
 | `not_downloading` | `models.download_cancel` for a model with no download running |

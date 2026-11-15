@@ -202,6 +202,10 @@ async fn play(state: Arc<State>, model: String, total: Option<u64>, steps: Vec<D
             }
         }
     }
+    // A cancel that came after the last step still wins.
+    if *cancel.borrow() {
+        return end(received, DownloadOutcome::Cancelled, None);
+    }
     end(received, DownloadOutcome::Installed, None);
 }
 
@@ -213,15 +217,16 @@ fn quarters(total: Option<u64>) -> Vec<DownloadStep> {
 }
 
 /// Start the model's download unless it runs, and attach to it: where it
-/// stands now, then what follows.
+/// stands now, then what follows. Both under one lock, so the snapshot is
+/// never newer than the first event after it.
 fn attach(
     state: &Arc<State>,
     model: &str,
     total: Option<u64>,
-) -> broadcast::Receiver<DownloadProgress> {
+) -> (u64, broadcast::Receiver<DownloadProgress>) {
     let mut downloads = state.downloads.lock().unwrap();
     if let Some(running) = downloads.running.get(model) {
-        return running.events.subscribe();
+        return (running.received, running.events.subscribe());
     }
     let steps = downloads
         .scripts
@@ -237,7 +242,7 @@ fn attach(
     };
     downloads.running.insert(model.to_string(), running);
     tokio::spawn(play(Arc::clone(state), model.to_string(), total, steps));
-    receiver
+    (0, receiver)
 }
 
 fn recommended(state: &State, request: RecommendModel) -> Result<Reply, WireError> {
@@ -323,20 +328,11 @@ pub(crate) async fn dispatch(
                     send(done).await;
                 })
             } else {
-                let mut events = attach(state, &model, total);
-                let now = state
-                    .downloads
-                    .lock()
-                    .unwrap()
-                    .running
-                    .get(&model)
-                    .map(|r| r.received);
+                let (now, mut events) = attach(state, &model, total);
                 let state = Arc::clone(state);
                 tokio::spawn(async move {
-                    if let Some(received) = now {
-                        if !send(progress(&model, received, total)).await {
-                            return;
-                        }
+                    if !send(progress(&model, now, total)).await {
+                        return;
                     }
                     loop {
                         match events.recv().await {

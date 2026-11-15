@@ -30,6 +30,7 @@ isonomic-app = { path = "crates/app" }
 # way the engine and the window pin this repo. Only the app crate (and apps)
 # depend on it.
 isonomic-ui = { path = "../isonomic-ui/crates/ui", default-features = false }
+isonomic-ui-extra = { path = "../isonomic-ui/crates/extra" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

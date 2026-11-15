@@ -46,6 +46,11 @@ use isonomic_ui as gpui;
 /// `#[gpui::test]`.
 pub use isonomic_ui as ui;
 
+/// Isonomic UI's extra components: the prompt composer, the thinking
+/// indicator, approval and tool cards, and more. Feature `extra`.
+#[cfg(feature = "extra")]
+pub use isonomic_ui_extra as extra;
+
 /// The editor toolkit, reached through the SDK. Reserved: empty until the
 /// toolkit exists, so turning the feature on later breaks no app.
 #[cfg(feature = "editor")]
