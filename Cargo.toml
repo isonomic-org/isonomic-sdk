@@ -4,6 +4,7 @@ members = [
     "crates/proto",
     "crates/client",
     "crates/testkit",
+    "crates/conformance",
     "crates/app",
     "examples/hello-app",
     "xtask",
@@ -18,6 +19,7 @@ publish = false
 isonomic-proto = { path = "crates/proto", features = ["tokio"] }
 isonomic-client = { path = "crates/client" }
 isonomic-testkit = { path = "crates/testkit" }
+isonomic-conformance = { path = "crates/conformance" }
 isonomic-app = { path = "crates/app" }
 # Isonomic UI is a sibling checkout pinned to the commit in UI_REF, the same
 # way the engine and the window pin this repo. Only the app crate (and apps)

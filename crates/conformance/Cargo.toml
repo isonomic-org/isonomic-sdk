@@ -1,0 +1,16 @@
+[package]
+name = "isonomic-conformance"
+description = "The SDK contract as checks against any engine connection: the testkit and the engine both pass them"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+isonomic-client.workspace = true
+isonomic-proto.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+isonomic-testkit.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread"] }

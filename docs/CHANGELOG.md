@@ -2,6 +2,14 @@
 
 Newest first. Each entry names what the engine (isonomic-capsule) and the window (isonomic-desktop) must do when they move `SDK_REF` to it.
 
+## Unreleased: the conformance crate
+
+**Wire:** no change.
+
+**For the engine:** add `isonomic-conformance` as a dev-dependency and run `isonomic_conformance::run(unix_connector(<test socket>))` in a test (`docs/conformance.md`). Every check that fails names the rule it broke. `run_only` takes a filter, for interfaces still being built.
+
+**For the window:** nothing to change. `Client::live()` now documents that a borrow of the live view must not be held: while one is, the client cannot update the view and calls wait.
+
 ## Unreleased: the `sql` interface
 
 **Wire (additive, still version 0)**

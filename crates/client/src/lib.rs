@@ -151,7 +151,9 @@ impl Client {
         Self { requests, live }
     }
 
-    /// The live view. Await `changed()` on it; never poll.
+    /// The live view. Await `changed()` on it; never poll. Copy what you
+    /// need out of `borrow()` or `wait_for()` and drop the guard at once:
+    /// while one is held, the client cannot update the view, and calls wait.
     pub fn live(&self) -> watch::Receiver<Live> {
         self.live.clone()
     }
