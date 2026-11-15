@@ -96,14 +96,23 @@ async fn still_answers(stream: &mut BoxedStream, id: u64) -> Outcome {
 }
 
 /// `hello` with the client's versions gets a `welcome` naming the highest
-/// version both speak.
+/// version both speak, and the agent session schema the engine writes.
 pub async fn welcome(target: Target) -> Outcome {
     let mut stream = open(&target).await?;
     send(&mut stream, &hello(vec![PROTOCOL_VERSION, 9_999])).await?;
     match next(&mut stream).await? {
-        ServerMessage::Welcome { version, engine } => ensure(version == PROTOCOL_VERSION, || {
-            format!("engine {engine} chose version {version}, not {PROTOCOL_VERSION}")
-        }),
+        ServerMessage::Welcome {
+            version,
+            engine,
+            schema,
+        } => {
+            ensure(version == PROTOCOL_VERSION, || {
+                format!("engine {engine} chose version {version}, not {PROTOCOL_VERSION}")
+            })?;
+            ensure(schema.is_some(), || {
+                format!("engine {engine} did not name its session event schema")
+            })
+        }
         other => Err(format!("expected welcome, got {other:?}")),
     }
 }

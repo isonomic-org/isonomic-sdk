@@ -18,6 +18,7 @@ const FIXTURES: &[&str] = &[
     include_str!("../../proto/fixtures/v0/blobs.jsonl"),
     include_str!("../../proto/fixtures/v0/events.jsonl"),
     include_str!("../../proto/fixtures/v0/sql.jsonl"),
+    include_str!("../../proto/fixtures/v0/agents.jsonl"),
 ];
 
 /// Every call in the fixtures, in order.
@@ -50,8 +51,8 @@ fn everything() -> Capabilities {
     }
 }
 
-/// The shell grants valid manifests and refuses invalid ones, including one
-/// that sets the reserved agents capability.
+/// The shell grants valid manifests, including one with the agents
+/// capability, and refuses invalid ones.
 pub async fn grant(target: Target) -> Outcome {
     let valid = manifest("grant", everything(), &["conformance_grant"]);
     let token = ok(target.shell.grant(valid.clone()).await, "a valid manifest")?;
@@ -69,12 +70,7 @@ pub async fn grant(target: Target) -> Outcome {
 
     let mut agents = valid;
     agents.capabilities.agents = Some(AgentsAccess::default());
-    let result = target.shell.grant(agents).await;
-    refused(
-        result,
-        ErrorCode::InvalidManifest,
-        "the reserved agents capability",
-    )
+    ok(target.shell.grant(agents).await, "the agents capability").map(|_| ())
 }
 
 /// A token the engine never issued: `unknown_token`, on any interface.
@@ -121,7 +117,8 @@ pub async fn shell_only(target: Target) -> Outcome {
 }
 
 /// An app with no capabilities is refused every method of every interface
-/// that needs one, and the fixtures cover every such method.
+/// that needs one (all but `events`), and the fixtures cover every such
+/// method.
 pub async fn every_interface(target: Target) -> Outcome {
     let app = target
         .app(manifest("no-capabilities", Capabilities::default(), &[]))
@@ -135,6 +132,7 @@ pub async fn every_interface(target: Target) -> Outcome {
                 | Interface::Models
                 | Interface::Blobs
                 | Interface::Sql
+                | Interface::Agents
         );
         if !needs_one || matches!(call, Call::SystemShutdown) {
             continue;
