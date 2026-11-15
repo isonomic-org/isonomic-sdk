@@ -2,6 +2,16 @@
 
 Newest first. Each entry names what the engine (isonomic-capsule) and the window (isonomic-desktop) must do when they move `SDK_REF` to it.
 
+## Unreleased: the `sql` interface
+
+**Wire (additive, still version 0)**
+
+- Methods `sql.query`, `sql.execute`, `sql.batch`, `sql.subscribe`, `sql.unsubscribe` (`docs/interfaces/sql.md`); replies `rows`, `executed`, `executed_batch`, `live_query`; event `rows_changed`; error code `sql_error`.
+
+**For the engine** (filed in isonomic-capsule `docs/requests.md`, R5): a role per app over its own schemas plus read-only grants on the schemas its manifest lists, chosen with `proto::auth::authorize_schema`; positional parameters; batches in one transaction; live queries re-run when a write touches their tables, pushing the whole new result.
+
+**For the window:** `Client::sql()` and `AppClient::sql()`: `query`, `execute`, `batch`, `in_schema`, and `live` → `LiveQuery` (`rows`, `changed`), which unsubscribes when dropped.
+
 ## Unreleased: the `events` interface
 
 **Wire (additive, still version 0)**
