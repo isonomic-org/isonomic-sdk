@@ -3,6 +3,13 @@
 Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architecture/sdk/status.md`; this repo's own session owns the SDK from here.
 
 
+
+## 2026-11-15 · Requests from other sessions
+
+`docs/requests.md` collects them. Open there:
+
+- **Say why a call was refused** (Identity, isonomic-id): errors `permission_denied` and `approval_required`, with fixtures. **Accepted, scheduled after version 1**: identity is outside V1, and error codes are additive.
+
 ## 2026-11-15 · Isonomic UI's features and extra components through the SDK
 
 **Built:** `isonomic-app` features `component` and `assets` (on by default) and `extra` (`isonomic_app::extra`, from isonomic-ui-extra at the same `UI_REF`). A scratch crate outside the workspace, depending on `isonomic-app` alone with `extra`, names items in `ui::component`, `ui::assets` and `extra`.
