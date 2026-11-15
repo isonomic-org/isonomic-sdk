@@ -15,7 +15,7 @@ use tokio::io::DuplexStream;
 use tokio::sync::{mpsc, oneshot};
 use tokio::task::JoinHandle;
 
-use crate::{blobs, faults, models, system, CallRecord, Grant, State};
+use crate::{blobs, events, faults, models, system, CallRecord, Grant, State};
 
 /// One open subscription: the task feeding it, how to stop it gracefully,
 /// and the token it was opened under.
@@ -60,6 +60,15 @@ impl Conn {
                 true
             }
             None => false,
+        }
+    }
+
+    /// Abort a subscription, if `token` opened it: apps share the window's
+    /// connection, so one app must not end another's subscription.
+    pub(crate) fn close_owned(&mut self, subscription: u64, token: Option<&Token>) -> bool {
+        match self.subs.get(&subscription) {
+            Some(sub) if sub.owner.as_ref() == token => self.close(subscription),
+            _ => false,
         }
     }
 
@@ -136,6 +145,10 @@ async fn dispatch(
                 Ok(reply) => result(id, reply),
                 Err(error) => failure(id, error),
             })
+        }
+        Interface::Events => {
+            let app = app.map(str::to_string);
+            return events::dispatch(state, conn, id, app.as_deref(), token, call).await;
         }
         _ => {}
     }
