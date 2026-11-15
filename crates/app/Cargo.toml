@@ -8,7 +8,7 @@ publish.workspace = true
 [features]
 # A headless host for app tests: an in-memory engine, a granted token, and
 # GPUI's test harness.
-test-support = ["dep:isonomic-testkit", "isonomic-ui/test-support"]
+test-support = ["dep:isonomic-testkit", "isonomic-ui/test-support", "tokio/rt-multi-thread"]
 
 [dependencies]
 isonomic-client.workspace = true
