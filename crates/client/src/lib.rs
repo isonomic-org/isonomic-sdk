@@ -22,6 +22,7 @@
 
 mod actor;
 mod blobs;
+mod events;
 mod models;
 mod scoped;
 
@@ -99,6 +100,7 @@ pub enum ClientError {
 }
 
 pub use blobs::Blobs;
+pub use events::{EventStream, Events};
 pub use models::{ModelStream, Models};
 pub use scoped::AppClient;
 
@@ -170,6 +172,11 @@ impl Client {
     /// The `blobs` interface, as the shell.
     pub fn blobs(&self) -> Blobs {
         Blobs::new(self.clone(), None)
+    }
+
+    /// The `events` interface, as the shell.
+    pub fn events(&self) -> Events {
+        Events::new(self.clone(), None)
     }
 
     /// A client that names `token` on every call: what an app is given.
