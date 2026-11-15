@@ -9,8 +9,10 @@
 //! The first message on a connection is `hello`; the engine answers
 //! `welcome` with the version both sides will speak.
 
+pub mod agents;
 pub mod auth;
 pub mod blobs;
+mod calls;
 pub mod events;
 pub mod frame;
 #[cfg(feature = "tokio")]
@@ -192,105 +194,52 @@ pub enum Call {
     },
     #[serde(rename = "sql.unsubscribe")]
     SqlUnsubscribe { subscription: u64 },
-}
-
-impl Call {
-    /// Every method this build knows, in interface order.
-    pub const METHODS: &'static [&'static str] = &[
-        "system.status",
-        "system.subscribe",
-        "system.unsubscribe",
-        "system.logs",
-        "system.profile",
-        "system.shutdown",
-        "system.retry",
-        "apps.grant",
-        "models.list",
-        "models.info",
-        "models.stream",
-        "models.cancel",
-        "models.embed",
-        "blobs.put",
-        "blobs.create",
-        "blobs.write",
-        "blobs.get",
-        "blobs.info",
-        "blobs.delete",
-        "events.publish",
-        "events.subscribe",
-        "events.unsubscribe",
-        "sql.query",
-        "sql.execute",
-        "sql.batch",
-        "sql.subscribe",
-        "sql.unsubscribe",
-    ];
-
-    /// The method name on the wire, for logs and the Activity tab.
-    pub fn method(&self) -> &'static str {
-        match self {
-            Call::SystemStatus => "system.status",
-            Call::SystemSubscribe => "system.subscribe",
-            Call::SystemUnsubscribe { .. } => "system.unsubscribe",
-            Call::SystemLogs { .. } => "system.logs",
-            Call::SystemProfile => "system.profile",
-            Call::SystemShutdown => "system.shutdown",
-            Call::SystemRetry { .. } => "system.retry",
-            Call::AppsGrant { .. } => "apps.grant",
-            Call::ModelsList => "models.list",
-            Call::ModelsInfo { .. } => "models.info",
-            Call::ModelsStream(_) => "models.stream",
-            Call::ModelsCancel { .. } => "models.cancel",
-            Call::ModelsEmbed { .. } => "models.embed",
-            Call::BlobsPut { .. } => "blobs.put",
-            Call::BlobsCreate { .. } => "blobs.create",
-            Call::BlobsWrite { .. } => "blobs.write",
-            Call::BlobsGet { .. } => "blobs.get",
-            Call::BlobsInfo { .. } => "blobs.info",
-            Call::BlobsDelete { .. } => "blobs.delete",
-            Call::EventsPublish { .. } => "events.publish",
-            Call::EventsSubscribe { .. } => "events.subscribe",
-            Call::EventsUnsubscribe { .. } => "events.unsubscribe",
-            Call::SqlQuery { .. } => "sql.query",
-            Call::SqlExecute { .. } => "sql.execute",
-            Call::SqlBatch { .. } => "sql.batch",
-            Call::SqlSubscribe { .. } => "sql.subscribe",
-            Call::SqlUnsubscribe { .. } => "sql.unsubscribe",
-        }
-    }
-
-    pub fn interface(&self) -> auth::Interface {
-        use auth::Interface;
-        match self {
-            Call::SystemStatus
-            | Call::SystemSubscribe
-            | Call::SystemUnsubscribe { .. }
-            | Call::SystemLogs { .. }
-            | Call::SystemProfile
-            | Call::SystemShutdown
-            | Call::SystemRetry { .. } => Interface::System,
-            Call::AppsGrant { .. } => Interface::Apps,
-            Call::ModelsList
-            | Call::ModelsInfo { .. }
-            | Call::ModelsStream(_)
-            | Call::ModelsCancel { .. }
-            | Call::ModelsEmbed { .. } => Interface::Models,
-            Call::BlobsPut { .. }
-            | Call::BlobsCreate { .. }
-            | Call::BlobsWrite { .. }
-            | Call::BlobsGet { .. }
-            | Call::BlobsInfo { .. }
-            | Call::BlobsDelete { .. } => Interface::Blobs,
-            Call::EventsPublish { .. }
-            | Call::EventsSubscribe { .. }
-            | Call::EventsUnsubscribe { .. } => Interface::Events,
-            Call::SqlQuery { .. }
-            | Call::SqlExecute { .. }
-            | Call::SqlBatch { .. }
-            | Call::SqlSubscribe { .. }
-            | Call::SqlUnsubscribe { .. } => Interface::Sql,
-        }
-    }
+    // The agents interface: agent sessions run by the engine's host.
+    #[serde(rename = "sessions.create")]
+    SessionsCreate(agents::CreateSession),
+    #[serde(rename = "sessions.list")]
+    SessionsList(agents::ListSessions),
+    #[serde(rename = "sessions.open")]
+    SessionsOpen(agents::SessionRef),
+    #[serde(rename = "sessions.fork")]
+    SessionsFork(agents::ForkSession),
+    #[serde(rename = "sessions.archive")]
+    SessionsArchive(agents::ArchiveSession),
+    #[serde(rename = "sessions.rename")]
+    SessionsRename(agents::RenameSession),
+    #[serde(rename = "sessions.send")]
+    SessionsSend(agents::SendInput),
+    #[serde(rename = "sessions.continue")]
+    SessionsContinue(agents::SessionRef),
+    #[serde(rename = "sessions.cancel")]
+    SessionsCancel(agents::SessionRef),
+    /// Delete every session of the calling app, and what they own.
+    #[serde(rename = "sessions.purge")]
+    SessionsPurge,
+    #[serde(rename = "sessions.subscribe")]
+    SessionsSubscribe(agents::SubscribeSession),
+    #[serde(rename = "sessions.unsubscribe")]
+    SessionsUnsubscribe { subscription: u64 },
+    #[serde(rename = "approvals.list")]
+    ApprovalsList,
+    #[serde(rename = "approvals.decide")]
+    ApprovalsDecide(agents::DecideApproval),
+    #[serde(rename = "questions.answer")]
+    QuestionsAnswer(agents::AnswerQuestion),
+    #[serde(rename = "tools.register_client")]
+    ToolsRegisterClient(agents::RegisterClientTools),
+    #[serde(rename = "tools.result")]
+    ToolsResult(agents::ClientToolResult),
+    #[serde(rename = "presets.list")]
+    PresetsList,
+    #[serde(rename = "presets.get")]
+    PresetsGet(agents::GetPreset),
+    #[serde(rename = "presets.put")]
+    PresetsPut(agents::PutPreset),
+    #[serde(rename = "artifacts.get")]
+    ArtifactsGet(agents::GetArtifact),
+    #[serde(rename = "artifacts.list")]
+    ArtifactsList(agents::SessionRef),
 }
 
 /// What the engine sends.
@@ -298,7 +247,13 @@ impl Call {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ServerMessage {
     /// Answer to `hello`.
-    Welcome { version: u32, engine: String },
+    Welcome {
+        version: u32,
+        engine: String,
+        /// The agent session event schema the engine writes.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        schema: Option<agents::SchemaVersion>,
+    },
     Response {
         id: u64,
         #[serde(flatten)]
@@ -390,6 +345,37 @@ pub enum Reply {
         subscription: u64,
         rows: Rows,
     },
+    /// Answer to `sessions.create` and `sessions.fork`.
+    SessionCreated {
+        session: agents::SessionId,
+    },
+    /// Answer to `sessions.list`.
+    Sessions {
+        items: Vec<agents::SessionSummary>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        next: Option<String>,
+    },
+    SessionSnapshot(Box<agents::SessionSnapshot>),
+    /// Answer to a call that only acts.
+    Done {},
+    /// Answer to `sessions.send`: `queued` when a turn is already running.
+    Accepted {
+        queued: bool,
+    },
+    Purged(agents::PurgeReport),
+    /// Answer to `sessions.subscribe`: `session_event` and `live_delta`
+    /// events follow.
+    SessionStream {
+        subscription: u64,
+    },
+    Approvals(Vec<agents::PendingApproval>),
+    Presets(Vec<agents::PresetSummary>),
+    Preset(Box<agents::PresetDetail>),
+    PresetSaved {
+        reference: agents::PresetRef,
+    },
+    Artifact(Box<agents::ArtifactVersion>),
+    Artifacts(Vec<agents::ArtifactEvent>),
 }
 
 impl Reply {
@@ -400,7 +386,8 @@ impl Reply {
             Reply::Subscribed { subscription, .. }
             | Reply::Stream { subscription, .. }
             | Reply::Listening { subscription }
-            | Reply::LiveQuery { subscription, .. } => Some(*subscription),
+            | Reply::LiveQuery { subscription, .. }
+            | Reply::SessionStream { subscription } => Some(*subscription),
             _ => None,
         }
     }
@@ -418,6 +405,10 @@ pub enum Event {
     AppEvent(AppEvent),
     /// A live query's whole new result.
     RowsChanged(Rows),
+    /// One durable agent session event, in sequence order.
+    SessionEvent(Box<agents::SessionEvent>),
+    /// Reply text as it streams; lossy, replaced by the `assistant` event.
+    LiveDelta(agents::LiveDelta),
 }
 
 impl Event {
@@ -501,6 +492,26 @@ pub enum ErrorCode {
     Incomplete,
     /// The database refused the statement; the message says why.
     SqlError,
+    /// No such session, approval, question, preset or artifact for this
+    /// caller; another app's ids answer this too.
+    NotFound,
+    /// The preset did not validate; the message lists why.
+    InvalidPreset,
+    /// The host runs interactive sessions only, for now.
+    ClassNotSupported,
+    /// A fork point that is not a turn boundary.
+    NotAtTurnBoundary,
+    /// There is nothing to continue, or the model cannot continue it.
+    ContinueRefused,
+    /// Views and third-party code may not decide approvals.
+    NotAllowedToDecide,
+    /// Deciding an approval needs a user-action token.
+    MissingUserAction,
+    AlreadyDecided,
+    /// The session failed and takes no more input.
+    SessionFailed,
+    /// Client tool specs must be client tools with free names.
+    InvalidTools,
     /// A code from a newer engine.
     #[serde(other)]
     Unrecognized,

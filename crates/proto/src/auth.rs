@@ -19,6 +19,9 @@ pub enum Interface {
     Blobs,
     Events,
     Sql,
+    /// Agent sessions: `sessions`, `approvals`, `questions`, `tools`,
+    /// `presets` and `artifacts`.
+    Agents,
 }
 
 impl Interface {
@@ -30,6 +33,7 @@ impl Interface {
             Interface::Blobs => "blobs",
             Interface::Events => "events",
             Interface::Sql => "sql",
+            Interface::Agents => "agents",
         }
     }
 
@@ -113,6 +117,9 @@ pub fn authorize(caller: Caller<'_>, call: &Call) -> Result<(), WireError> {
             _ => Ok(()),
         },
         Interface::Sql if capabilities.sql.is_none() => Err(denied(id, "use sql")),
+        // Which sessions, presets and artifacts an app reaches is the host's
+        // decision: another app's ids answer `not_found` there.
+        Interface::Agents if capabilities.agents.is_none() => Err(denied(id, "use agents")),
         _ => Ok(()),
     }
 }
