@@ -7,43 +7,14 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
 
 jobs:
   rust:
-    name: rust (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    env:
-      CARGO_TERM_COLOR: always
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          path: isonomic-sdk
-      - uses: dtolnay/rust-toolchain@1.97
-        with:
-          components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: isonomic-sdk
-      - name: Format
-        working-directory: isonomic-sdk
-        run: cargo fmt --all --check
-      - name: Lint
-        working-directory: isonomic-sdk
-        run: cargo clippy --all-targets --all-features -- -D warnings
-      - name: Test
-        working-directory: isonomic-sdk
-        run: cargo test --all-features
-      - name: Every source and doc file stays under 20 KB
-        working-directory: isonomic-sdk
-        shell: bash
-        run: |
-          big=$(git ls-files -z -- '*.rs' '*.md' '*.toml' '*.yml' '*.json' | xargs -0 -r ls -l | awk '$5 > 20480 {print $9" ("$5" bytes)"}')
-          if [ -n "$big" ]; then echo "Over 20 KB:"; echo "$big"; exit 1; fi
+    uses: isonomic-org/.github/.github/workflows/rust-ci.yml@main
+    secrets: inherit
+    with:
+      toolchain: "1.97"
