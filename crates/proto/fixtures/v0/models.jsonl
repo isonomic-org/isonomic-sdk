@@ -24,3 +24,22 @@
 {"type":"response","id":29,"error":{"code":"remote_disabled","message":"remote models are switched off"}}
 {"type":"response","id":30,"error":{"code":"capability_denied","message":"app com.isonomic.hello may not use models"}}
 {"type":"response","id":31,"error":{"code":"unsupported","message":"model chat-small does not do embeddings"}}
+{"type":"request","id":120,"method":"models.info","params":{"model":"chat-medium"}}
+{"type":"response","id":120,"result":{"model":{"id":"chat-medium","name":"Chat Medium","context_length":32768,"capabilities":["chat"],"size_bytes":5368709120,"license":"Test License","state":"not_installed"}}}
+{"type":"response","id":120,"result":{"model":{"id":"chat-medium","name":"Chat Medium","context_length":32768,"capabilities":["chat"],"size_bytes":5368709120,"license":"Test License","state":"downloading"}}}
+{"type":"request","id":121,"method":"models.recommended","params":{}}
+{"type":"response","id":121,"result":{"recommended":{"model":"chat-medium","profile":"standard","size_bytes":5368709120}}}
+{"type":"request","id":122,"method":"models.recommended","params":{"profile":"low"}}
+{"type":"response","id":122,"error":{"code":"insufficient_memory","message":"this machine has less memory than any local model needs","memory":{"required_bytes":17179869184,"available_bytes":8589934592,"reason":"this machine has less memory than any local model needs"}}}
+{"type":"request","id":123,"method":"models.download","params":{"model":"chat-medium"}}
+{"type":"response","id":123,"result":{"downloading":{"subscription":30,"model":"chat-medium","total_bytes":5368709120}}}
+{"type":"event","subscription":30,"event":"download_progress","data":{"model":"chat-medium","received_bytes":1342177280,"total_bytes":5368709120}}
+{"type":"event","subscription":30,"event":"download_progress","data":{"model":"chat-medium","received_bytes":5368709120,"total_bytes":5368709120,"outcome":"installed"}}
+{"type":"event","subscription":31,"event":"download_progress","data":{"model":"chat-medium","received_bytes":2147483648,"total_bytes":5368709120,"outcome":"failed","error":{"code":"model_unavailable","message":"the download source stopped answering"}}}
+{"type":"request","id":124,"method":"models.download_cancel","params":{"model":"chat-medium"}}
+{"type":"response","id":124,"result":{"cancelled":{}}}
+{"type":"event","subscription":32,"event":"download_progress","data":{"model":"chat-medium","received_bytes":268435456,"total_bytes":5368709120,"outcome":"cancelled"}}
+{"type":"request","id":125,"token":"tok-hello-1","method":"models.download","params":{"model":"chat-medium"}}
+{"type":"response","id":125,"error":{"code":"capability_denied","message":"app com.isonomic.hello may not call models.download"}}
+{"type":"request","id":126,"method":"models.download","params":{"model":"remote-large"}}
+{"type":"response","id":126,"error":{"code":"unsupported","message":"remote-large is a remote model; there is nothing to download"}}

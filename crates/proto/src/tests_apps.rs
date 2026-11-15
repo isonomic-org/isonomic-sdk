@@ -305,3 +305,49 @@ fn only_the_shell_names_another_apps_agent_sessions() {
     let everything = authorize(Caller::Shell, &purge(None)).unwrap_err();
     assert_eq!(everything.code, ErrorCode::BadRequest);
 }
+
+#[test]
+fn installing_models_is_the_shells_alone() {
+    use crate::models::{DownloadModel, RecommendModel};
+    let mut every = hello();
+    every.capabilities.models = Some(ModelAccess {
+        any: true,
+        remote: true,
+        ..Default::default()
+    });
+    let app = Caller::App {
+        id: &every.id,
+        capabilities: &every.capabilities,
+    };
+    let model = || DownloadModel {
+        model: "chat-medium".into(),
+    };
+    for call in [
+        Call::ModelsDownload(model()),
+        Call::ModelsDownloadCancel(model()),
+        Call::ModelsRecommended(RecommendModel::default()),
+    ] {
+        assert!(call.installs_models());
+        let error = authorize(app, &call).unwrap_err();
+        assert_eq!(error.code, ErrorCode::CapabilityDenied, "{call:?}");
+        assert!(authorize(Caller::Shell, &call).is_ok());
+    }
+    assert!(!Call::ModelsList.installs_models());
+}
+
+#[test]
+fn only_the_download_event_with_an_outcome_is_final() {
+    use crate::models::{DownloadOutcome, DownloadProgress};
+    let progress = |outcome| {
+        Event::DownloadProgress(DownloadProgress {
+            model: "chat-medium".into(),
+            received_bytes: 1,
+            total_bytes: 2,
+            outcome,
+            error: None,
+        })
+    };
+    assert!(!progress(None).is_final());
+    assert!(progress(Some(DownloadOutcome::Installed)).is_final());
+    assert!(progress(Some(DownloadOutcome::Cancelled)).is_final());
+}
