@@ -31,6 +31,10 @@ pub struct ModelInfo {
     /// Runs at a remote provider rather than on this machine.
     #[serde(default, skip_serializing_if = "is_false")]
     pub remote: bool,
+    /// The model the engine recommends for this machine's profile, so an
+    /// app can show it first. At most one model has it.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub recommended: bool,
 }
 
 impl ModelInfo {

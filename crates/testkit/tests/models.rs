@@ -47,6 +47,7 @@ fn remote_model() -> ModelInfo {
         context_length: Some(200_000),
         capabilities: vec!["chat".into()],
         remote: true,
+        recommended: false,
     }
 }
 

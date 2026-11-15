@@ -80,6 +80,16 @@ fn info(id: &str, capability: &str) -> ModelInfo {
         context_length: Some(8192),
         capabilities: vec![capability.to_string()],
         remote: false,
+        recommended: false,
+    }
+}
+
+/// The model as the caller sees it: `recommended` set on the one the
+/// engine recommends for this machine's profile.
+fn shown(model: &FakeModel, recommended: Option<&str>) -> ModelInfo {
+    ModelInfo {
+        recommended: recommended == Some(model.info.id.as_str()),
+        ..model.info.clone()
     }
 }
 
@@ -367,16 +377,18 @@ pub(crate) async fn dispatch(
 ) -> Option<ServerMessage> {
     let answer = match call {
         Call::ModelsList => {
+            let recommended = crate::downloads::recommended_id(state);
             let models = state.models.lock().unwrap();
             let list = models
                 .models
                 .iter()
-                .map(|m| m.info.clone())
+                .map(|m| shown(m, recommended.as_deref()))
                 .filter(|info| visible(caller, info))
                 .collect();
             Ok(Reply::Models(list))
         }
         Call::ModelsInfo { model } => {
+            let recommended = crate::downloads::recommended_id(state);
             let models = state.models.lock().unwrap();
             match models.models.iter().find(|m| m.info.id == model) {
                 None => Err(WireError::new(
@@ -386,7 +398,7 @@ pub(crate) async fn dispatch(
                 Some(found) => {
                     authorize_model(caller, &found.info.id, found.info.remote).map(|()| {
                         Reply::Model(ModelDetail {
-                            info: found.info.clone(),
+                            info: shown(found, recommended.as_deref()),
                             size_bytes: found.size_bytes,
                             license: (!found.info.remote).then(|| "Test License".to_string()),
                             state: crate::downloads::state_of(state, found),
