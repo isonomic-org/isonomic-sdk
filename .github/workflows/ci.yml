@@ -20,4 +20,5 @@ jobs:
       toolchain: "1.98"
       linux-gui-libs: true
       ui: true
+      harness: true
       xtask: frozen-fixtures
