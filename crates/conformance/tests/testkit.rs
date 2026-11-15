@@ -100,6 +100,7 @@ async fn an_engine_that_ignores_tokens_fails() {
         "blobs.max_bytes",
         "events.scoped",
         "sql.schemas",
+        "agents.isolated",
         "tokens.shutdown_refused",
     ] {
         assert!(failed.contains(name), "{name} passed:\n{report}");

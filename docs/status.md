@@ -2,6 +2,18 @@
 
 Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architecture/sdk/status.md`; this repo's own session owns the SDK from here.
 
+## 2026-11-15 · The testkit's agent host and the `agents.` conformance group (S0, agents brief Part B)
+
+**Built:** `testkit::agents` serves all 22 agents methods with harness-host's `MemoryHost`, plus `agents_map` (SDK types ⇄ host types, `HostError` → error codes). `TestEngine::agents()` → `FakeAgents` (`reply`, `with`, `advance`, `user_action`, `disconnect`, `reconnect`, `log`). There are 9 testkit tests, and 6 new conformance checks (`agents.presets`, `registry`, `replay`, `isolated`, `purge_own`, `unknown_subscription`). The token-stripping engine fails `agents.isolated`. No proto change.
+
+**Decisions**
+
+- **Each call drives the host to completion.** `MemoryHost` has no runtime; the testkit runs it under one lock with `block_on`, so a scripted turn is over when `send` answers. Streams are Tokio tasks awaiting `Subscription::next`, which the host wakes.
+- **Every granted app is first-party.** Manifests carry no app kind yet. View and third-party deciding stays tested in harness-host.
+- **Conformance sends no input.** The engine's model is real, so turns stay in testkit tests.
+
+**Gap:** a purged session's stream goes quiet: the wire has no end-of-stream event for session streams.
+
 ## 2026-11-15 · The `agents` interface: wire and client (S0, agents brief Part B)
 
 **Built:** `proto::agents` (argument and result types; harness-core's event schema re-exported as `agents::schema`), 22 methods, 72 fixture lines in `agents.jsonl` (every agents error code, and `welcome.schema`) including an event from a newer schema revision, the `schema` field in `welcome`, the `Agents` interface in `proto::auth`, `client::Agents` and `SessionStream`. The method tables moved to `proto/src/calls.rs` to keep `lib.rs` under the size limit. 84 tests.

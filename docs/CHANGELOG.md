@@ -2,6 +2,16 @@
 
 Newest first. Each entry names what the engine (isonomic-capsule) and the window (isonomic-desktop) must do when they move `SDK_REF` to it.
 
+## Unreleased: the testkit's agent host, and the `agents.` conformance group
+
+**Wire:** no change.
+
+**Build:** the testkit now depends on `harness-host` (isonomic-harness, the same pinned commit as `harness-core`).
+
+**For the engine:** run the conformance suite's new `agents.` checks against the engine host (`docs/conformance.md`). They need no model: none sends input, and each purges what it created.
+
+**For the window and apps:** agents calls in tests now work against `TestEngine` instead of answering `unknown_method`. `TestEngine::agents()` scripts the model, the clock and the person (`docs/interfaces/agents.md`, Testing).
+
 ## Unreleased: the `agents` interface (wire and client)
 
 **Build:** the proto now depends on `harness-core` (isonomic-harness, pinned by commit in the workspace `Cargo.toml`) for the agent session event types it re-exports. Cargo fetches it over SSH. Every repository that builds the proto needs read access to isonomic-harness: in CI, add `harness: true` to the shared workflow call (needs the `HARNESS_DEPLOY_KEY` org secret).

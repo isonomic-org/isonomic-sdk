@@ -15,7 +15,7 @@ use tokio::io::DuplexStream;
 use tokio::sync::{mpsc, oneshot};
 use tokio::task::JoinHandle;
 
-use crate::{blobs, events, faults, models, sql, system, CallRecord, Grant, State};
+use crate::{agents, blobs, events, faults, models, sql, system, CallRecord, Grant, State};
 
 /// One open subscription: the task feeding it, how to stop it gracefully,
 /// and the token it was opened under.
@@ -154,6 +154,7 @@ async fn dispatch(
             let manifest = grant.as_ref().map(|g| g.manifest.clone());
             return sql::dispatch(state, conn, id, manifest.as_ref(), token, call).await;
         }
+        Interface::Agents => return agents::dispatch(state, conn, id, caller, token, call).await,
         _ => {}
     }
     Some(match call {

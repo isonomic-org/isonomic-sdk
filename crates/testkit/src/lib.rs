@@ -10,6 +10,8 @@
 //! `isonomic_proto::auth`), so an app cannot pass its tests while calling
 //! something its manifest does not allow.
 
+mod agents;
+mod agents_map;
 mod blobs;
 mod conn;
 mod events;
@@ -18,7 +20,10 @@ mod models;
 mod sql;
 mod system;
 
+pub use agents::FakeAgents;
 pub use blobs::{FakeBlobs, DEFAULT_LIMIT as DEFAULT_BLOB_LIMIT};
+/// harness-host, whose `MemoryHost` serves the agents interface here.
+pub use harness_host;
 pub use isonomic_proto::auth::Interface;
 pub use models::{FakeModels, Gate, Step};
 pub use sql::{FakeSql, SqlCall};
@@ -65,6 +70,7 @@ pub(crate) struct State {
     pub(crate) events: Mutex<events::EventsState>,
     pub(crate) sql: Mutex<sql::SqlState>,
     pub(crate) faults: Mutex<HashMap<Interface, faults::Fault>>,
+    pub(crate) agents: Mutex<agents::AgentsState>,
     next_token: AtomicU64,
 }
 
@@ -155,6 +161,7 @@ impl TestEngine {
                 events: Mutex::new(events::EventsState::default()),
                 sql: Mutex::new(sql::SqlState::default()),
                 faults: Mutex::new(HashMap::new()),
+                agents: Mutex::new(agents::AgentsState::default()),
                 next_token: AtomicU64::new(1),
             }),
         }
@@ -219,6 +226,14 @@ impl TestEngine {
     /// The fake blob store: its limit and what apps stored.
     pub fn blobs(&self) -> FakeBlobs {
         FakeBlobs {
+            state: Arc::clone(&self.state),
+        }
+    }
+
+    /// The agent host (harness-host's `MemoryHost`): script the model, move
+    /// the clock, mint the person's user-action tokens.
+    pub fn agents(&self) -> FakeAgents {
+        FakeAgents {
             state: Arc::clone(&self.state),
         }
     }

@@ -6,6 +6,7 @@ edition.workspace = true
 publish.workspace = true
 
 [dependencies]
+harness-host.workspace = true
 isonomic-client.workspace = true
 isonomic-proto.workspace = true
 tokio.workspace = true

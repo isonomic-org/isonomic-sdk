@@ -77,4 +77,16 @@ A client tool call arrives as a `tool.call` event with `kind: client`; answer it
 
 ## Testing
 
-The testkit's host is to be harness-host's `MemoryHost`, behind the same client API, so apps test sessions without the engine. Until it lands (the next pull request), the testkit checks the capability on every agents call and answers the rest `unknown_method`. The conformance suite then gains an `agents.` group that `MemoryHost` and the engine host must both pass.
+The testkit serves every agents call with harness-host's `MemoryHost` (at the commit the workspace pins), behind the same client API, so apps test sessions without the engine. The token check comes first, through `proto::auth`; the host then keeps apps apart exactly as the engine's does. Every granted app is first-party.
+
+`TestEngine::agents()` scripts the engine side:
+
+- `reply(text)` queues the model's next reply. With nothing queued it answers "OK.". `with(|host| ..)` reaches the rest of the host: `host.model.calls(..)` for tool calls, `host.model.push(..)` for any model events.
+- Each call runs what it started to completion before it answers, so a scripted turn has ended by the time `sessions.send` replies. The clock moves only with `advance(ms)`, which also runs timers, timeouts and the watchdog.
+- `user_action(app, approval)` mints the token the window would when the person acts; pass it to `decide`.
+- `disconnect(app)` and `reconnect(app)` take an app's client tools away and bring them back.
+- `log(session)` reads the events the host stored.
+
+A purged session's stream sends nothing more; the wire has no end-of-stream event for it.
+
+The conformance suite's `agents.` group runs against this host and the engine's (`docs/conformance.md`).
