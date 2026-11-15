@@ -60,7 +60,7 @@ async fn a_download_reports_progress_then_the_model_is_installed() {
     let refused = models.stream(hello()).await.map(|_| ());
     assert_eq!(code(refused), ErrorCode::ModelUnavailable);
     let mut download = models.download("chat-small").await.unwrap();
-    assert_eq!(download.total_bytes(), SIZE);
+    assert_eq!(download.total_bytes(), Some(SIZE));
     let events = to_end(&mut download).await;
     let received: Vec<u64> = events.iter().map(|e| e.received_bytes).collect();
     assert!(received.windows(2).all(|w| w[0] <= w[1]), "{received:?}");
@@ -131,7 +131,7 @@ async fn cancel_stops_the_download_for_every_window() {
     }
     assert!(!engine.models().installed("chat-small"));
     let again = models.cancel_download("chat-small").await;
-    assert_eq!(code(again), ErrorCode::UnknownSubscription);
+    assert_eq!(code(again), ErrorCode::NotDownloading);
     assert_eq!(
         models.info("chat-small").await.unwrap().state,
         ModelState::NotInstalled
@@ -238,7 +238,7 @@ async fn the_recommendation_follows_the_profile_and_the_memory_floor() {
         (standard.model.as_str(), standard.profile.as_str()),
         ("chat-small", "standard")
     );
-    assert_eq!(standard.size_bytes, SIZE);
+    assert_eq!(standard.size_bytes, Some(SIZE));
     let small = HardwareProfile {
         profile: "low".into(),
         total_memory_bytes: 8 << 30,
@@ -259,4 +259,62 @@ async fn the_recommendation_follows_the_profile_and_the_memory_floor() {
     assert_eq!(high.profile, "high");
     engine.models().recommend("low", Some("chat-small"));
     assert_eq!(models.recommended(None).await.unwrap().model, "chat-small");
+}
+
+#[tokio::test]
+async fn an_unknown_size_is_absent_not_zero() {
+    let engine = TestEngine::new();
+    engine.models().uninstall("chat-small");
+    engine.models().set_size("chat-small", None);
+    let models = engine.client().models();
+    let mut download = models.download("chat-small").await.unwrap();
+    assert_eq!(download.total_bytes(), None);
+    let events = to_end(&mut download).await;
+    assert!(events.iter().all(|e| e.total_bytes.is_none()));
+    let last = events.last().unwrap();
+    assert_eq!(last.outcome, Some(DownloadOutcome::Installed));
+    assert!(last.received_bytes > 0);
+    assert_eq!(models.recommended(None).await.unwrap().size_bytes, None);
+}
+
+#[tokio::test]
+async fn a_dropped_connection_leaves_the_download_running_to_resume() {
+    let engine = TestEngine::new();
+    let gate = Gate::new();
+    engine.models().uninstall("chat-small");
+    let steps = vec![
+        DownloadStep::Progress(SIZE / 4),
+        DownloadStep::Hold(gate.clone()),
+        DownloadStep::Progress(SIZE),
+    ];
+    engine.models().script_download("chat-small", steps);
+    let client = engine.client();
+    let models = client.models();
+    let mut download = models.download("chat-small").await.unwrap();
+    while next(&mut download).await.received_bytes < SIZE / 4 {}
+    engine.go_offline();
+    let dropped = tokio::time::timeout(Duration::from_secs(5), download.next()).await;
+    assert!(
+        matches!(dropped, Ok(Some(Err(ClientError::Disconnected)))),
+        "{dropped:?}"
+    );
+    assert!(download.next().await.is_none());
+    engine.go_online();
+    let mut live = client.live();
+    let back = live.wait_for(|view| view.connected);
+    tokio::time::timeout(Duration::from_secs(5), back)
+        .await
+        .expect("reconnected within 5 s")
+        .unwrap();
+    drop(live);
+    let mut resumed = models.download("chat-small").await.unwrap();
+    assert_eq!(
+        next(&mut resumed).await.received_bytes,
+        SIZE / 4,
+        "where it stood"
+    );
+    gate.open();
+    let last = to_end(&mut resumed).await.pop().unwrap();
+    assert_eq!(last.outcome, Some(DownloadOutcome::Installed));
+    assert!(engine.models().installed("chat-small"));
 }

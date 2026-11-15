@@ -13,9 +13,9 @@ Needs the `models` capability. An app sees and uses only the models its manifest
 | `models.stream` | `StreamRequest` | `stream { subscription, model }`, then `model_chunk` events |
 | `models.cancel` | `{ subscription }` | `cancelled {}`; the stream's last chunk then has `stop: cancelled` |
 | `models.embed` | `{ model?, input: [text] }` | `embeddings { model, vectors }`, one per input, in order |
-| `models.download` | `{ model }` | `downloading { subscription, model, total_bytes }`, then `download_progress` events. Shell only |
+| `models.download` | `{ model }` | `downloading { subscription, model, total_bytes? }`, then `download_progress` events. Shell only |
 | `models.download_cancel` | `{ model }` | `cancelled {}`; every subscriber's stream ends `cancelled`. Shell only |
-| `models.recommended` | `{ profile? }` | `recommended { model, profile, size_bytes }`: the local model to start with. Shell only |
+| `models.recommended` | `{ profile? }` | `recommended { model, profile, size_bytes? }`: the local model to start with. Shell only |
 
 `model` left out means the user's default chat (or embeddings) model; the reply names the one chosen.
 
@@ -58,10 +58,11 @@ Only the app that opened a stream can cancel it. Dropping a `ModelStream` in the
 The window's first run, V1 local models only. All three calls are the shell's: `proto::auth` refuses them to every app token, whatever its capabilities.
 
 - **State.** `models.info` says `not_installed` for a local model whose file is not on the machine yet, and `downloading` while it is fetched; `size_bytes` is the size to show before starting. A model that is not installed refuses streams and embeddings with `model_unavailable`.
-- **The first model.** `models.recommended {}` names the model for this machine's profile (`system.profile`), or for the `profile` asked about. Below every local model's needs (V1's floor is 16 GiB) it answers `insufficient_memory`, with `required_bytes` and `available_bytes`.
+- **The first model.** `models.recommended {}` names the model for this machine's profile (`system.profile`), or for the `profile` asked about. Below every local model's needs (V1's floor is 16 GiB) it answers `insufficient_memory`, with `required_bytes` (the floor) and `available_bytes`. Here `available_bytes` is the machine's **total physical memory**, not what is free now: the floor is about the machine, not the moment.
 - **The download is the engine's.** `models.download` starts it, or attaches to it if it is already running. The first event says where it stands, so a window that closed and came back calls `models.download` again and carries on. Dropping a `DownloadStream` only stops following it. An installed model answers with one final `installed` event.
-- **Progress.** `download_progress { model, received_bytes, total_bytes }`. The last event has `outcome`: `installed` (the model is then `stopped`, ready to load), `failed` (with `error`), or `cancelled`.
-- **Cancel** names the model, since several windows may follow one download. `unknown_subscription` when none is running. A remote model answers `unsupported`; there is nothing to download.
+- **Sizes may be unknown.** `total_bytes` and `size_bytes` are absent, never 0, when the engine does not know the size yet; show bytes received instead of a percentage.
+- **Progress.** `download_progress { model, received_bytes, total_bytes? }`. The last event has `outcome`: `installed` (the model is then `stopped`, ready to load), `failed` (with `error`), or `cancelled`.
+- **Cancel** names the model, since several windows may follow one download. `not_downloading` when none is running. A remote model answers `unsupported`; there is nothing to download.
 
 ```json
 {"type":"request","id":123,"method":"models.download","params":{"model":"chat-medium"}}
@@ -81,6 +82,7 @@ The window's first run, V1 local models only. All three calls are the shell's: `
 | `model_unavailable` | The worker is degraded or crashed |
 | `remote_disabled` | The model is remote and the user's switch is off |
 | `unknown_subscription` | `models.cancel` for a stream that ended or is not the caller's |
+| `not_downloading` | `models.download_cancel` for a model with no download running |
 
 ```json
 {"type":"response","id":27,"error":{"code":"insufficient_memory","message":"not enough free memory to load the model without thrashing; try a smaller model or a remote one","memory":{"required_bytes":21474836480,"available_bytes":6442450944,"reason":"not enough free memory to load the model without thrashing; try a smaller model or a remote one"}}}

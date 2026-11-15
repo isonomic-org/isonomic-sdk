@@ -91,6 +91,12 @@ impl FakeModels {
         self.with_model(id, |model| model.installed = false);
     }
 
+    /// The model's file size, `None` for unknown: downloads then report no
+    /// `total_bytes`.
+    pub fn set_size(&self, id: &str, size_bytes: Option<u64>) {
+        self.with_model(id, |model| model.size_bytes = size_bytes);
+    }
+
     pub fn installed(&self, id: &str) -> bool {
         let models = self.state.models.lock().unwrap();
         models.models.iter().any(|m| m.info.id == id && m.installed)
@@ -115,7 +121,8 @@ impl FakeModels {
     }
 }
 
-fn size_of(state: &State, id: &str) -> Result<u64, WireError> {
+/// The file size, `None` when the fake does not know it.
+fn size_of(state: &State, id: &str) -> Result<Option<u64>, WireError> {
     let models = state.models.lock().unwrap();
     let Some(model) = models.models.iter().find(|m| m.info.id == id) else {
         return Err(WireError::new(
@@ -127,7 +134,7 @@ fn size_of(state: &State, id: &str) -> Result<u64, WireError> {
         let message = format!("{id} is a remote model; there is nothing to download");
         return Err(WireError::new(ErrorCode::Unsupported, message));
     }
-    Ok(model.size_bytes.unwrap_or(0))
+    Ok(model.size_bytes)
 }
 
 fn installed(state: &State, id: &str) -> bool {
@@ -135,7 +142,7 @@ fn installed(state: &State, id: &str) -> bool {
     models.models.iter().any(|m| m.info.id == id && m.installed)
 }
 
-fn progress(model: &str, received: u64, total: u64) -> DownloadProgress {
+fn progress(model: &str, received: u64, total: Option<u64>) -> DownloadProgress {
     DownloadProgress {
         model: model.to_string(),
         received_bytes: received,
@@ -146,7 +153,7 @@ fn progress(model: &str, received: u64, total: u64) -> DownloadProgress {
 }
 
 /// Play one download to its end, then forget it.
-async fn play(state: Arc<State>, model: String, total: u64, steps: Vec<DownloadStep>) {
+async fn play(state: Arc<State>, model: String, total: Option<u64>, steps: Vec<DownloadStep>) {
     let (events, mut cancel) = {
         let downloads = state.downloads.lock().unwrap();
         let running = &downloads.running[&model];
@@ -158,7 +165,7 @@ async fn play(state: Arc<State>, model: String, total: u64, steps: Vec<DownloadS
         last.outcome = Some(outcome);
         last.error = error;
         if outcome == DownloadOutcome::Installed {
-            last.received_bytes = total;
+            last.received_bytes = total.unwrap_or(received);
             let mut models = state.models.lock().unwrap();
             if let Some(m) = models.models.iter_mut().find(|m| m.info.id == model) {
                 m.installed = true;
@@ -175,7 +182,7 @@ async fn play(state: Arc<State>, model: String, total: u64, steps: Vec<DownloadS
         }
         match step {
             DownloadStep::Progress(bytes) => {
-                received = bytes.min(total);
+                received = total.map_or(bytes, |total| bytes.min(total));
                 if let Some(r) = state.downloads.lock().unwrap().running.get_mut(&model) {
                     r.received = received;
                 }
@@ -198,15 +205,20 @@ async fn play(state: Arc<State>, model: String, total: u64, steps: Vec<DownloadS
     end(received, DownloadOutcome::Installed, None);
 }
 
-fn quarters(total: u64) -> Vec<DownloadStep> {
-    (1..=4)
-        .map(|q| DownloadStep::Progress(total / 4 * q))
-        .collect()
+/// The default script: four quarters, or four 256 MiB steps when the size
+/// is unknown.
+fn quarters(total: Option<u64>) -> Vec<DownloadStep> {
+    let step = total.map_or(256 << 20, |total| total / 4);
+    (1..=4).map(|q| DownloadStep::Progress(step * q)).collect()
 }
 
 /// Start the model's download unless it runs, and attach to it: where it
 /// stands now, then what follows.
-fn attach(state: &Arc<State>, model: &str, total: u64) -> broadcast::Receiver<DownloadProgress> {
+fn attach(
+    state: &Arc<State>,
+    model: &str,
+    total: Option<u64>,
+) -> broadcast::Receiver<DownloadProgress> {
     let mut downloads = state.downloads.lock().unwrap();
     if let Some(running) = downloads.running.get(model) {
         return running.events.subscribe();
@@ -241,6 +253,8 @@ fn recommended(state: &State, request: RecommendModel) -> Result<Reply, WireErro
         let reason = "this machine has less memory than any local model needs";
         return Err(WireError::memory(MemoryRefusal {
             required_bytes: MEMORY_FLOOR,
+            // The machine's total physical memory: the floor is about the
+            // machine, not what is free now.
             available_bytes: total,
             reason: reason.into(),
         }));
@@ -272,7 +286,7 @@ pub(crate) async fn dispatch(
                     Ok(Reply::Cancelled {})
                 }
                 None => Err(WireError::new(
-                    ErrorCode::UnknownSubscription,
+                    ErrorCode::NotDownloading,
                     format!("no download of {} is running", request.model),
                 )),
             }
@@ -303,7 +317,7 @@ pub(crate) async fn dispatch(
                 }
             };
             let task = if installed(state, &model) {
-                let mut done = progress(&model, total, total);
+                let mut done = progress(&model, total.unwrap_or(0), total);
                 done.outcome = Some(DownloadOutcome::Installed);
                 tokio::spawn(async move {
                     send(done).await;
@@ -336,7 +350,7 @@ pub(crate) async fn dispatch(
                             Err(broadcast::error::RecvError::Closed) => {
                                 // Ended before this subscriber caught the
                                 // last event: say how it stands.
-                                let mut last = progress(&model, total, total);
+                                let mut last = progress(&model, total.unwrap_or(0), total);
                                 last.outcome = Some(if installed(&state, &model) {
                                     DownloadOutcome::Installed
                                 } else {

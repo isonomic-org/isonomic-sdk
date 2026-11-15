@@ -342,7 +342,7 @@ fn only_the_download_event_with_an_outcome_is_final() {
         Event::DownloadProgress(DownloadProgress {
             model: "chat-medium".into(),
             received_bytes: 1,
-            total_bytes: 2,
+            total_bytes: Some(2),
             outcome,
             error: None,
         })

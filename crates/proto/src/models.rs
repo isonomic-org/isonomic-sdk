@@ -286,7 +286,9 @@ pub enum DownloadOutcome {
 pub struct DownloadProgress {
     pub model: String,
     pub received_bytes: u64,
-    pub total_bytes: u64,
+    /// Absent when the engine does not know the size yet.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_bytes: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub outcome: Option<DownloadOutcome>,
     /// With `outcome: failed`: what went wrong.
@@ -309,6 +311,8 @@ pub struct Recommendation {
     pub model: String,
     /// The profile it was chosen for.
     pub profile: String,
-    /// Its file size, to show before the download starts.
-    pub size_bytes: u64,
+    /// Its file size, to show before the download starts; absent when
+    /// unknown.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size_bytes: Option<u64>,
 }

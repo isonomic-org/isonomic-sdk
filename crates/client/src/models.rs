@@ -130,7 +130,7 @@ impl Models {
 /// the download goes on.
 pub struct DownloadStream {
     events: Subscription,
-    total_bytes: u64,
+    total_bytes: Option<u64>,
     done: bool,
     /// Keeps the connection up while the stream is followed.
     _client: Client,
@@ -140,7 +140,7 @@ impl std::fmt::Debug for DownloadStream {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "DownloadStream({}, {} bytes)",
+            "DownloadStream({}, {:?} bytes)",
             self.events.id(),
             self.total_bytes
         )
@@ -148,7 +148,8 @@ impl std::fmt::Debug for DownloadStream {
 }
 
 impl DownloadStream {
-    pub fn total_bytes(&self) -> u64 {
+    /// The file size; `None` when the engine does not know it yet.
+    pub fn total_bytes(&self) -> Option<u64> {
         self.total_bytes
     }
 

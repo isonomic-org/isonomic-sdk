@@ -43,3 +43,13 @@
 {"type":"response","id":125,"error":{"code":"capability_denied","message":"app com.isonomic.hello may not call models.download"}}
 {"type":"request","id":126,"method":"models.download","params":{"model":"remote-large"}}
 {"type":"response","id":126,"error":{"code":"unsupported","message":"remote-large is a remote model; there is nothing to download"}}
+{"type":"request","id":127,"token":"tok-hello-1","method":"models.download_cancel","params":{"model":"chat-medium"}}
+{"type":"response","id":127,"error":{"code":"capability_denied","message":"app com.isonomic.hello may not call models.download_cancel"}}
+{"type":"request","id":128,"token":"tok-hello-1","method":"models.recommended","params":{}}
+{"type":"response","id":128,"error":{"code":"capability_denied","message":"app com.isonomic.hello may not call models.recommended"}}
+{"type":"request","id":129,"method":"models.download_cancel","params":{"model":"chat-medium"}}
+{"type":"response","id":129,"error":{"code":"not_downloading","message":"no download of chat-medium is running"}}
+{"type":"request","id":130,"method":"models.download","params":{"model":"chat-custom"}}
+{"type":"response","id":130,"result":{"downloading":{"subscription":33,"model":"chat-custom"}}}
+{"type":"event","subscription":33,"event":"download_progress","data":{"model":"chat-custom","received_bytes":268435456}}
+{"type":"response","id":131,"result":{"recommended":{"model":"chat-custom","profile":"high"}}}

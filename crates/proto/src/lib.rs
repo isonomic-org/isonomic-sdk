@@ -321,7 +321,9 @@ pub enum Reply {
     Downloading {
         subscription: u64,
         model: String,
-        total_bytes: u64,
+        /// Absent when the engine does not know the size yet.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        total_bytes: Option<u64>,
     },
     /// Answer to `models.recommended`.
     Recommended(models::Recommendation),
@@ -536,6 +538,8 @@ pub enum ErrorCode {
     SessionFailed,
     /// Client tool specs must be client tools with free names.
     InvalidTools,
+    /// `models.download_cancel` for a model with no download running.
+    NotDownloading,
     /// A code from a newer engine.
     #[serde(other)]
     Unrecognized,

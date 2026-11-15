@@ -32,7 +32,7 @@ The checks speak the wire alone. They grant their own apps through `apps.grant` 
 | `wire.bad_frame` | Answer a frame that is not a message with `bad_request`, id 0; the connection goes on |
 | `tokens.grant` | Grant a valid manifest, including one with the `agents` capability; refuse a bad version or a bad id with `invalid_manifest` |
 | `tokens.unknown_token` | Refuse a token it never issued with `unknown_token`, on any interface |
-| `tokens.shell_only` | Refuse every `system` and `apps` method to an app holding every capability |
+| `tokens.shell_only` | Refuse every `system` and `apps` method, and `models.download`, `models.download_cancel` and `models.recommended`, to an app holding every capability |
 | `tokens.every_interface` | Refuse every method of `system`, `apps`, `models`, `blobs`, `sql` and `agents` to an app with no capabilities. The calls come from the frozen fixtures, and the check fails if a method has none |
 | `tokens.named_model` | Refuse a model outside the manifest's list with `capability_denied` |
 | `tokens.other_scope` | Refuse an app publishing to, or listening on, another app's events |
