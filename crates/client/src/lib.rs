@@ -25,6 +25,7 @@ mod blobs;
 mod events;
 mod models;
 mod scoped;
+mod sql;
 
 use std::future::Future;
 use std::io;
@@ -103,6 +104,7 @@ pub use blobs::Blobs;
 pub use events::{EventStream, Events};
 pub use models::{ModelStream, Models};
 pub use scoped::AppClient;
+pub use sql::{LiveQuery, Sql};
 
 pub(crate) struct Request {
     pub(crate) token: Option<Token>,
@@ -177,6 +179,11 @@ impl Client {
     /// The `events` interface, as the shell.
     pub fn events(&self) -> Events {
         Events::new(self.clone(), None)
+    }
+
+    /// The `sql` interface, as the shell (which must name each schema).
+    pub fn sql(&self) -> Sql {
+        Sql::new(self.clone(), None)
     }
 
     /// A client that names `token` on every call: what an app is given.

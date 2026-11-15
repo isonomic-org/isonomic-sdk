@@ -4,7 +4,7 @@
 use isonomic_proto::{Call, Reply, Token};
 use tokio::sync::watch;
 
-use crate::{Blobs, Client, ClientError, Events, Live, Models, Subscription};
+use crate::{Blobs, Client, ClientError, Events, Live, Models, Sql, Subscription};
 
 /// A [`Client`] scoped to one app's capability token. Cheap to clone.
 #[derive(Clone)]
@@ -41,6 +41,11 @@ impl AppClient {
     /// The `events` interface, scoped to this app.
     pub fn events(&self) -> Events {
         Events::new(self.client.clone(), Some(self.token.clone()))
+    }
+
+    /// The `sql` interface, in this app's schemas.
+    pub fn sql(&self) -> Sql {
+        Sql::new(self.client.clone(), Some(self.token.clone()))
     }
 
     /// Make one call under this app's token.
