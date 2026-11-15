@@ -15,7 +15,7 @@ use tokio::io::DuplexStream;
 use tokio::sync::{mpsc, oneshot};
 use tokio::task::JoinHandle;
 
-use crate::{models, system, CallRecord, Grant, State};
+use crate::{blobs, faults, models, system, CallRecord, Grant, State};
 
 /// One open subscription: the task feeding it, how to stop it gracefully,
 /// and the token it was opened under.
@@ -125,8 +125,19 @@ async fn dispatch(
     if let Err(error) = authorize(caller, &call) {
         return Some(failure(id, error));
     }
-    if call.interface() == Interface::Models {
-        return models::dispatch(state, conn, id, caller, token, call).await;
+    if let Err(error) = faults::apply(state, call.interface()).await {
+        return Some(failure(id, error));
+    }
+    let app = grant.as_ref().map(|g| g.manifest.id.as_str());
+    match call.interface() {
+        Interface::Models => return models::dispatch(state, conn, id, caller, token, call).await,
+        Interface::Blobs => {
+            return Some(match blobs::answer(state, app, call) {
+                Ok(reply) => result(id, reply),
+                Err(error) => failure(id, error),
+            })
+        }
+        _ => {}
     }
     Some(match call {
         Call::SystemSubscribe => {

@@ -1,0 +1,20 @@
+{"type":"request","id":40,"token":"tok-hello-1","method":"blobs.put","params":{"content_type":"text/plain","data":"aGVsbG8="}}
+{"type":"response","id":40,"result":{"blob":{"handle":"blob-1","content_type":"text/plain","size":5,"written":5}}}
+{"type":"request","id":41,"token":"tok-hello-1","method":"blobs.create","params":{"content_type":"image/png","size":1048576}}
+{"type":"response","id":41,"result":{"blob":{"handle":"blob-2","content_type":"image/png","size":1048576,"written":0}}}
+{"type":"request","id":42,"token":"tok-hello-1","method":"blobs.write","params":{"handle":"blob-2","offset":0,"data":"iVBORw0KGgo="}}
+{"type":"response","id":42,"result":{"blob":{"handle":"blob-2","content_type":"image/png","size":1048576,"written":8}}}
+{"type":"request","id":43,"token":"tok-hello-1","method":"blobs.get","params":{"handle":"blob-1","offset":0}}
+{"type":"response","id":43,"result":{"blob_data":{"info":{"handle":"blob-1","content_type":"text/plain","size":5,"written":5},"offset":0,"data":"aGVsbG8="}}}
+{"type":"request","id":44,"token":"tok-hello-1","method":"blobs.get","params":{"handle":"blob-1","offset":1,"length":3}}
+{"type":"response","id":44,"result":{"blob_data":{"info":{"handle":"blob-1","content_type":"text/plain","size":5,"written":5},"offset":1,"data":"ZWxs"}}}
+{"type":"request","id":45,"token":"tok-hello-1","method":"blobs.info","params":{"handle":"blob-2"}}
+{"type":"response","id":45,"result":{"blob":{"handle":"blob-2","content_type":"image/png","size":1048576,"written":8}}}
+{"type":"request","id":46,"token":"tok-hello-1","method":"blobs.delete","params":{"handle":"blob-1"}}
+{"type":"response","id":46,"result":{"deleted":{}}}
+{"type":"request","id":47,"token":"tok-hello-1","method":"blobs.get","params":{"handle":"blob-9","offset":0}}
+{"type":"response","id":47,"error":{"code":"unknown_blob","message":"no blob blob-9"}}
+{"type":"request","id":48,"token":"tok-hello-1","method":"blobs.create","params":{"content_type":"video/mp4","size":99999999999}}
+{"type":"response","id":48,"error":{"code":"too_large","message":"99999999999 bytes is over the limit of 67108864"}}
+{"type":"request","id":49,"token":"tok-hello-1","method":"blobs.get","params":{"handle":"blob-2","offset":0}}
+{"type":"response","id":49,"error":{"code":"incomplete","message":"blob-2 has 8 of 1048576 bytes"}}
