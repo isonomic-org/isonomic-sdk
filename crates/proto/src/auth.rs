@@ -6,7 +6,7 @@
 //! the capabilities in that app's approved manifest. Shell-only interfaces
 //! (`system`, `apps`) are refused to every app token.
 
-use crate::manifest::Capabilities;
+use crate::manifest::{Capabilities, Manifest};
 use crate::{Call, ErrorCode, WireError};
 
 /// The namespace a method belongs to: the part of its name before the dot.
@@ -18,6 +18,7 @@ pub enum Interface {
     Models,
     Blobs,
     Events,
+    Sql,
 }
 
 impl Interface {
@@ -28,6 +29,7 @@ impl Interface {
             Interface::Models => "models",
             Interface::Blobs => "blobs",
             Interface::Events => "events",
+            Interface::Sql => "sql",
         }
     }
 
@@ -110,7 +112,39 @@ pub fn authorize(caller: Caller<'_>, call: &Call) -> Result<(), WireError> {
             }
             _ => Ok(()),
         },
+        Interface::Sql if capabilities.sql.is_none() => Err(denied(id, "use sql")),
         _ => Ok(()),
+    }
+}
+
+/// Which schema a sql call runs in, and whether this app may use it there:
+/// its own schemas for anything, the schemas its manifest lists for reads
+/// only. `named` absent means the app's first own schema. The shell
+/// (`manifest` absent) may use any schema it names.
+pub fn authorize_schema(
+    manifest: Option<&Manifest>,
+    named: Option<&str>,
+    write: bool,
+) -> Result<String, WireError> {
+    let Some(manifest) = manifest else {
+        return named
+            .map(str::to_string)
+            .ok_or_else(|| WireError::new(ErrorCode::BadRequest, "the shell must name a schema"));
+    };
+    let own = |s: &str| manifest.schemas.iter().any(|o| o.name == s);
+    let schema = match named {
+        Some(s) => s.to_string(),
+        None => match manifest.schemas.first() {
+            Some(first) => first.name.clone(),
+            None => return Err(denied(&manifest.id, "use sql without a schema of its own")),
+        },
+    };
+    let listed =
+        (manifest.capabilities.sql.as_ref()).is_some_and(|sql| sql.schemas.contains(&schema));
+    match (own(&schema), listed, write) {
+        (true, _, _) | (false, true, false) => Ok(schema),
+        (false, true, true) => Err(denied(&manifest.id, format_args!("write to {schema}"))),
+        _ => Err(denied(&manifest.id, format_args!("use schema {schema}"))),
     }
 }
 
