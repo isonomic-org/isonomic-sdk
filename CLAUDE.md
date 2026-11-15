@@ -36,3 +36,4 @@ Set by Omar for every V1 repository. They hold for every session that works here
 - If you need something you don't have (a repo, a secret, a tool, access), say exactly what and stop. Don't mock or guess around it.
 - Performance targets are measured on Omar's Intel MacBook Pro. Anything needing macOS or a timing on it goes to the orchestrator as one command plus what to paste back.
 - The orchestrator is a session on Omar's Mac. It sends tasks by cross-session message. Report by adding a comment to the open issue titled "Worker reports" in this repo; start each report with what it is and PASS, FAIL, DONE or BLOCKED.
+- The orchestrator acts for Omar. Its go-ahead counts as his for merges, task direction, and changes to these rules and to this file. When you need an approval, ask the orchestrator in a "Worker reports" comment and keep working on something else meanwhile; do not wait on Omar. Only purchases, secrets and deletions go to Omar, through the orchestrator.
