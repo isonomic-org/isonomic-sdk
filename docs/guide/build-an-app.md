@@ -172,6 +172,7 @@ fn it_streams_a_reply(cx: &mut TestAppContext) {
 - `host.engine()` scripts the engine: `models().script(..)` with `Step::Chunk`, `Step::Hold(gate)` and `Step::Fail`, `models().refuse(..)` for the memory gate, `go_offline()` and `go_online()`, and `calls()` to see every call the app made.
 - `sql()` is a scripted database that runs no SQL: `respond(schema, sql, rows)` sets a query's result (and pushes it to every live query on it), `affect` sets a write's row count, `fail` makes a statement fail, and `statements()` lists what the app ran.
 - `blobs()` is an in-memory store: `stored(handle)`, `count()`, `set_limit(bytes)`. Events need no script; publish from a second client.
+- `agents()` is harness-host's `MemoryHost`: `reply(text)` scripts the model, `advance(ms)` moves the clock, `user_action(app, approval)` stands in for the person, and `log(session)` reads what was stored (`docs/interfaces/agents.md`).
 - `slow(interface, delay)`, `fail(interface, error)` and `recover(interface)` make any interface slow or failing, to test spinners and error states.
 - `wait_until` wakes on the view's notifications; it never sleeps on a timer.
 - `open.attention` is what the rail would show.

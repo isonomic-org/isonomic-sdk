@@ -18,9 +18,11 @@
 //! output or a query's rows, stays in the testkit's own tests.
 //!
 //! Run them against a test engine, never a user's: the checks store and
-//! delete small blobs, publish events and grant test apps, and the last one
-//! asks the engine to shut down with an app's token, which it must refuse.
+//! delete small blobs, publish events, create and purge agent sessions and
+//! grant test apps, and the last one asks the engine to shut down with an
+//! app's token, which it must refuse.
 
+mod agents;
 mod interfaces;
 mod tokens;
 mod wire;
@@ -84,6 +86,12 @@ pub const CHECKS: &[Check] = &[
     ),
     check!("subscriptions.owner_only", interfaces::owner_only),
     check!("sql.schemas", interfaces::sql_schemas),
+    check!("agents.presets", agents::presets),
+    check!("agents.registry", agents::registry),
+    check!("agents.replay", agents::replay),
+    check!("agents.isolated", agents::isolated),
+    check!("agents.purge_own", agents::purge_own),
+    check!("agents.unknown_subscription", agents::unknown_subscription),
     check!("tokens.shutdown_refused", tokens::shutdown_refused),
 ];
 

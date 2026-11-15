@@ -45,6 +45,12 @@ The checks speak the wire alone. They grant their own apps through `apps.grant` 
 | `events.shell_reaches_app` | Deliver the shell's event to the app whose scope it names |
 | `subscriptions.owner_only` | Let only the token that opened a subscription end it, even on the same connection |
 | `sql.schemas` | Run reads in the app's own schema; refuse writes to listed schemas, anything in other schemas, and an app with no schema; make the shell name a schema |
+| `agents.presets` | List and read the built-in `chat` preset; refuse invalid preset text with `invalid_preset` |
+| `agents.registry` | Show a created session in `sessions.list`, and a rename, an archive and a restore in the next read |
+| `agents.replay` | Start a session's log with `session.start` at seq 1; replay from a seq starting at the next event |
+| `agents.isolated` | Answer another app's open, subscribe, rename and send with `not_found`; refuse purge and `approvals.list` naming another app with `capability_denied`; leave its sessions out of the list |
+| `agents.purge_own` | Delete the caller's sessions on purge and leave every other app's |
+| `agents.unknown_subscription` | Refuse unsubscribing from a stream that is not open with `unknown_subscription` |
 | `tokens.shutdown_refused` | Refuse `system.shutdown` to an app, and keep answering |
 
 ## How we know the checks bite
