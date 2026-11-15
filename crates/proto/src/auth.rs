@@ -16,6 +16,7 @@ pub enum Interface {
     System,
     Apps,
     Models,
+    Blobs,
 }
 
 impl Interface {
@@ -24,6 +25,7 @@ impl Interface {
             Interface::System => "system",
             Interface::Apps => "apps",
             Interface::Models => "models",
+            Interface::Blobs => "blobs",
         }
     }
 
@@ -81,8 +83,30 @@ pub fn authorize(caller: Caller<'_>, call: &Call) -> Result<(), WireError> {
                 _ => Ok(()),
             }
         }
+        Interface::Blobs => {
+            let Some(blobs) = &capabilities.blobs else {
+                return Err(denied(id, "store blobs"));
+            };
+            let size = match call {
+                Call::BlobsPut { data, .. } => Some(data.0.len() as u64),
+                Call::BlobsCreate { size, .. } => Some(*size),
+                _ => None,
+            };
+            match (size, blobs.max_bytes) {
+                (Some(size), Some(max)) if size > max => Err(too_large(size, max)),
+                _ => Ok(()),
+            }
+        }
         _ => Ok(()),
     }
+}
+
+/// A blob over a limit: the manifest's, or the engine's own.
+pub fn too_large(size: u64, max: u64) -> WireError {
+    WireError::new(
+        ErrorCode::TooLarge,
+        format!("{size} bytes is over the limit of {max}"),
+    )
 }
 
 /// The check the engine makes once it knows which model a call runs on:

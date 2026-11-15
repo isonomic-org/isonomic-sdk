@@ -10,6 +10,7 @@
 //! `welcome` with the version both sides will speak.
 
 pub mod auth;
+pub mod blobs;
 pub mod frame;
 #[cfg(feature = "tokio")]
 pub mod io;
@@ -21,6 +22,7 @@ pub mod system;
 
 use serde::{Deserialize, Serialize};
 
+pub use blobs::{BlobInfo, Bytes};
 pub use manifest::{Capabilities, Manifest, Token};
 pub use models::{
     MemoryRefusal, Message, ModelChunk, ModelDetail, ModelInfo, StopReason, StreamRequest,
@@ -97,6 +99,32 @@ pub enum Call {
         model: Option<String>,
         input: Vec<String>,
     },
+    /// Store a blob of at most `CHUNK_BYTES` in one call.
+    #[serde(rename = "blobs.put")]
+    BlobsPut { content_type: String, data: Bytes },
+    /// Reserve a larger blob, then send its bytes with `blobs.write`.
+    #[serde(rename = "blobs.create")]
+    BlobsCreate { content_type: String, size: u64 },
+    /// Append the next chunk; `offset` must equal the bytes written so far.
+    #[serde(rename = "blobs.write")]
+    BlobsWrite {
+        handle: String,
+        offset: u64,
+        data: Bytes,
+    },
+    /// Read up to `length` bytes (and at most `CHUNK_BYTES`) from `offset`.
+    #[serde(rename = "blobs.get")]
+    BlobsGet {
+        handle: String,
+        #[serde(default)]
+        offset: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        length: Option<u64>,
+    },
+    #[serde(rename = "blobs.info")]
+    BlobsInfo { handle: String },
+    #[serde(rename = "blobs.delete")]
+    BlobsDelete { handle: String },
 }
 
 impl Call {
@@ -114,6 +142,12 @@ impl Call {
         "models.stream",
         "models.cancel",
         "models.embed",
+        "blobs.put",
+        "blobs.create",
+        "blobs.write",
+        "blobs.get",
+        "blobs.info",
+        "blobs.delete",
     ];
 
     /// The method name on the wire, for logs and the Activity tab.
@@ -131,6 +165,12 @@ impl Call {
             Call::ModelsStream(_) => "models.stream",
             Call::ModelsCancel { .. } => "models.cancel",
             Call::ModelsEmbed { .. } => "models.embed",
+            Call::BlobsPut { .. } => "blobs.put",
+            Call::BlobsCreate { .. } => "blobs.create",
+            Call::BlobsWrite { .. } => "blobs.write",
+            Call::BlobsGet { .. } => "blobs.get",
+            Call::BlobsInfo { .. } => "blobs.info",
+            Call::BlobsDelete { .. } => "blobs.delete",
         }
     }
 
@@ -149,6 +189,12 @@ impl Call {
             | Call::ModelsStream(_)
             | Call::ModelsCancel { .. }
             | Call::ModelsEmbed { .. } => Interface::Models,
+            Call::BlobsPut { .. }
+            | Call::BlobsCreate { .. }
+            | Call::BlobsWrite { .. }
+            | Call::BlobsGet { .. }
+            | Call::BlobsInfo { .. }
+            | Call::BlobsDelete { .. } => Interface::Blobs,
         }
     }
 }
@@ -216,6 +262,17 @@ pub enum Reply {
         model: String,
         vectors: Vec<Vec<f32>>,
     },
+    /// Answer to `blobs.put`, `blobs.create`, `blobs.write` and
+    /// `blobs.info`.
+    Blob(BlobInfo),
+    /// Answer to `blobs.get`: `data` starts at `offset`.
+    BlobData {
+        info: BlobInfo,
+        offset: u64,
+        data: Bytes,
+    },
+    /// Answer to `blobs.delete`.
+    Deleted {},
 }
 
 impl Reply {
@@ -312,6 +369,12 @@ pub enum ErrorCode {
     ModelUnavailable,
     /// Remote models are switched off by the user.
     RemoteDisabled,
+    /// No blob with that handle for this caller.
+    UnknownBlob,
+    /// Over the manifest's `max_bytes` or the engine's own limit.
+    TooLarge,
+    /// The blob is still being written.
+    Incomplete,
     /// A code from a newer engine.
     #[serde(other)]
     Unrecognized,
