@@ -16,3 +16,9 @@
 {"type":"response","id":7,"result":{"shutting_down":{}}}
 {"type":"request","id":12,"token":"tok-hello-1","method":"system.shutdown"}
 {"type":"response","id":12,"error":{"code":"capability_denied","message":"app com.isonomic.hello may not call system.shutdown"}}
+{"type":"request","id":15,"method":"system.retry","params":{"service":"search"}}
+{"type":"response","id":15,"result":{"retrying":{}}}
+{"type":"request","id":16,"method":"system.retry","params":{"service":"search"}}
+{"type":"response","id":16,"error":{"code":"not_degraded","message":"search is not degraded"}}
+{"type":"request","id":17,"method":"system.retry","params":{"service":"nope"}}
+{"type":"response","id":17,"error":{"code":"unknown_service","message":"no service named nope"}}

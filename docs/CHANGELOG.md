@@ -2,6 +2,14 @@
 
 Newest first. Each entry names what the engine (isonomic-capsule) and the window (isonomic-desktop) must do when they move `SDK_REF` to it.
 
+## Unreleased: `system.retry`
+
+**Wire (additive, still version 0):** method `system.retry { service }`, reply `retrying {}`, error code `not_degraded`. Requested by the Desktop session (isonomic-sdk #14).
+
+**For the engine:** on `system.retry`, refuse an unknown service (`unknown_service`) or one that is not degraded (`not_degraded`); otherwise call the supervisor's `reset()` and start the service, answering `retrying {}`. The outcome goes out as the usual `service_status` events. `proto::auth` already refuses app tokens.
+
+**For the window:** `Client::retry(service)` for the Retry action on a degraded service in the logs view. Show the result from `Client::live()`, not from the reply.
+
 ## Unreleased: the conformance crate
 
 **Wire:** no change.

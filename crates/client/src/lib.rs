@@ -281,6 +281,18 @@ impl Client {
         }
     }
 
+    /// Start a degraded service again. The outcome arrives as
+    /// `service_status` events; refused with `not_degraded` otherwise.
+    pub async fn retry(&self, service: &str) -> Result<(), ClientError> {
+        let call = Call::SystemRetry {
+            service: service.to_string(),
+        };
+        match self.call(call).await? {
+            Reply::Retrying {} => Ok(()),
+            _ => Err(ClientError::UnexpectedReply),
+        }
+    }
+
     /// Ask the engine to stop every service in order, then itself.
     pub async fn shutdown(&self) -> Result<(), ClientError> {
         match self.call(Call::SystemShutdown).await? {

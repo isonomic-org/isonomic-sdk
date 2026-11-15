@@ -53,6 +53,8 @@ pub(crate) struct State {
     pub(crate) system: Mutex<SystemStatus>,
     pub(crate) logs: Mutex<HashMap<String, Vec<String>>>,
     pub(crate) changes: broadcast::Sender<ServiceStatus>,
+    pub(crate) retries: Mutex<Vec<String>>,
+    pub(crate) retry_outcomes: Mutex<HashMap<String, ServiceState>>,
     pub(crate) online: watch::Sender<bool>,
     pub(crate) shutdown_requested: AtomicBool,
     pub(crate) grants: Mutex<HashMap<Token, Grant>>,
@@ -67,6 +69,23 @@ pub(crate) struct State {
 }
 
 impl State {
+    fn set_service(&self, status: ServiceStatus) {
+        self.system.lock().unwrap().apply(status.clone());
+        let _ = self.changes.send(status);
+    }
+
+    fn set_state(&self, name: &str, state: ServiceState) {
+        let services = self.system.lock().unwrap().services.clone();
+        let Some(mut status) = services.into_iter().find(|s| s.name == name) else {
+            return;
+        };
+        if state == ServiceState::Healthy && status.state != ServiceState::Healthy {
+            status.restart_count += 1;
+        }
+        status.state = state;
+        self.set_service(status);
+    }
+
     /// Validate a manifest and issue a token for it. Granting the same app
     /// again replaces its manifest and keeps earlier tokens working, like an
     /// engine whose tokens are derived from the manifest.
@@ -124,6 +143,8 @@ impl TestEngine {
                 system: Mutex::new(system),
                 logs: Mutex::new(HashMap::new()),
                 changes: broadcast::channel(64).0,
+                retries: Mutex::new(Vec::new()),
+                retry_outcomes: Mutex::new(HashMap::new()),
                 online: watch::channel(true).0,
                 shutdown_requested: AtomicBool::new(false),
                 grants: Mutex::new(HashMap::new()),
@@ -238,28 +259,26 @@ impl TestEngine {
 
     /// Replace (or add) one service and tell every subscriber.
     pub fn set_service(&self, status: ServiceStatus) {
-        self.state.system.lock().unwrap().apply(status.clone());
-        let _ = self.state.changes.send(status);
+        self.state.set_service(status);
     }
 
     /// Change one existing service's state, counting a restart when it comes
     /// back to healthy from anything else.
     pub fn set_state(&self, name: &str, state: ServiceState) {
-        let current = self
-            .state
-            .system
-            .lock()
-            .unwrap()
-            .services
-            .iter()
-            .find(|s| s.name == name)
-            .cloned();
-        let Some(mut status) = current else { return };
-        if state == ServiceState::Healthy && status.state != ServiceState::Healthy {
-            status.restart_count += 1;
-        }
-        status.state = state;
-        self.set_service(status);
+        self.state.set_state(name, state);
+    }
+
+    /// The services `system.retry` restarted, oldest first.
+    pub fn retries(&self) -> Vec<String> {
+        self.state.retries.lock().unwrap().clone()
+    }
+
+    /// What a retry of `service` leads to after `starting`: `Healthy`, or
+    /// `Degraded` again. Unscripted, the service stays `starting` until the
+    /// test calls `set_state`.
+    pub fn on_retry(&self, service: &str, outcome: ServiceState) {
+        let mut outcomes = self.state.retry_outcomes.lock().unwrap();
+        outcomes.insert(service.to_string(), outcome);
     }
 
     pub fn set_logs(&self, service: &str, lines: &[&str]) {

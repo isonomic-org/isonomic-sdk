@@ -2,7 +2,7 @@
 
 use std::sync::atomic::Ordering;
 
-use isonomic_proto::{Call, ErrorCode, HardwareProfile, Reply, WireError};
+use isonomic_proto::{Call, ErrorCode, HardwareProfile, Reply, ServiceState, WireError};
 
 use crate::State;
 
@@ -39,6 +39,28 @@ pub(crate) fn answer(state: &State, call: Call) -> Result<Reply, WireError> {
             total_memory_bytes: 16 << 30,
             available_memory_bytes: 8 << 30,
         })),
+        Call::SystemRetry { service } => {
+            let services = state.system.lock().unwrap().services.clone();
+            let Some(current) = services.iter().find(|s| s.name == service) else {
+                return Err(WireError::new(
+                    ErrorCode::UnknownService,
+                    format!("no service named {service}"),
+                ));
+            };
+            if current.state != ServiceState::Degraded {
+                return Err(WireError::new(
+                    ErrorCode::NotDegraded,
+                    format!("{service} is not degraded"),
+                ));
+            }
+            state.retries.lock().unwrap().push(service.clone());
+            state.set_state(&service, ServiceState::Starting);
+            let outcome = state.retry_outcomes.lock().unwrap().get(&service).copied();
+            if let Some(outcome) = outcome {
+                state.set_state(&service, outcome);
+            }
+            Ok(Reply::Retrying {})
+        }
         Call::SystemShutdown => {
             state.shutdown_requested.store(true, Ordering::SeqCst);
             Ok(Reply::ShuttingDown {})
