@@ -50,8 +50,7 @@ pub struct Capabilities {
     pub egress: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub blobs: Option<BlobAccess>,
-    /// Reserved for the agents interface. Must stay absent until that
-    /// interface exists; the engine refuses a manifest that sets it.
+    /// Agent sessions: the app's own sessions, presets and artifacts.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub agents: Option<AgentsAccess>,
 }
@@ -109,7 +108,8 @@ pub struct BlobAccess {
     pub max_bytes: Option<u64>,
 }
 
-/// Reserved. No fields until the agents interface is approved.
+/// Access to agent sessions. Which sessions an app reaches is the host's
+/// rule (its own only); fields that narrow it may come later.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AgentsAccess {}
 
@@ -156,8 +156,6 @@ pub enum ManifestError {
     BadVersion(String),
     #[error("schema name {0:?} must be lowercase letters, digits and underscores")]
     BadSchema(String),
-    #[error("the agents capability is reserved and must not be set yet")]
-    AgentsReserved,
 }
 
 impl Manifest {
@@ -189,9 +187,6 @@ impl Manifest {
             if !ok {
                 return Err(ManifestError::BadSchema(schema.name.clone()));
             }
-        }
-        if self.capabilities.agents.is_some() {
-            return Err(ManifestError::AgentsReserved);
         }
         Ok(())
     }

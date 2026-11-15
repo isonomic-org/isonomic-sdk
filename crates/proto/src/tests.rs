@@ -74,7 +74,11 @@ fn server_messages_have_a_frozen_shape() {
     let service = r#"{"name":"postgres","tier":1,"state":"healthy","restart_count":2,"last_healthy_unix":1700000000}"#;
     let cases = [
         (
-            ServerMessage::Welcome { version: 0, engine: "0.0.1".into() },
+            ServerMessage::Welcome {
+                version: 0,
+                engine: "0.0.1".into(),
+                schema: None,
+            },
             r#"{"type":"welcome","version":0,"engine":"0.0.1"}"#.to_string(),
         ),
         (

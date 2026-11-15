@@ -1,0 +1,76 @@
+{"type":"request","id":80,"token":"tok-chat-1","method":"sessions.create","params":{"preset":"chat"}}
+{"type":"response","id":80,"result":{"session_created":{"session":"s-1"}}}
+{"type":"request","id":81,"token":"tok-chat-1","method":"sessions.list","params":{"archived":false,"text":"lisbon","limit":20}}
+{"type":"response","id":81,"result":{"sessions":{"items":[{"id":"s-1","app":"com.isonomic.chat","class":"interactive","preset":{"id":"chat","version":1},"title":"Trip to Lisbon","status":"active","created_at":1700000000000,"updated_at":1700000060000,"last_seq":12}],"next":"c-2"}}}
+{"type":"request","id":82,"token":"tok-chat-1","method":"sessions.open","params":{"session":"s-1"}}
+{"type":"response","id":82,"result":{"session_snapshot":{"summary":{"id":"s-1","app":"com.isonomic.chat","class":"interactive","preset":{"id":"chat","version":1},"title":"Trip to Lisbon","status":"active","created_at":1700000000000,"updated_at":1700000060000,"last_seq":12},"turn_open":"t-3","approvals":["a-1"]}}}
+{"type":"request","id":83,"token":"tok-chat-1","method":"sessions.fork","params":{"session":"s-1","at":{"before_turn":"t-2"},"reason":"edit"}}
+{"type":"response","id":83,"result":{"session_created":{"session":"s-2"}}}
+{"type":"request","id":84,"token":"tok-chat-1","method":"sessions.archive","params":{"session":"s-1","archived":true}}
+{"type":"response","id":84,"result":{"done":{}}}
+{"type":"request","id":85,"token":"tok-chat-1","method":"sessions.rename","params":{"session":"s-1","title":"Lisbon"}}
+{"type":"response","id":85,"result":{"done":{}}}
+{"type":"request","id":86,"token":"tok-chat-1","method":"sessions.send","params":{"session":"s-1","content":[{"type":"text","text":"Plan three days in Lisbon"},{"type":"attachment","blob":"b-9","name":"notes.md","media_type":"text/markdown","bytes":120},{"type":"mention","target":"file","id":"f-4","label":"budget.xlsx"}],"client_ref":"draft-7"}}
+{"type":"response","id":86,"result":{"accepted":{"queued":false}}}
+{"type":"request","id":87,"token":"tok-chat-1","method":"sessions.continue","params":{"session":"s-1"}}
+{"type":"response","id":87,"error":{"code":"continue_refused","message":"There is no partial reply to continue."}}
+{"type":"request","id":88,"token":"tok-chat-1","method":"sessions.cancel","params":{"session":"s-1"}}
+{"type":"response","id":88,"result":{"done":{}}}
+{"type":"request","id":89,"token":"tok-chat-1","method":"sessions.purge","params":{}}
+{"type":"response","id":89,"result":{"purged":{"sessions":3,"events":140,"blobs":2}}}
+{"type":"request","id":90,"token":"tok-chat-1","method":"sessions.subscribe","params":{"session":"s-1","from_seq":10}}
+{"type":"response","id":90,"result":{"session_stream":{"subscription":21}}}
+{"type":"event","subscription":21,"event":"session_event","data":{"session":"s-1","seq":11,"at":1700000000011,"turn":"t-3","type":"user","content":[{"type":"text","text":"And a day trip?"}]}}
+{"type":"event","subscription":21,"event":"live_delta","data":{"session":"s-1","turn":"t-3","step":"p-1","after_seq":12,"block":0,"kind":"text","text":"Sintra is "}}
+{"type":"event","subscription":21,"event":"session_event","data":{"session":"s-1","seq":13,"at":1700000000013,"turn":"t-3","step":"p-1","type":"assistant","content":[{"type":"text","text":"Sintra is an easy day trip."}],"stop":"end","stream":[[0,27,900]],"usage":{"input_tokens":420,"output_tokens":9}}}
+{"type":"event","subscription":21,"event":"session_event","data":{"session":"s-1","seq":14,"at":1700000000014,"turn":"t-3","step":"p-1","type":"approval.request","approval":"a-1","call":"c-5","summary":"Send an email to Ana","rule":"acts_outward","effects":["acts_outward"]}}
+{"type":"request","id":91,"token":"tok-chat-1","method":"sessions.unsubscribe","params":{"subscription":21}}
+{"type":"response","id":91,"result":{"unsubscribed":{}}}
+{"type":"request","id":92,"token":"tok-chat-1","method":"approvals.list","params":{}}
+{"type":"response","id":92,"result":{"approvals":[{"session":"s-1","app":"com.isonomic.chat","request":{"approval":"a-1","call":"c-5","summary":"Send an email to Ana","rule":"acts_outward","effects":["acts_outward"]}}]}}
+{"type":"request","id":93,"token":"tok-chat-1","method":"approvals.decide","params":{"session":"s-1","approval":"a-1","decision":"allow","user_action":"ua-77"}}
+{"type":"response","id":93,"result":{"done":{}}}
+{"type":"request","id":94,"token":"tok-chat-1","method":"approvals.decide","params":{"session":"s-1","approval":"a-2","decision":{"text":"maybe later"}}}
+{"type":"response","id":94,"error":{"code":"missing_user_action","message":"Deciding an approval needs a user action."}}
+{"type":"request","id":95,"token":"tok-chat-1","method":"questions.answer","params":{"session":"s-1","question":"q-1","selected":["morning"]}}
+{"type":"response","id":95,"result":{"done":{}}}
+{"type":"request","id":96,"token":"tok-chat-1","method":"tools.register_client","params":{"session":"s-1","specs":[{"name":"open_map","description":"Show a place on the map","input_schema":{"type":"object"},"kind":"client","concurrency":"parallel"}]}}
+{"type":"response","id":96,"result":{"done":{}}}
+{"type":"request","id":97,"token":"tok-chat-1","method":"tools.result","params":{"session":"s-1","call":"c-6","content":[{"type":"text","text":"Shown"}]}}
+{"type":"response","id":97,"result":{"done":{}}}
+{"type":"request","id":98,"token":"tok-chat-1","method":"presets.list","params":{}}
+{"type":"response","id":98,"result":{"presets":[{"reference":{"id":"chat","version":1},"name":"Chat"}]}}
+{"type":"request","id":99,"token":"tok-chat-1","method":"presets.get","params":{"preset":"travel"}}
+{"type":"response","id":99,"result":{"preset":{"reference":{"id":"travel","version":2},"owner":"com.isonomic.chat","text":"name = \"Travel\"\n","diagnostics":[{"severity":"warning","at":"policy.autonomy","message":"Defaults to ask."}]}}}
+{"type":"request","id":100,"token":"tok-chat-1","method":"presets.put","params":{"text":"name = \"Travel\"\n"}}
+{"type":"response","id":100,"result":{"preset_saved":{"reference":{"id":"travel","version":3}}}}
+{"type":"request","id":101,"token":"tok-chat-1","method":"artifacts.get","params":{"artifact":"r-1","version":2}}
+{"type":"response","id":101,"result":{"artifact":{"meta":{"artifact":"r-1","version":2,"op":"update","title":"Itinerary","media_type":"text/markdown","blob":"b-12","bytes":5,"call":"c-8"},"bytes":"IyBEYXk="}}}
+{"type":"request","id":102,"token":"tok-chat-1","method":"artifacts.list","params":{"session":"s-1"}}
+{"type":"response","id":102,"result":{"artifacts":[{"artifact":"r-1","version":2,"op":"update","title":"Itinerary","media_type":"text/markdown","blob":"b-12","bytes":5,"call":"c-8"}]}}
+{"type":"request","id":103,"token":"tok-chat-1","method":"sessions.open","params":{"session":"s-from-another-app"}}
+{"type":"response","id":103,"error":{"code":"not_found","message":"no such session"}}
+{"type":"event","subscription":21,"event":"session_event","data":{"session":"s-1","seq":15,"at":1700000000015,"turn":"t-3","type":"reaction","emoji":"thumbs_up","to_seq":13}}
+{"type":"welcome","version":0,"engine":"isonomic-engine","schema":{"version":1,"revision":2}}
+{"type":"request","id":104,"method":"sessions.purge","params":{"app":"com.isonomic.chat"}}
+{"type":"response","id":104,"result":{"purged":{"sessions":1,"events":12,"blobs":0}}}
+{"type":"request","id":105,"method":"approvals.list","params":{"app":"com.isonomic.chat"}}
+{"type":"response","id":105,"result":{"approvals":[]}}
+{"type":"request","id":106,"token":"tok-chat-1","method":"presets.put","params":{"text":"name = 3\n"}}
+{"type":"response","id":106,"error":{"code":"invalid_preset","message":"name: expected a string"}}
+{"type":"request","id":107,"token":"tok-chat-1","method":"sessions.create","params":{"preset":"nightly-digest"}}
+{"type":"response","id":107,"error":{"code":"class_not_supported","message":"Autonomous sessions are not run yet."}}
+{"type":"request","id":108,"token":"tok-chat-1","method":"sessions.fork","params":{"session":"s-1","at":{"after_turn":"t-3"}}}
+{"type":"response","id":108,"error":{"code":"not_at_turn_boundary","message":"Turn t-3 is still open."}}
+{"type":"request","id":109,"token":"tok-view-1","method":"approvals.decide","params":{"session":"s-4","approval":"a-3","decision":"allow","user_action":"ua-78"}}
+{"type":"response","id":109,"error":{"code":"not_allowed_to_decide","message":"Views may request approvals but not decide them."}}
+{"type":"request","id":110,"token":"tok-chat-1","method":"approvals.decide","params":{"session":"s-1","approval":"a-1","decision":"deny","user_action":"ua-79"}}
+{"type":"response","id":110,"error":{"code":"already_decided","message":"This approval was already decided."}}
+{"type":"request","id":111,"token":"tok-chat-1","method":"sessions.send","params":{"session":"s-5","content":[{"type":"text","text":"Still there?"}]}}
+{"type":"response","id":111,"error":{"code":"session_failed","message":"The session failed and takes no more input."}}
+{"type":"request","id":112,"token":"tok-chat-1","method":"tools.register_client","params":{"session":"s-1","specs":[{"name":"open_map","description":"Show a place on the map","input_schema":{"type":"object"},"kind":"engine","concurrency":"parallel"}]}}
+{"type":"response","id":112,"error":{"code":"invalid_tools","message":"open_map is not a client tool."}}
+{"type":"request","id":113,"token":"tok-notes-1","method":"approvals.list","params":{"app":"com.isonomic.chat"}}
+{"type":"response","id":113,"error":{"code":"capability_denied","message":"app com.isonomic.notes may not reach the agent sessions of com.isonomic.chat"}}
+{"type":"request","id":114,"method":"sessions.purge","params":{}}
+{"type":"response","id":114,"error":{"code":"bad_request","message":"the shell must name the app whose sessions to purge"}}

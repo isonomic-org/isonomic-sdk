@@ -76,10 +76,10 @@ fn validation_applies_the_engine_rules() {
         }]),
         ManifestError::BadSchema(_)
     ));
-    assert_eq!(
-        bad(|m| m.capabilities.agents = Some(AgentsAccess {})),
-        ManifestError::AgentsReserved
-    );
+    // The agents capability is open: a manifest may set it.
+    let mut agents = hello();
+    agents.capabilities.agents = Some(AgentsAccess {});
+    assert_eq!(agents.validate(), Ok(()));
 }
 
 #[test]
@@ -245,4 +245,63 @@ fn only_the_last_chunk_is_final() {
     let newer = r#"{"stop":"paused","text":"x"}"#;
     let chunk: ModelChunk = serde_json::from_str(newer).unwrap();
     assert_eq!(chunk.stop, Some(StopReason::Unrecognized));
+}
+
+#[test]
+fn a_session_event_from_a_newer_schema_decodes_as_unknown() {
+    use crate::agents::schema;
+    let line = r#"{"type":"event","subscription":21,"event":"session_event","data":{"session":"s-1","seq":15,"at":1700000000015,"turn":"t-3","type":"reaction","emoji":"thumbs_up","to_seq":13}}"#;
+    let message: ServerMessage = serde_json::from_str(line).unwrap();
+    let ServerMessage::Event {
+        event: Event::SessionEvent(event),
+        ..
+    } = message
+    else {
+        panic!("not a session event: {message:?}");
+    };
+    assert_eq!(event.seq, 15);
+    let schema::Event::Unknown(unknown) = &event.event else {
+        panic!("decoded as a known event: {:?}", event.event);
+    };
+    assert_eq!(unknown.kind.0, "reaction");
+    assert!(crate::agents::SchemaVersion::CURRENT.readable());
+}
+
+#[test]
+fn only_the_shell_names_another_apps_agent_sessions() {
+    use crate::agents::{ListApprovals, PurgeSessions};
+    let mut chat = hello();
+    chat.capabilities.agents = Some(AgentsAccess {});
+    let app = Caller::App {
+        id: &chat.id,
+        capabilities: &chat.capabilities,
+    };
+    let purge = |app: Option<&str>| {
+        Call::SessionsPurge(PurgeSessions {
+            app: app.map(Into::into),
+        })
+    };
+    let approvals = |app: Option<&str>| {
+        Call::ApprovalsList(ListApprovals {
+            app: app.map(Into::into),
+        })
+    };
+    for call in [
+        purge(None),
+        purge(Some("com.isonomic.hello")),
+        approvals(None),
+    ] {
+        assert!(authorize(app, &call).is_ok(), "{call:?}");
+    }
+    for call in [
+        purge(Some("com.isonomic.notes")),
+        approvals(Some("com.isonomic.notes")),
+    ] {
+        let error = authorize(app, &call).unwrap_err();
+        assert_eq!(error.code, ErrorCode::CapabilityDenied, "{call:?}");
+    }
+    assert!(authorize(Caller::Shell, &purge(Some("com.isonomic.notes"))).is_ok());
+    assert!(authorize(Caller::Shell, &approvals(None)).is_ok());
+    let everything = authorize(Caller::Shell, &purge(None)).unwrap_err();
+    assert_eq!(everything.code, ErrorCode::BadRequest);
 }

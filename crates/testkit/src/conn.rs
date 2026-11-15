@@ -241,6 +241,7 @@ pub(crate) async fn serve(stream: DuplexStream, state: Arc<State>) {
                         Some(ServerMessage::Welcome {
                             version,
                             engine: "testkit".to_string(),
+                            schema: Some(isonomic_proto::agents::SchemaVersion::CURRENT),
                         })
                     }
                     None => Some(failure(

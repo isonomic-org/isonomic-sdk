@@ -24,16 +24,16 @@ The checks speak the wire alone. They grant their own apps through `apps.grant` 
 
 | Check | The engine must |
 | --- | --- |
-| `wire.welcome` | Answer `hello` with `welcome` and the highest version both speak |
+| `wire.welcome` | Answer `hello` with `welcome`, the highest version both speak, and the agent session schema it writes |
 | `wire.unsupported_version` | Answer `unsupported_version` when there is none |
 | `wire.hello_required` | Answer a request sent before `hello` with `hello_required` and its id |
 | `wire.unknown_method` | Fail an unknown method alone with `unknown_method`; the connection goes on |
 | `wire.unknown_fields` | Ignore fields it does not know, at the top and in `params` |
 | `wire.bad_frame` | Answer a frame that is not a message with `bad_request`, id 0; the connection goes on |
-| `tokens.grant` | Grant a valid manifest; refuse a bad version, a bad id and the reserved agents capability with `invalid_manifest` |
+| `tokens.grant` | Grant a valid manifest, including one with the `agents` capability; refuse a bad version or a bad id with `invalid_manifest` |
 | `tokens.unknown_token` | Refuse a token it never issued with `unknown_token`, on any interface |
 | `tokens.shell_only` | Refuse every `system` and `apps` method to an app holding every capability |
-| `tokens.every_interface` | Refuse every method of `system`, `apps`, `models`, `blobs` and `sql` to an app with no capabilities. The calls come from the frozen fixtures, and the check fails if a method has none |
+| `tokens.every_interface` | Refuse every method of `system`, `apps`, `models`, `blobs`, `sql` and `agents` to an app with no capabilities. The calls come from the frozen fixtures, and the check fails if a method has none |
 | `tokens.named_model` | Refuse a model outside the manifest's list with `capability_denied` |
 | `tokens.other_scope` | Refuse an app publishing to, or listening on, another app's events |
 | `blobs.round_trip` | Store, read back, describe and delete a blob; then `unknown_blob` |
