@@ -13,6 +13,7 @@ pub mod agents;
 pub mod auth;
 pub mod blobs;
 mod calls;
+mod error;
 pub mod events;
 pub mod frame;
 #[cfg(feature = "tokio")]
@@ -22,18 +23,21 @@ pub mod lenient;
 pub mod locate;
 pub mod manifest;
 pub mod models;
+mod reply;
 pub mod sql;
 pub mod system;
 
 use serde::{Deserialize, Serialize};
 
 pub use blobs::{BlobInfo, Bytes};
+pub use error::{ErrorCode, WireError};
 pub use events::AppEvent;
 pub use json::Json;
 pub use manifest::{Capabilities, Manifest, Token};
 pub use models::{
     MemoryRefusal, Message, ModelChunk, ModelDetail, ModelInfo, StopReason, StreamRequest,
 };
+pub use reply::{Event, Reply};
 pub use sql::{Rows, SqlValue};
 pub use system::{HardwareProfile, ServiceState, ServiceStatus, SystemStatus};
 
@@ -280,269 +284,6 @@ pub enum ServerMessage {
 pub enum Outcome {
     Result(Reply),
     Error(WireError),
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-#[non_exhaustive]
-pub enum Reply {
-    Status(SystemStatus),
-    Subscribed {
-        subscription: u64,
-        snapshot: SystemStatus,
-    },
-    Unsubscribed {},
-    Logs {
-        service: String,
-        lines: Vec<String>,
-    },
-    Profile(HardwareProfile),
-    ShuttingDown {},
-    /// Answer to `system.retry`: the service is starting again.
-    Retrying {},
-    /// Answer to `apps.grant`.
-    Granted {
-        app: String,
-        token: Token,
-    },
-    /// Answer to `models.list`.
-    Models(Vec<ModelInfo>),
-    /// Answer to `models.info`.
-    Model(ModelDetail),
-    /// Answer to `models.stream`: chunks follow on `subscription`. `model`
-    /// is the model the engine chose.
-    Stream {
-        subscription: u64,
-        model: String,
-    },
-    /// Answer to `models.cancel`.
-    Cancelled {},
-    /// Answer to `models.download`: `download_progress` events follow.
-    Downloading {
-        subscription: u64,
-        model: String,
-        /// Absent when the engine does not know the size yet.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        total_bytes: Option<u64>,
-    },
-    /// Answer to `models.recommended`.
-    Recommended(models::Recommendation),
-    /// Answer to `models.embed`: one vector per input, in order.
-    Embeddings {
-        model: String,
-        vectors: Vec<Vec<f32>>,
-    },
-    /// Answer to `blobs.put`, `blobs.create`, `blobs.write` and
-    /// `blobs.info`.
-    Blob(BlobInfo),
-    /// Answer to `blobs.get`: `data` starts at `offset`.
-    BlobData {
-        info: BlobInfo,
-        offset: u64,
-        data: Bytes,
-    },
-    /// Answer to `blobs.delete`.
-    Deleted {},
-    /// Answer to `events.publish`.
-    Published {},
-    /// Answer to `events.subscribe`: `app_event`s follow on `subscription`.
-    Listening {
-        subscription: u64,
-    },
-    /// Answer to `sql.query`.
-    Rows(Rows),
-    /// Answer to `sql.execute`.
-    Executed {
-        rows_affected: u64,
-    },
-    /// Answer to `sql.batch`: one count per statement, in order.
-    ExecutedBatch {
-        rows_affected: Vec<u64>,
-    },
-    /// Answer to `sql.subscribe`: the result now; changes follow.
-    LiveQuery {
-        subscription: u64,
-        rows: Rows,
-    },
-    /// Answer to `sessions.create` and `sessions.fork`.
-    SessionCreated {
-        session: agents::SessionId,
-    },
-    /// Answer to `sessions.list`.
-    Sessions {
-        items: Vec<agents::SessionSummary>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        next: Option<String>,
-    },
-    SessionSnapshot(Box<agents::SessionSnapshot>),
-    /// Answer to a call that only acts.
-    Done {},
-    /// Answer to `sessions.send`: `queued` when a turn is already running.
-    Accepted {
-        queued: bool,
-    },
-    Purged(agents::PurgeReport),
-    /// Answer to `sessions.subscribe`: `session_event` and `live_delta`
-    /// events follow.
-    SessionStream {
-        subscription: u64,
-    },
-    Approvals(Vec<agents::PendingApproval>),
-    Presets(Vec<agents::PresetSummary>),
-    Preset(Box<agents::PresetDetail>),
-    PresetSaved {
-        reference: agents::PresetRef,
-    },
-    Artifact(Box<agents::ArtifactVersion>),
-    Artifacts(Vec<agents::ArtifactEvent>),
-}
-
-impl Reply {
-    /// The subscription this reply opened, if it opened one. Events for it
-    /// follow on the same connection.
-    pub fn opened_subscription(&self) -> Option<u64> {
-        match self {
-            Reply::Subscribed { subscription, .. }
-            | Reply::Stream { subscription, .. }
-            | Reply::Downloading { subscription, .. }
-            | Reply::Listening { subscription }
-            | Reply::LiveQuery { subscription, .. }
-            | Reply::SessionStream { subscription } => Some(*subscription),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "event", content = "data", rename_all = "snake_case")]
-#[non_exhaustive]
-pub enum Event {
-    /// One service changed.
-    ServiceStatus(ServiceStatus),
-    /// Part of a model stream.
-    ModelChunk(ModelChunk),
-    /// Progress of a model download; the one with `outcome` is the last.
-    DownloadProgress(models::DownloadProgress),
-    /// A message published to an `events` subscription's scope.
-    AppEvent(AppEvent),
-    /// A live query's whole new result.
-    RowsChanged(Rows),
-    /// One durable agent session event, in sequence order.
-    SessionEvent(Box<agents::SessionEvent>),
-    /// Reply text as it streams; lossy, replaced by the `assistant` event.
-    LiveDelta(agents::LiveDelta),
-}
-
-impl Event {
-    /// Whether this is the last event of its subscription.
-    pub fn is_final(&self) -> bool {
-        match self {
-            Event::ModelChunk(chunk) => chunk.stop.is_some(),
-            Event::DownloadProgress(progress) => progress.outcome.is_some(),
-            _ => false,
-        }
-    }
-}
-
-/// A typed error: a stable code to branch on and a message a person can
-/// read. Interface-specific detail rides in optional fields, so an older
-/// client simply ignores detail it does not know.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct WireError {
-    pub code: ErrorCode,
-    pub message: String,
-    /// With `insufficient_memory`: what the memory gate measured.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub memory: Option<MemoryRefusal>,
-}
-
-impl WireError {
-    pub fn new(code: ErrorCode, message: impl Into<String>) -> Self {
-        Self {
-            code,
-            message: message.into(),
-            memory: None,
-        }
-    }
-
-    /// The memory gate's refusal, with its numbers.
-    pub fn memory(refusal: MemoryRefusal) -> Self {
-        Self {
-            code: ErrorCode::InsufficientMemory,
-            message: refusal.reason.clone(),
-            memory: Some(refusal),
-        }
-    }
-}
-
-/// Stable error codes. A code this build does not know decodes as
-/// `Unrecognized` instead of failing the whole message.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-#[non_exhaustive]
-pub enum ErrorCode {
-    /// No protocol version in common.
-    UnsupportedVersion,
-    /// A request arrived before `hello`.
-    HelloRequired,
-    /// The frame was not a valid message.
-    BadRequest,
-    UnknownService,
-    /// `system.retry` on a service that is not degraded.
-    NotDegraded,
-    UnknownSubscription,
-    Internal,
-    /// The engine does not implement this method (yet).
-    UnknownMethod,
-    /// The token was never issued, or was revoked.
-    UnknownToken,
-    /// The token's manifest does not allow this call.
-    CapabilityDenied,
-    /// The manifest broke a rule in [`Manifest::validate`].
-    InvalidManifest,
-    /// No model with that id, or no default model of the kind asked for.
-    UnknownModel,
-    /// The model cannot do this (embeddings from a chat-only model, say).
-    Unsupported,
-    /// The memory gate refused to load the model; see `WireError::memory`.
-    InsufficientMemory,
-    /// The model's worker is degraded or crashed.
-    ModelUnavailable,
-    /// Remote models are switched off by the user.
-    RemoteDisabled,
-    /// No blob with that handle for this caller.
-    UnknownBlob,
-    /// Over the manifest's `max_bytes` or the engine's own limit.
-    TooLarge,
-    /// The blob is still being written.
-    Incomplete,
-    /// The database refused the statement; the message says why.
-    SqlError,
-    /// No such session, approval, question, preset or artifact for this
-    /// caller; another app's ids answer this too.
-    NotFound,
-    /// The preset did not validate; the message lists why.
-    InvalidPreset,
-    /// The host runs interactive sessions only, for now.
-    ClassNotSupported,
-    /// A fork point that is not a turn boundary.
-    NotAtTurnBoundary,
-    /// There is nothing to continue, or the model cannot continue it.
-    ContinueRefused,
-    /// Views and third-party code may not decide approvals.
-    NotAllowedToDecide,
-    /// Deciding an approval needs a user-action token.
-    MissingUserAction,
-    AlreadyDecided,
-    /// The session failed and takes no more input.
-    SessionFailed,
-    /// Client tool specs must be client tools with free names.
-    InvalidTools,
-    /// `models.download_cancel` for a model with no download running.
-    NotDownloading,
-    /// A code from a newer engine.
-    #[serde(other)]
-    Unrecognized,
 }
 
 /// Pick the version to speak: the highest one both sides support.
