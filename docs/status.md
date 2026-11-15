@@ -2,6 +2,14 @@
 
 Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architecture/sdk/status.md`; this repo's own session owns the SDK from here.
 
+## 2026-11-15 · Isonomic UI and the shared toolkits through the SDK (decision, 15 Nov)
+
+**Built:** `isonomic_app::ui` re-exports Isonomic UI; `editor` and `node-graph` features reserve empty `isonomic_app::editor` and `isonomic_app::node_graph`. `hello-app` imports only from the SDK and no longer depends on isonomic-ui. A scratch crate outside the workspace, depending on `isonomic-app` alone, derives components in two modules and runs `#[gpui::test]`.
+
+**Decisions**
+
+- **Imported as `gpui`.** The UI's macros expand to `gpui::` paths when the calling crate does not name isonomic-ui, so `use isonomic_app::ui as gpui;` satisfies them, one `use` per module. Teaching the macros to find `isonomic-app` would drop that line; it is a change in isonomic-ui, not filed yet.
+- **One pin.** The SDK's `UI_REF` is the only one. Consumers still need the UI's source at that commit beside the SDK, and the `gpui-pre-macros` patch line in their workspace root.
 ## 2026-11-15 · The testkit's agent host and the `agents.` conformance group (S0, agents brief Part B)
 
 **Built:** `testkit::agents` serves all 22 agents methods with harness-host's `MemoryHost`, plus `agents_map` (SDK types ⇄ host types, `HostError` → error codes). `TestEngine::agents()` → `FakeAgents` (`reply`, `with`, `advance`, `user_action`, `disconnect`, `reconnect`, `log`). There are 9 testkit tests, and 6 new conformance checks (`agents.presets`, `registry`, `replay`, `isolated`, `purge_own`, `unknown_subscription`). The token-stripping engine fails `agents.isolated`. No proto change.

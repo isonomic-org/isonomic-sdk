@@ -8,7 +8,6 @@ publish.workspace = true
 [dependencies]
 isonomic-app.workspace = true
 isonomic-proto.workspace = true
-isonomic-ui.workspace = true
 
 [dev-dependencies]
 isonomic-app = { workspace = true, features = ["test-support"] }

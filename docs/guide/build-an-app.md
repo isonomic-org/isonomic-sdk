@@ -1,6 +1,6 @@
 # Build an Isonomic app
 
-A first-party Isonomic app is a Rust crate. It depends on `isonomic-app` (this repo) and `isonomic-ui`, implements one trait, and is linked into the window, which shows it as a tab. It never opens a socket, a file, a database or a network connection itself: everything goes through the client it is given, under its own capability token.
+A first-party Isonomic app is a Rust crate. It depends on `isonomic-app` (this repo), which also hands it Isonomic UI, implements one trait, and is linked into the window, which shows it as a tab. It never opens a socket, a file, a database or a network connection itself: everything goes through the client it is given, under its own capability token.
 
 `examples/hello-app` is the whole of this guide in about 200 lines.
 
@@ -10,14 +10,24 @@ A first-party Isonomic app is a Rust crate. It depends on `isonomic-app` (this r
 [dependencies]
 isonomic-app = { path = "../isonomic-sdk/crates/app" }
 isonomic-proto = { path = "../isonomic-sdk/crates/proto" }
-isonomic-ui = { path = "../isonomic-ui/crates/ui" }
 
 [dev-dependencies]
 isonomic-app = { path = "../isonomic-sdk/crates/app", features = ["test-support"] }
 isonomic-testkit = { path = "../isonomic-sdk/crates/testkit" }
 ```
 
-Both repos are sibling checkouts pinned by commit (`SDK_REF`, and the SDK's own `UI_REF` for Isonomic UI). GPUI comes only through `isonomic-ui`; name it nowhere else. Files where GPUI's macros expand (tests with `#[isonomic_ui::test]`, derives) start with `extern crate isonomic_ui as gpui;`.
+The SDK is a sibling checkout pinned by commit (`SDK_REF`). **Isonomic UI comes through the SDK** as `isonomic_app::ui`, at the commit in the SDK's `UI_REF`, and is compiled into the window once. An app's front end is a configuration of those shared components; its back end is its own logic on the SDK. Do not depend on `isonomic-ui` yourself and do not keep a `UI_REF` of your own: the SDK's pin is the only one. GPUI comes only through it; name it nowhere else.
+
+Import the components under the name `gpui`, which the UI's macros expand to, in every module that derives a component or runs `#[gpui::test]`:
+
+```rust
+use isonomic_app::ui as gpui;
+use gpui::{div, IntoElement, ParentElement, Render, Window};
+```
+
+The build still needs the UI's source next to the SDK: a checkout of `../isonomic-ui` at the SDK's `UI_REF`, and in your workspace root the same patch line the SDK has, `gpui-pre-macros = { path = "../isonomic-ui/vendor/gpui-pre-macros" }` under `[patch.crates-io]`.
+
+The shared toolkits come the same way, behind features of `isonomic-app`: `editor` (`isonomic_app::editor`) and `node-graph` (`isonomic_app::node_graph`). Both are reserved and empty until those toolkits exist; an app may turn them on now, and nothing breaks when they fill in.
 
 ## 2. The manifest
 
@@ -157,9 +167,9 @@ while let Some(update) = stream.next().await {
 `isonomic_app::testing` (feature `test-support`) runs the app in a headless window against the in-memory engine, under a token granted from the app's own manifest. The testkit enforces that token exactly as the engine does, so a test fails if the app calls anything its manifest does not allow.
 
 ```rust
-extern crate isonomic_ui as gpui;
+use isonomic_app::ui as gpui;
 
-#[isonomic_ui::test]
+#[gpui::test]
 fn it_streams_a_reply(cx: &mut TestAppContext) {
     let host = TestHost::new();
     let open = host.open::<Hello>(cx);
@@ -192,6 +202,6 @@ For each app the window grants a token from the manifest (`client.grant(manifest
 
 - [ ] The manifest asks for the least it needs, and `Manifest::validate` passes.
 - [ ] No network, file, process or socket code in the crate.
-- [ ] No GPUI version named; GPUI only through `isonomic-ui`.
+- [ ] No GPUI version named, no `isonomic-ui` dependency and no `UI_REF` of the app's own: components only through `isonomic_app::ui`.
 - [ ] Every interaction tested against `TestHost`, including refusals and a disconnect.
 - [ ] Live queries and event streams belong to a view and are dropped with it.

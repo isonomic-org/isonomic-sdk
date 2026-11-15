@@ -4,14 +4,14 @@
 //! Everything it reaches goes through its [`AppContext`]: the client
 //! scoped to its token, its settings, and its attention signal.
 
-extern crate isonomic_ui as gpui;
+use isonomic_app::ui as gpui;
 
-use isonomic_app::{App, AppContext, Attention, Manifest, ModelAccess, SearchHit};
-use isonomic_proto::{Capabilities, Message, ModelInfo, StreamRequest};
-use isonomic_ui::{
+use gpui::{
     div, AnyView, AppContext as _, Context, IntoElement, ParentElement, Render, Styled, WeakEntity,
     Window,
 };
+use isonomic_app::{App, AppContext, Attention, Manifest, ModelAccess, SearchHit};
+use isonomic_proto::{Capabilities, Message, ModelInfo, StreamRequest};
 
 /// What the reply is doing.
 #[derive(Debug, Clone, PartialEq, Eq)]
