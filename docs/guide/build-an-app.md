@@ -27,7 +27,16 @@ use gpui::{div, IntoElement, ParentElement, Render, Window};
 
 The build still needs the UI's source next to the SDK: a checkout of `../isonomic-ui` at the SDK's `UI_REF`, and in your workspace root the same patch line the SDK has, `gpui-pre-macros = { path = "../isonomic-ui/vendor/gpui-pre-macros" }` under `[patch.crates-io]`.
 
-The shared toolkits come the same way, behind features of `isonomic-app`: `editor` (`isonomic_app::editor`) and `node-graph` (`isonomic_app::node_graph`). Both are reserved and empty until those toolkits exist; an app may turn them on now, and nothing breaks when they fill in.
+Features of `isonomic-app`, on top of the core it always has:
+
+| Feature | Default | Gives |
+| --- | --- | --- |
+| `component` | on | `isonomic_app::ui::component`, the styled component library |
+| `assets` | on | `isonomic_app::ui::assets`, the icon set and fonts |
+| `extra` | off | `isonomic_app::extra`: the prompt composer, the thinking indicator, approval and tool cards and more (turns on `component`) |
+| `test-support` | off | `isonomic_app::testing` |
+
+A window or app that uses the defaults needs no feature line; Chat adds `features = ["extra"]`. The shared toolkits come the same way, behind features of `isonomic-app`: `editor` (`isonomic_app::editor`) and `node-graph` (`isonomic_app::node_graph`). Both are reserved and empty until those toolkits exist; an app may turn them on now, and nothing breaks when they fill in.
 
 ## 2. The manifest
 

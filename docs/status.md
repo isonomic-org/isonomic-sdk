@@ -2,9 +2,19 @@
 
 Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architecture/sdk/status.md`; this repo's own session owns the SDK from here.
 
+
+## 2026-11-15 · Isonomic UI's features and extra components through the SDK
+
+**Built:** `isonomic-app` features `component` and `assets` (on by default) and `extra` (`isonomic_app::extra`, from isonomic-ui-extra at the same `UI_REF`). A scratch crate outside the workspace, depending on `isonomic-app` alone with `extra`, names items in `ui::component`, `ui::assets` and `extra`.
+
+**Decisions**
+
+- **Components and assets on by default.** Every app front end is made of them, and the engine never depends on `isonomic-app`, so the cost falls only on UI crates.
+- **`extra` is opt-in, next to `ui`.** It is a separate crate with a large surface, so it is its own module (`isonomic_app::extra`) rather than a path under `ui`, which would need a wrapper module in place of the crate re-export.
+
 ## 2026-11-15 · Installing local models (isonomic-sdk #21, from the window)
 
-**Built:** `models.download`, `models.download_cancel` and `models.recommended`, all shell only; `download_progress` events; `not_installed` and `downloading` states. 19 fixture lines. On the client: `Models::download` → `DownloadStream`, `cancel_download` and `recommended`. In the testkit: downloads (`DownloadStep`), `uninstall`, `recommend`, and `TestEngine::set_profile`. 8 tests.
+**Built:** `models.download`, `models.download_cancel` and `models.recommended`, all shell only; `download_progress` events; `not_installed` and `downloading` states; `total_bytes` and `size_bytes` optional (absent when unknown); error `not_downloading` for a cancel with nothing running. 29 fixture lines. On the client: `Models::download` → `DownloadStream`, `cancel_download` and `recommended`. In the testkit: downloads (`DownloadStep`), `uninstall`, `recommend`, `set_size` and `TestEngine::set_profile`. 10 tests, including a download resumed after the connection drops. After review: the attach snapshot is taken under the same lock as the subscription, and a cancel after the last step still cancels.
 
 **Decisions**
 

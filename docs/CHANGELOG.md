@@ -2,7 +2,15 @@
 
 Newest first. Each entry names what the engine (isonomic-capsule) and the window (isonomic-desktop) must do when they move `SDK_REF` to it.
 
+## Unreleased: Isonomic UI's features through the SDK (isonomic-sdk #27, isonomic-chat O8)
 
+**Wire:** no change.
+
+**For apps and the window:** `isonomic-app` forwards Isonomic UI's features. `component` (`ui::component`) and `assets` (`ui::assets`) are on by default, so a consumer that drops its own isonomic-ui dependency keeps both with no feature line. The new `extra` feature re-exports `isonomic-ui-extra` as `isonomic_app::extra` and turns on `component`.
+
+- The window: `isonomic-app = { path = "../isonomic-sdk/crates/app" }`; the defaults cover it.
+- Chat: `isonomic-app = { path = "../isonomic-sdk/crates/app", features = ["extra"] }`, and `isonomic_ui_extra::…` becomes `isonomic_app::extra::…`.
+- A consumer that wants neither sets `default-features = false`.
 ## Unreleased: harness at f061211
 
 **Wire:** no change; the session event schema is the same.
