@@ -10,16 +10,21 @@
 //! `isonomic_proto::auth`), so an app cannot pass its tests while calling
 //! something its manifest does not allow.
 
+mod blobs;
 mod conn;
+mod faults;
 mod models;
 mod system;
 
+pub use blobs::{FakeBlobs, DEFAULT_LIMIT as DEFAULT_BLOB_LIMIT};
+pub use isonomic_proto::auth::Interface;
 pub use models::{FakeModels, Gate, Step};
 
 use std::collections::HashMap;
 use std::io;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use isonomic_client::{AppClient, BoxedStream, Client, Connector, Options};
 use isonomic_proto::{
@@ -51,6 +56,8 @@ pub(crate) struct State {
     pub(crate) calls: Mutex<Vec<CallRecord>>,
     pub(crate) models: Mutex<models::ModelsState>,
     pub(crate) cancels: watch::Sender<u32>,
+    pub(crate) blobs: Mutex<blobs::BlobsState>,
+    pub(crate) faults: Mutex<HashMap<Interface, faults::Fault>>,
     next_token: AtomicU64,
 }
 
@@ -118,6 +125,8 @@ impl TestEngine {
                 calls: Mutex::new(Vec::new()),
                 models: Mutex::new(models::ModelsState::default()),
                 cancels: watch::channel(0).0,
+                blobs: Mutex::new(blobs::BlobsState::default()),
+                faults: Mutex::new(HashMap::new()),
                 next_token: AtomicU64::new(1),
             }),
         }
@@ -177,6 +186,30 @@ impl TestEngine {
         FakeModels {
             state: Arc::clone(&self.state),
         }
+    }
+
+    /// The fake blob store: its limit and what apps stored.
+    pub fn blobs(&self) -> FakeBlobs {
+        FakeBlobs {
+            state: Arc::clone(&self.state),
+        }
+    }
+
+    /// Make every call on `interface` wait `delay` before it is answered.
+    pub fn slow(&self, interface: Interface, delay: Duration) {
+        let mut faults = self.state.faults.lock().unwrap();
+        faults.entry(interface).or_default().delay = Some(delay);
+    }
+
+    /// Answer every call on `interface` with `error`, after any delay.
+    pub fn fail(&self, interface: Interface, error: WireError) {
+        let mut faults = self.state.faults.lock().unwrap();
+        faults.entry(interface).or_default().error = Some(error);
+    }
+
+    /// Clear `slow` and `fail` for `interface`.
+    pub fn recover(&self, interface: Interface) {
+        self.state.faults.lock().unwrap().remove(&interface);
     }
 
     /// Withdraw every token, like an engine that lost its grants.
