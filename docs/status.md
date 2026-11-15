@@ -2,6 +2,16 @@
 
 Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architecture/sdk/status.md`; this repo's own session owns the SDK from here.
 
+## 2026-11-15 · The `events` interface (S0)
+
+**Built:** `proto::events` (`AppEvent`, topic rules), `Json` for payloads the SDK does not own, three methods and 16 fixture lines; `client::Events` and `EventStream`; a testkit channel per scope shared by every connection. 5 new integration tests, 2 unit tests; 68 in all.
+
+**Decisions**
+
+- **No capability.** An app reaches only its own scope, so there is nothing to grant; the brief's capability list has no events entry. Only the shell may name another app's scope, which `proto::auth` checks.
+- **Live only, at most once.** Nothing is stored or replayed; durable state belongs in `sql` and `blobs`. This keeps the engine side a plain broadcast.
+- **`Json` is a value, not raw text.** Raw JSON cannot pass through the flattened request and event envelopes, so payloads are parsed values; key order is not kept, and fixtures write keys sorted.
+
 ## 2026-11-15 · The `blobs` interface (S0)
 
 **Built**

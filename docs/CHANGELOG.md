@@ -2,6 +2,19 @@
 
 Newest first. Each entry names what the engine (isonomic-capsule) and the window (isonomic-desktop) must do when they move `SDK_REF` to it.
 
+## Unreleased: the `events` interface
+
+**Wire (additive, still version 0)**
+
+- Methods `events.publish`, `events.subscribe`, `events.unsubscribe` (`docs/interfaces/events.md`); replies `published`, `listening`; event `app_event`.
+- `Json`: any JSON value inside a message, for payloads the SDK does not own.
+
+**Breaking for Rust:** `Event` no longer implements `Eq` (it carries `Json`). `PartialEq` remains.
+
+**For the engine** (filed in isonomic-capsule `docs/requests.md`, R4): one live channel per app scope across every connection, at most once, in order; only the shell may name another app's scope (already checked by `proto::auth`); an unsubscribe is honoured only from the token that subscribed.
+
+**For the window:** `Client::events()` and `AppClient::events()`; `EventStream` unsubscribes when dropped.
+
 ## Unreleased: the `blobs` interface
 
 **Wire (additive, still version 0)**
