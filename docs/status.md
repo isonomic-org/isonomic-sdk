@@ -2,6 +2,18 @@
 
 Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architecture/sdk/status.md`; this repo's own session owns the SDK from here.
 
+## 2026-11-15 · Conformance (S0)
+
+**Built:** `isonomic-conformance`: 22 checks over the wire (handshake and tolerance, tokens, blobs, events, subscriptions, sql schemas), `run`, `run_only` and a `Report`. The testkit passes all 22. A proxy that strips tokens fails every token, privacy and scope check, so the checks bite. 4 integration tests and a doctest; 80 in all.
+
+**Decisions**
+
+- **The wire alone.** Checks grant their own apps through `apps.grant` and assert only what any engine must do, so the engine runs them unchanged. Scripted behaviour (model output, query rows) stays in the testkit's tests.
+- **Token checks read the fixtures.** `tokens.every_interface` sends every fixture call with a capability-free token and fails if a method has no fixture, so a new method is covered when its fixture lands.
+- **Shutdown last.** An app asking the engine to stop is the most dangerous refusal; it runs at the end, then checks the engine still answers.
+
+**Found:** binding the borrow `watch::Receiver::wait_for` returns blocks the client's actor, and every call then waits. The conformance runner hit it; `Client::live()` now says so.
+
 ## 2026-11-15 · The `sql` interface (S0)
 
 **Built:** `proto::sql` (`SqlValue`, `Rows`, `Column`, `Statement`), five methods and 17 fixture lines; `auth::authorize_schema`; `client::Sql` and `LiveQuery`; a scripted database in the testkit. 5 new integration tests, 2 unit tests; 75 in all.
