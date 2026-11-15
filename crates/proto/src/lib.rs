@@ -11,9 +11,11 @@
 
 pub mod auth;
 pub mod blobs;
+pub mod events;
 pub mod frame;
 #[cfg(feature = "tokio")]
 pub mod io;
+mod json;
 pub mod lenient;
 pub mod locate;
 pub mod manifest;
@@ -23,6 +25,8 @@ pub mod system;
 use serde::{Deserialize, Serialize};
 
 pub use blobs::{BlobInfo, Bytes};
+pub use events::AppEvent;
+pub use json::Json;
 pub use manifest::{Capabilities, Manifest, Token};
 pub use models::{
     MemoryRefusal, Message, ModelChunk, ModelDetail, ModelInfo, StopReason, StreamRequest,
@@ -125,6 +129,27 @@ pub enum Call {
     BlobsInfo { handle: String },
     #[serde(rename = "blobs.delete")]
     BlobsDelete { handle: String },
+    /// Send `data` to every current subscriber of `topic` in the app's
+    /// scope. Only the shell may name another `app`.
+    #[serde(rename = "events.publish")]
+    EventsPublish {
+        topic: String,
+        data: Json,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        sender: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        app: Option<String>,
+    },
+    /// Receive `app_event`s for `topics` (all topics when empty).
+    #[serde(rename = "events.subscribe")]
+    EventsSubscribe {
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        topics: Vec<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        app: Option<String>,
+    },
+    #[serde(rename = "events.unsubscribe")]
+    EventsUnsubscribe { subscription: u64 },
 }
 
 impl Call {
@@ -148,6 +173,9 @@ impl Call {
         "blobs.get",
         "blobs.info",
         "blobs.delete",
+        "events.publish",
+        "events.subscribe",
+        "events.unsubscribe",
     ];
 
     /// The method name on the wire, for logs and the Activity tab.
@@ -171,6 +199,9 @@ impl Call {
             Call::BlobsGet { .. } => "blobs.get",
             Call::BlobsInfo { .. } => "blobs.info",
             Call::BlobsDelete { .. } => "blobs.delete",
+            Call::EventsPublish { .. } => "events.publish",
+            Call::EventsSubscribe { .. } => "events.subscribe",
+            Call::EventsUnsubscribe { .. } => "events.unsubscribe",
         }
     }
 
@@ -195,6 +226,9 @@ impl Call {
             | Call::BlobsGet { .. }
             | Call::BlobsInfo { .. }
             | Call::BlobsDelete { .. } => Interface::Blobs,
+            Call::EventsPublish { .. }
+            | Call::EventsSubscribe { .. }
+            | Call::EventsUnsubscribe { .. } => Interface::Events,
         }
     }
 }
@@ -273,6 +307,12 @@ pub enum Reply {
     },
     /// Answer to `blobs.delete`.
     Deleted {},
+    /// Answer to `events.publish`.
+    Published {},
+    /// Answer to `events.subscribe`: `app_event`s follow on `subscription`.
+    Listening {
+        subscription: u64,
+    },
 }
 
 impl Reply {
@@ -280,15 +320,15 @@ impl Reply {
     /// follow on the same connection.
     pub fn opened_subscription(&self) -> Option<u64> {
         match self {
-            Reply::Subscribed { subscription, .. } | Reply::Stream { subscription, .. } => {
-                Some(*subscription)
-            }
+            Reply::Subscribed { subscription, .. }
+            | Reply::Stream { subscription, .. }
+            | Reply::Listening { subscription } => Some(*subscription),
             _ => None,
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "event", content = "data", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum Event {
@@ -296,6 +336,8 @@ pub enum Event {
     ServiceStatus(ServiceStatus),
     /// Part of a model stream.
     ModelChunk(ModelChunk),
+    /// A message published to an `events` subscription's scope.
+    AppEvent(AppEvent),
 }
 
 impl Event {

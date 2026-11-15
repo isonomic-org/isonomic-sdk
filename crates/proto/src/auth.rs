@@ -17,6 +17,7 @@ pub enum Interface {
     Apps,
     Models,
     Blobs,
+    Events,
 }
 
 impl Interface {
@@ -26,6 +27,7 @@ impl Interface {
             Interface::Apps => "apps",
             Interface::Models => "models",
             Interface::Blobs => "blobs",
+            Interface::Events => "events",
         }
     }
 
@@ -97,6 +99,17 @@ pub fn authorize(caller: Caller<'_>, call: &Call) -> Result<(), WireError> {
                 _ => Ok(()),
             }
         }
+        // An app's own scope needs no capability; another app's is the
+        // shell's alone.
+        Interface::Events => match call {
+            Call::EventsPublish { app: Some(app), .. }
+            | Call::EventsSubscribe { app: Some(app), .. }
+                if app != id =>
+            {
+                Err(denied(id, format_args!("reach the events of {app}")))
+            }
+            _ => Ok(()),
+        },
         _ => Ok(()),
     }
 }

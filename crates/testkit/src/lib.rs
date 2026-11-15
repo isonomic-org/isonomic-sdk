@@ -12,6 +12,7 @@
 
 mod blobs;
 mod conn;
+mod events;
 mod faults;
 mod models;
 mod system;
@@ -57,6 +58,7 @@ pub(crate) struct State {
     pub(crate) models: Mutex<models::ModelsState>,
     pub(crate) cancels: watch::Sender<u32>,
     pub(crate) blobs: Mutex<blobs::BlobsState>,
+    pub(crate) events: Mutex<events::EventsState>,
     pub(crate) faults: Mutex<HashMap<Interface, faults::Fault>>,
     next_token: AtomicU64,
 }
@@ -126,6 +128,7 @@ impl TestEngine {
                 models: Mutex::new(models::ModelsState::default()),
                 cancels: watch::channel(0).0,
                 blobs: Mutex::new(blobs::BlobsState::default()),
+                events: Mutex::new(events::EventsState::default()),
                 faults: Mutex::new(HashMap::new()),
                 next_token: AtomicU64::new(1),
             }),
