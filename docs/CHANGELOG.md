@@ -2,6 +2,12 @@
 
 Newest first. Each entry names what the engine (isonomic-capsule) and the window (isonomic-desktop) must do when they move `SDK_REF` to it.
 
+## Unreleased: Isonomic UI at 4c912f6
+
+**Wire:** no change.
+
+**For the engine and the window:** move `../isonomic-ui` to `4c912f61a1ea80cdf10d369fe7cf013ddbc2228a`, the commit in `UI_REF`. Every V1 repo pins this commit.
+
 ## Unreleased: `system.retry`
 
 **Wire (additive, still version 0):** method `system.retry { service }`, reply `retrying {}`, error code `not_degraded`. Requested by the Desktop session (isonomic-sdk #14).
