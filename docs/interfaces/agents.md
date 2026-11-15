@@ -57,7 +57,7 @@ A client tool call arrives as a `tool.call` event with `kind: client`; answer it
 
 - **Approvals need a person.** `approvals.decide` takes the user-action token the window minted when the person acted. The shell and the session's first-party app may decide; Views and third-party code only request (`not_allowed_to_decide`). Words that are not a clear yes are a denial.
 - **Client tools are the app's own.** `tools.register_client` applies to the calling app's token and that session only; `tools.result` is accepted only from the app that registered the tool.
-- **Only the shell names another app.** `app` on `sessions.purge` and `approvals.list` works as on `events`: an app may name only itself (`capability_denied` otherwise, from `proto::auth`), and the shell may name any. The shell's purge with no `app` is `bad_request`, never "purge everything".
+- **Only the shell names another app.** `app` on `sessions.purge` and `approvals.list` works as on `events`: an app may name only itself (`capability_denied` otherwise, from `proto::auth`), and the shell may name any. The shell's purge with no `app` is `bad_request`, never "purge everything". An app that misspells `app` sends a key the engine ignores, so the call reads as `{}` and acts on the app's own sessions: tolerant decoding working as designed, not a way past the rule.
 - **Purge is the app's own data.** `sessions.purge` stops the app's running turns, then deletes its sessions' logs, attachments and artifacts. Nothing of any other app's is touched.
 
 ## Errors
