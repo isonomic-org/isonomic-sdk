@@ -2,6 +2,17 @@
 
 Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architecture/sdk/status.md`; this repo's own session owns the SDK from here.
 
+## 2026-11-15 · The `sql` interface (S0)
+
+**Built:** `proto::sql` (`SqlValue`, `Rows`, `Column`, `Statement`), five methods and 17 fixture lines; `auth::authorize_schema`; `client::Sql` and `LiveQuery`; a scripted database in the testkit. 5 new integration tests, 2 unit tests; 75 in all.
+
+**Decisions**
+
+- **The testkit runs no SQL.** Its database is scripted per statement (`respond`, `affect`, `fail`) and logs what apps ran. A real engine in tests would tie apps to one SQL dialect's quirks; the script keeps app tests about the app.
+- **Live queries send the whole result**, not a diff. Results are small (a thread list, a count); diffs can come later as an optional field.
+- **Values are plain JSON** with bytes as `{"bytes":…}` and floats always written with a decimal point, so every value reads back as the kind it was.
+- **One schema per call.** The app's first own schema is the default; reads may reach the schemas its manifest lists.
+
 ## 2026-11-15 · The `events` interface (S0)
 
 **Built:** `proto::events` (`AppEvent`, topic rules), `Json` for payloads the SDK does not own, three methods and 16 fixture lines; `client::Events` and `EventStream`; a testkit channel per scope shared by every connection. 5 new integration tests, 2 unit tests; 68 in all.

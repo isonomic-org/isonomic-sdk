@@ -20,6 +20,7 @@ pub mod lenient;
 pub mod locate;
 pub mod manifest;
 pub mod models;
+pub mod sql;
 pub mod system;
 
 use serde::{Deserialize, Serialize};
@@ -31,6 +32,7 @@ pub use manifest::{Capabilities, Manifest, Token};
 pub use models::{
     MemoryRefusal, Message, ModelChunk, ModelDetail, ModelInfo, StopReason, StreamRequest,
 };
+pub use sql::{Rows, SqlValue};
 pub use system::{HardwareProfile, ServiceState, ServiceStatus, SystemStatus};
 
 /// The protocol version this crate describes.
@@ -150,6 +152,42 @@ pub enum Call {
     },
     #[serde(rename = "events.unsubscribe")]
     EventsUnsubscribe { subscription: u64 },
+    /// Run a query in `schema` (the app's first own schema when absent).
+    #[serde(rename = "sql.query")]
+    SqlQuery {
+        sql: String,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        params: Vec<SqlValue>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        schema: Option<String>,
+    },
+    #[serde(rename = "sql.execute")]
+    SqlExecute {
+        sql: String,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        params: Vec<SqlValue>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        schema: Option<String>,
+    },
+    /// Run every statement in one transaction: all or nothing.
+    #[serde(rename = "sql.batch")]
+    SqlBatch {
+        statements: Vec<sql::Statement>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        schema: Option<String>,
+    },
+    /// A live query: the result now, then a `rows_changed` event with the
+    /// whole new result whenever it changes.
+    #[serde(rename = "sql.subscribe")]
+    SqlSubscribe {
+        sql: String,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        params: Vec<SqlValue>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        schema: Option<String>,
+    },
+    #[serde(rename = "sql.unsubscribe")]
+    SqlUnsubscribe { subscription: u64 },
 }
 
 impl Call {
@@ -176,6 +214,11 @@ impl Call {
         "events.publish",
         "events.subscribe",
         "events.unsubscribe",
+        "sql.query",
+        "sql.execute",
+        "sql.batch",
+        "sql.subscribe",
+        "sql.unsubscribe",
     ];
 
     /// The method name on the wire, for logs and the Activity tab.
@@ -202,6 +245,11 @@ impl Call {
             Call::EventsPublish { .. } => "events.publish",
             Call::EventsSubscribe { .. } => "events.subscribe",
             Call::EventsUnsubscribe { .. } => "events.unsubscribe",
+            Call::SqlQuery { .. } => "sql.query",
+            Call::SqlExecute { .. } => "sql.execute",
+            Call::SqlBatch { .. } => "sql.batch",
+            Call::SqlSubscribe { .. } => "sql.subscribe",
+            Call::SqlUnsubscribe { .. } => "sql.unsubscribe",
         }
     }
 
@@ -229,6 +277,11 @@ impl Call {
             Call::EventsPublish { .. }
             | Call::EventsSubscribe { .. }
             | Call::EventsUnsubscribe { .. } => Interface::Events,
+            Call::SqlQuery { .. }
+            | Call::SqlExecute { .. }
+            | Call::SqlBatch { .. }
+            | Call::SqlSubscribe { .. }
+            | Call::SqlUnsubscribe { .. } => Interface::Sql,
         }
     }
 }
@@ -313,6 +366,21 @@ pub enum Reply {
     Listening {
         subscription: u64,
     },
+    /// Answer to `sql.query`.
+    Rows(Rows),
+    /// Answer to `sql.execute`.
+    Executed {
+        rows_affected: u64,
+    },
+    /// Answer to `sql.batch`: one count per statement, in order.
+    ExecutedBatch {
+        rows_affected: Vec<u64>,
+    },
+    /// Answer to `sql.subscribe`: the result now; changes follow.
+    LiveQuery {
+        subscription: u64,
+        rows: Rows,
+    },
 }
 
 impl Reply {
@@ -322,7 +390,8 @@ impl Reply {
         match self {
             Reply::Subscribed { subscription, .. }
             | Reply::Stream { subscription, .. }
-            | Reply::Listening { subscription } => Some(*subscription),
+            | Reply::Listening { subscription }
+            | Reply::LiveQuery { subscription, .. } => Some(*subscription),
             _ => None,
         }
     }
@@ -338,6 +407,8 @@ pub enum Event {
     ModelChunk(ModelChunk),
     /// A message published to an `events` subscription's scope.
     AppEvent(AppEvent),
+    /// A live query's whole new result.
+    RowsChanged(Rows),
 }
 
 impl Event {
@@ -417,6 +488,8 @@ pub enum ErrorCode {
     TooLarge,
     /// The blob is still being written.
     Incomplete,
+    /// The database refused the statement; the message says why.
+    SqlError,
     /// A code from a newer engine.
     #[serde(other)]
     Unrecognized,

@@ -1,0 +1,17 @@
+{"type":"request","id":70,"token":"tok-hello-1","method":"sql.query","params":{"sql":"select id, title, pinned from threads where archived = $1 order by updated desc","params":[false]}}
+{"type":"response","id":70,"result":{"rows":{"columns":[{"name":"id","type":"integer"},{"name":"title","type":"text"},{"name":"pinned","type":"boolean"}],"rows":[[42,"Trip to Lisbon",true],[41,null,false]]}}}
+{"type":"request","id":71,"token":"tok-hello-1","method":"sql.execute","params":{"sql":"update threads set title = $1 where id = $2","params":["Lisbon",42],"schema":"chat"}}
+{"type":"response","id":71,"result":{"executed":{"rows_affected":1}}}
+{"type":"request","id":72,"token":"tok-hello-1","method":"sql.batch","params":{"statements":[{"sql":"insert into messages (thread, body) values ($1, $2)","params":[42,"Hi"]},{"sql":"update threads set updated = now() where id = $1","params":[42]}]}}
+{"type":"response","id":72,"result":{"executed_batch":{"rows_affected":[1,1]}}}
+{"type":"request","id":73,"token":"tok-hello-1","method":"sql.subscribe","params":{"sql":"select count(*) as n from messages"}}
+{"type":"response","id":73,"result":{"live_query":{"subscription":14,"rows":{"columns":[{"name":"n","type":"integer"}],"rows":[[7]]}}}}
+{"type":"event","subscription":14,"event":"rows_changed","data":{"columns":[{"name":"n","type":"integer"}],"rows":[[8]]}}
+{"type":"request","id":74,"token":"tok-hello-1","method":"sql.unsubscribe","params":{"subscription":14}}
+{"type":"response","id":74,"result":{"unsubscribed":{}}}
+{"type":"request","id":75,"token":"tok-hello-1","method":"sql.query","params":{"sql":"select avatar, score from people where id = $1","params":[1]}}
+{"type":"response","id":75,"result":{"rows":{"columns":[{"name":"avatar","type":"bytea"},{"name":"score","type":"real"}],"rows":[[{"bytes":"iVBORw=="},0.5]]}}}
+{"type":"request","id":76,"token":"tok-hello-1","method":"sql.execute","params":{"sql":"insert into nope values (1)"}}
+{"type":"response","id":76,"error":{"code":"sql_error","message":"relation \"nope\" does not exist"}}
+{"type":"request","id":77,"token":"tok-hello-1","method":"sql.execute","params":{"sql":"delete from notes","schema":"notes"}}
+{"type":"response","id":77,"error":{"code":"capability_denied","message":"app com.isonomic.hello may not write to notes"}}
