@@ -2,6 +2,16 @@
 
 Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architecture/sdk/status.md`; this repo's own session owns the SDK from here.
 
+## 2026-11-15 · Installing local models (isonomic-sdk #21, from the window)
+
+**Built:** `models.download`, `models.download_cancel` and `models.recommended`, all shell only; `download_progress` events; `not_installed` and `downloading` states. 19 fixture lines. On the client: `Models::download` → `DownloadStream`, `cancel_download` and `recommended`. In the testkit: downloads (`DownloadStep`), `uninstall`, `recommend`, and `TestEngine::set_profile`. 8 tests.
+
+**Decisions**
+
+- **The download is the engine's.** Calling `download` again attaches to the running download rather than starting another, and the first event says where it stands. Cancel takes the model, not a subscription, because several windows can follow one download.
+- **Below the floor is `insufficient_memory`**, with the numbers, rather than a new code.
+- **Installed is not loaded.** A finished download leaves the model `stopped`; the memory gate still decides on the first request.
+
 ## 2026-11-15 · Isonomic UI and the shared toolkits through the SDK (decision, 15 Nov)
 
 **Built:** `isonomic_app::ui` re-exports Isonomic UI; `editor` and `node-graph` features reserve empty `isonomic_app::editor` and `isonomic_app::node_graph`. `hello-app` imports only from the SDK and no longer depends on isonomic-ui. A scratch crate outside the workspace, depending on `isonomic-app` alone, derives components in two modules and runs `#[gpui::test]`.

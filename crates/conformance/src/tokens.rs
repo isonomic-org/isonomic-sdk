@@ -100,14 +100,16 @@ pub async fn unknown_token(target: Target) -> Outcome {
     Ok(())
 }
 
-/// Even an app with every capability never reaches `system` or `apps`.
-/// (`system.shutdown` is checked last, on its own.)
+/// Even an app with every capability never reaches `system`, `apps`, or
+/// the model install calls (`models.download`, `download_cancel`,
+/// `recommended`). (`system.shutdown` is checked last, on its own.)
 pub async fn shell_only(target: Target) -> Outcome {
     let app = target
         .app(manifest("shell-only", everything(), &[]))
         .await?;
     for call in fixture_calls()? {
-        if !call.interface().shell_only() || matches!(call, Call::SystemShutdown) {
+        let shell_only = call.interface().shell_only() || call.installs_models();
+        if !shell_only || matches!(call, Call::SystemShutdown) {
             continue;
         }
         let method = call.method();

@@ -80,6 +80,10 @@ pub fn authorize(caller: Caller<'_>, call: &Call) -> Result<(), WireError> {
         return Err(denied(id, format_args!("call {}", call.method())));
     }
     match interface {
+        // Installing models is the window's first-run job, not an app's.
+        Interface::Models if call.installs_models() => {
+            Err(denied(id, format_args!("call {}", call.method())))
+        }
         Interface::Models => {
             let Some(models) = &capabilities.models else {
                 return Err(denied(id, "use models"));

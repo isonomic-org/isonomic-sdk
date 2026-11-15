@@ -1,6 +1,9 @@
 //! The `models` interface: list, inspect, stream and embed.
 
-use isonomic_proto::models::{ModelChunk, ModelDetail, ModelInfo, StopReason, StreamRequest};
+use isonomic_proto::models::{
+    DownloadModel, DownloadProgress, ModelChunk, ModelDetail, ModelInfo, RecommendModel,
+    Recommendation, StopReason, StreamRequest,
+};
 use isonomic_proto::{Call, Event, Reply, Token, WireError};
 
 use crate::{Client, ClientError, Subscription};
@@ -72,6 +75,103 @@ impl Models {
         match self.call(call).await? {
             Reply::Embeddings { vectors, .. } => Ok(vectors),
             _ => Err(ClientError::UnexpectedReply),
+        }
+    }
+}
+
+/// Downloads and the first-model choice: the shell's alone.
+impl Models {
+    /// Fetch a local model's file. The engine owns the download: dropping
+    /// the stream, or the window closing, leaves it running, and calling
+    /// this again attaches to it.
+    pub async fn download(&self, model: &str) -> Result<DownloadStream, ClientError> {
+        let call = Call::ModelsDownload(DownloadModel {
+            model: model.to_string(),
+        });
+        let (reply, events) = self.client.open(self.token.clone(), call).await?;
+        let Reply::Downloading { total_bytes, .. } = reply else {
+            return Err(ClientError::UnexpectedReply);
+        };
+        Ok(DownloadStream {
+            events,
+            total_bytes,
+            done: false,
+            _client: self.client.clone(),
+        })
+    }
+
+    /// Stop a model's download, for every window following it. Each of
+    /// their streams ends with `outcome: cancelled`.
+    pub async fn cancel_download(&self, model: &str) -> Result<(), ClientError> {
+        let call = Call::ModelsDownloadCancel(DownloadModel {
+            model: model.to_string(),
+        });
+        match self.call(call).await? {
+            Reply::Cancelled {} => Ok(()),
+            _ => Err(ClientError::UnexpectedReply),
+        }
+    }
+
+    /// The local model to start with on this machine, or on `profile`
+    /// (`low`, `standard`, `high`). Below every local model's needs:
+    /// `insufficient_memory`, with the numbers.
+    pub async fn recommended(&self, profile: Option<&str>) -> Result<Recommendation, ClientError> {
+        let call = Call::ModelsRecommended(RecommendModel {
+            profile: profile.map(str::to_string),
+        });
+        match self.call(call).await? {
+            Reply::Recommended(recommendation) => Ok(recommendation),
+            _ => Err(ClientError::UnexpectedReply),
+        }
+    }
+}
+
+/// A model download, as one window follows it. Dropping it stops following;
+/// the download goes on.
+pub struct DownloadStream {
+    events: Subscription,
+    total_bytes: Option<u64>,
+    done: bool,
+    /// Keeps the connection up while the stream is followed.
+    _client: Client,
+}
+
+impl std::fmt::Debug for DownloadStream {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "DownloadStream({}, {:?} bytes)",
+            self.events.id(),
+            self.total_bytes
+        )
+    }
+}
+
+impl DownloadStream {
+    /// The file size; `None` when the engine does not know it yet.
+    pub fn total_bytes(&self) -> Option<u64> {
+        self.total_bytes
+    }
+
+    /// The next progress event. The last one has `outcome` set; after it,
+    /// `None`. A dropped connection ends the stream with `Disconnected`:
+    /// download again to attach once the engine is back.
+    pub async fn next(&mut self) -> Option<Result<DownloadProgress, ClientError>> {
+        if self.done {
+            return None;
+        }
+        loop {
+            match self.events.next().await {
+                Some(Event::DownloadProgress(progress)) => {
+                    self.done = progress.outcome.is_some();
+                    return Some(Ok(progress));
+                }
+                Some(_) => continue,
+                None => {
+                    self.done = true;
+                    return Some(Err(ClientError::Disconnected));
+                }
+            }
         }
     }
 }

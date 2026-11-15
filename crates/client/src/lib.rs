@@ -108,7 +108,7 @@ pub enum ClientError {
 pub use agents::{Agents, SessionStream, SessionUpdate};
 pub use blobs::Blobs;
 pub use events::{EventStream, Events};
-pub use models::{ModelStream, Models};
+pub use models::{DownloadStream, ModelStream, Models};
 pub use scoped::AppClient;
 pub use sql::{LiveQuery, Sql};
 

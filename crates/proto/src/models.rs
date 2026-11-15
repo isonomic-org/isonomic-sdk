@@ -49,6 +49,11 @@ pub enum ModelState {
     Ready,
     /// Crashed too often; the engine stopped trying.
     Degraded,
+    /// A local model whose file is not on this machine yet:
+    /// `models.download` fetches it.
+    NotInstalled,
+    /// Its file is being fetched; `models.download` attaches to it.
+    Downloading,
     #[serde(other)]
     Unrecognized,
 }
@@ -252,4 +257,62 @@ pub struct MemoryRefusal {
     pub available_bytes: u64,
     /// Readable reason, with what to try instead.
     pub reason: String,
+}
+
+/// Params of `models.download`: fetch a local model's file. The engine owns
+/// the download; calling again while it runs attaches to it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DownloadModel {
+    pub model: String,
+}
+
+/// How a download ended.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DownloadOutcome {
+    /// The file is in place; the model is `stopped`, ready to load.
+    Installed,
+    /// The download failed; the event's `error` says why.
+    Failed,
+    /// `models.download_cancel`.
+    Cancelled,
+    #[serde(other)]
+    Unrecognized,
+}
+
+/// One event of a download. The last one has `outcome` set and ends the
+/// subscription.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DownloadProgress {
+    pub model: String,
+    pub received_bytes: u64,
+    /// Absent when the engine does not know the size yet.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_bytes: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub outcome: Option<DownloadOutcome>,
+    /// With `outcome: failed`: what went wrong.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<WireError>,
+}
+
+/// Params of `models.recommended`.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RecommendModel {
+    /// Ask for another profile than this machine's (`low`, `standard`,
+    /// `high`), to show what a profile would get.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub profile: Option<String>,
+}
+
+/// The local model to start with on a profile.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Recommendation {
+    pub model: String,
+    /// The profile it was chosen for.
+    pub profile: String,
+    /// Its file size, to show before the download starts; absent when
+    /// unknown.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size_bytes: Option<u64>,
 }

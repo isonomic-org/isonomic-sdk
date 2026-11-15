@@ -111,6 +111,15 @@ pub enum Call {
         model: Option<String>,
         input: Vec<String>,
     },
+    /// Shell only: fetch a local model's file, with progress events.
+    #[serde(rename = "models.download")]
+    ModelsDownload(models::DownloadModel),
+    /// Shell only: stop a model's download, for every subscriber.
+    #[serde(rename = "models.download_cancel")]
+    ModelsDownloadCancel(models::DownloadModel),
+    /// Shell only: the local model to start with on this machine.
+    #[serde(rename = "models.recommended")]
+    ModelsRecommended(models::RecommendModel),
     /// Store a blob of at most `CHUNK_BYTES` in one call.
     #[serde(rename = "blobs.put")]
     BlobsPut { content_type: String, data: Bytes },
@@ -308,6 +317,16 @@ pub enum Reply {
     },
     /// Answer to `models.cancel`.
     Cancelled {},
+    /// Answer to `models.download`: `download_progress` events follow.
+    Downloading {
+        subscription: u64,
+        model: String,
+        /// Absent when the engine does not know the size yet.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        total_bytes: Option<u64>,
+    },
+    /// Answer to `models.recommended`.
+    Recommended(models::Recommendation),
     /// Answer to `models.embed`: one vector per input, in order.
     Embeddings {
         model: String,
@@ -385,6 +404,7 @@ impl Reply {
         match self {
             Reply::Subscribed { subscription, .. }
             | Reply::Stream { subscription, .. }
+            | Reply::Downloading { subscription, .. }
             | Reply::Listening { subscription }
             | Reply::LiveQuery { subscription, .. }
             | Reply::SessionStream { subscription } => Some(*subscription),
@@ -401,6 +421,8 @@ pub enum Event {
     ServiceStatus(ServiceStatus),
     /// Part of a model stream.
     ModelChunk(ModelChunk),
+    /// Progress of a model download; the one with `outcome` is the last.
+    DownloadProgress(models::DownloadProgress),
     /// A message published to an `events` subscription's scope.
     AppEvent(AppEvent),
     /// A live query's whole new result.
@@ -414,7 +436,11 @@ pub enum Event {
 impl Event {
     /// Whether this is the last event of its subscription.
     pub fn is_final(&self) -> bool {
-        matches!(self, Event::ModelChunk(chunk) if chunk.stop.is_some())
+        match self {
+            Event::ModelChunk(chunk) => chunk.stop.is_some(),
+            Event::DownloadProgress(progress) => progress.outcome.is_some(),
+            _ => false,
+        }
     }
 }
 
@@ -512,6 +538,8 @@ pub enum ErrorCode {
     SessionFailed,
     /// Client tool specs must be client tools with free names.
     InvalidTools,
+    /// `models.download_cancel` for a model with no download running.
+    NotDownloading,
     /// A code from a newer engine.
     #[serde(other)]
     Unrecognized,

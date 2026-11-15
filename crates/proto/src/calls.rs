@@ -18,6 +18,9 @@ impl Call {
         "models.stream",
         "models.cancel",
         "models.embed",
+        "models.download",
+        "models.download_cancel",
+        "models.recommended",
         "blobs.put",
         "blobs.create",
         "blobs.write",
@@ -72,6 +75,9 @@ impl Call {
             Call::ModelsStream(_) => "models.stream",
             Call::ModelsCancel { .. } => "models.cancel",
             Call::ModelsEmbed { .. } => "models.embed",
+            Call::ModelsDownload(_) => "models.download",
+            Call::ModelsDownloadCancel(_) => "models.download_cancel",
+            Call::ModelsRecommended(_) => "models.recommended",
             Call::BlobsPut { .. } => "blobs.put",
             Call::BlobsCreate { .. } => "blobs.create",
             Call::BlobsWrite { .. } => "blobs.write",
@@ -126,7 +132,10 @@ impl Call {
             | Call::ModelsInfo { .. }
             | Call::ModelsStream(_)
             | Call::ModelsCancel { .. }
-            | Call::ModelsEmbed { .. } => Interface::Models,
+            | Call::ModelsEmbed { .. }
+            | Call::ModelsDownload(_)
+            | Call::ModelsDownloadCancel(_)
+            | Call::ModelsRecommended(_) => Interface::Models,
             Call::BlobsPut { .. }
             | Call::BlobsCreate { .. }
             | Call::BlobsWrite { .. }
@@ -164,5 +173,14 @@ impl Call {
             | Call::ArtifactsGet(_)
             | Call::ArtifactsList(_) => Interface::Agents,
         }
+    }
+
+    /// `models.download`, `download_cancel` and `recommended`: the shell's
+    /// alone, like `system.*`, whatever the app's capabilities.
+    pub fn installs_models(&self) -> bool {
+        matches!(
+            self,
+            Call::ModelsDownload(_) | Call::ModelsDownloadCancel(_) | Call::ModelsRecommended(_)
+        )
     }
 }
