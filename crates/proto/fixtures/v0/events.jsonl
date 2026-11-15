@@ -1,0 +1,16 @@
+{"type":"request","id":60,"token":"tok-hello-1","method":"events.subscribe","params":{"topics":["chat.thread-opened"]}}
+{"type":"response","id":60,"result":{"listening":{"subscription":12}}}
+{"type":"request","id":61,"token":"tok-hello-1","method":"events.subscribe","params":{}}
+{"type":"response","id":61,"result":{"listening":{"subscription":13}}}
+{"type":"request","id":62,"token":"tok-hello-1","method":"events.publish","params":{"topic":"chat.thread-opened","data":{"pinned":true,"thread":"t-42"},"sender":"tab-2"}}
+{"type":"response","id":62,"result":{"published":{}}}
+{"type":"event","subscription":12,"event":"app_event","data":{"topic":"chat.thread-opened","data":{"pinned":true,"thread":"t-42"},"sender":"tab-2"}}
+{"type":"request","id":63,"method":"events.publish","params":{"topic":"settings.changed","data":["theme"],"app":"com.isonomic.hello"}}
+{"type":"response","id":63,"result":{"published":{}}}
+{"type":"event","subscription":13,"event":"app_event","data":{"topic":"settings.changed","data":["theme"]}}
+{"type":"request","id":64,"token":"tok-hello-1","method":"events.unsubscribe","params":{"subscription":12}}
+{"type":"response","id":64,"result":{"unsubscribed":{}}}
+{"type":"request","id":65,"token":"tok-hello-1","method":"events.publish","params":{"topic":"Not A Topic","data":null}}
+{"type":"response","id":65,"error":{"code":"bad_request","message":"topic \"Not A Topic\" must be lowercase letters, digits, dots, dashes and underscores"}}
+{"type":"request","id":66,"token":"tok-hello-1","method":"events.subscribe","params":{"app":"com.isonomic.notes"}}
+{"type":"response","id":66,"error":{"code":"capability_denied","message":"app com.isonomic.hello may not reach the events of com.isonomic.notes"}}
