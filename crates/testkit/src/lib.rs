@@ -23,9 +23,9 @@ mod system;
 
 pub use agents::FakeAgents;
 pub use blobs::{FakeBlobs, DEFAULT_LIMIT as DEFAULT_BLOB_LIMIT};
+pub use downloads::{DownloadStep, MEMORY_FLOOR};
 /// harness-host, whose `MemoryHost` serves the agents interface here.
 pub use harness_host;
-pub use downloads::{DownloadStep, MEMORY_FLOOR};
 pub use isonomic_proto::auth::Interface;
 pub use models::{FakeModels, Gate, Step};
 pub use sql::{FakeSql, SqlCall};
