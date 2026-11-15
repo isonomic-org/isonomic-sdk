@@ -5,7 +5,7 @@ The contract between window and engine, and the platform every Isonomic app is b
 ## Rules
 
 1. **The wire format is frozen by fixtures.** Every message shape is a line in `crates/proto/fixtures/v<version>/`. Add lines freely; never edit one (CI refuses). Changing a shape means a protocol version bump, and needs Omar's approval. See `docs/versioning.md`.
-2. **No engine or window code here.** Types, the client and the test engine only.
+2. **No engine or window code here.** Types, the client, the test engine, and the app crate. Only `crates/app` and `examples/` may depend on Isonomic UI; `proto`, `client` and `testkit` must build without it.
 3. **No polling.** The client publishes changes on a watch; callers await them.
 4. **Hermetic tests only.** No socket, no engine binary, no network: use the test engine.
 5. **Small files.** Every source and doc file stays under 20 KB.

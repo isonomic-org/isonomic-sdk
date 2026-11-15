@@ -1,0 +1,15 @@
+[package]
+name = "hello-app"
+description = "The smallest Isonomic app: lists the models it may use and streams one reply"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+isonomic-app.workspace = true
+isonomic-proto.workspace = true
+isonomic-ui.workspace = true
+
+[dev-dependencies]
+isonomic-app = { workspace = true, features = ["test-support"] }
+isonomic-testkit.workspace = true

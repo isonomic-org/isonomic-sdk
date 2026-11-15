@@ -17,4 +17,7 @@ jobs:
     uses: isonomic-org/.github/.github/workflows/rust-ci.yml@main
     secrets: inherit
     with:
-      toolchain: "1.97"
+      toolchain: "1.98"
+      linux-gui-libs: true
+      ui: true
+      xtask: frozen-fixtures

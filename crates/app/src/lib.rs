@@ -1,0 +1,73 @@
+//! The app platform: the trait every first-party Isonomic app implements,
+//! and what the window gives each app.
+//!
+//! An app is a crate. It describes itself with a [`Manifest`] (identity,
+//! icon, capabilities, schemas) and builds its root view from an
+//! [`AppContext`]: a client scoped to the app's capability token, the app's
+//! own settings, and a way to ask for the user's attention. The window links
+//! app crates and registers them with [`register`]; it never hands an app
+//! anything else.
+//!
+//! ```ignore
+//! impl isonomic_app::App for Notes {
+//!     fn manifest() -> Manifest { /* id, name, version, icon, capabilities */ }
+//!     fn build(cx: AppContext, window: &mut Window, app: &mut gpui::App) -> AnyView {
+//!         app.new(|view| Notes::new(cx, window, view)).into()
+//!     }
+//! }
+//! ```
+//!
+//! This is the only SDK crate that depends on Isonomic UI: [`App::build`]
+//! returns a GPUI view, and GPUI comes only through Isonomic UI.
+
+mod context;
+mod host;
+#[cfg(feature = "test-support")]
+pub mod testing;
+
+use isonomic_ui as gpui;
+
+pub use context::{AppContext, Attention, MemorySettings, Settings, SettingsStore};
+pub use host::{register, LoadedApp, Registration, Tab};
+pub use isonomic_client::{AppClient, ClientError, ModelStream, Models};
+pub use isonomic_proto::manifest::{BlobAccess, ConnectionAccess, ModelAccess, Schema, SqlAccess};
+pub use isonomic_proto::{Capabilities, Manifest};
+
+/// One result for the window's global search.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SearchHit {
+    pub title: String,
+    /// A second line: where the hit is, or a snippet.
+    pub detail: Option<String>,
+    /// The deep link that opens it, handed back to [`App::open_link`].
+    pub link: String,
+}
+
+/// The trait every first-party app implements.
+///
+/// `build` returns the app's root view. When that view is an
+/// `Entity<Self>`, the window routes the hooks below to it; an app whose
+/// root is some other view simply gets the defaults.
+pub trait App: 'static {
+    /// Identity, icon and capabilities. The window shows it to the user,
+    /// and the engine derives the app's token from it.
+    fn manifest() -> Manifest;
+
+    /// Build the root view. Called on first open, and again after the tab
+    /// was unloaded.
+    fn build(cx: AppContext, window: &mut gpui::Window, app: &mut gpui::App) -> gpui::AnyView;
+
+    /// Open a deep link addressed to this app. `true` if it was handled.
+    fn open_link(&mut self, _url: &str) -> bool {
+        false
+    }
+
+    /// Answer the window's global search.
+    fn search(&mut self, _q: &str) -> Vec<SearchHit> {
+        vec![]
+    }
+
+    /// The tab is about to be unloaded to free memory. Everything the user
+    /// did is already in the engine; drop caches and subscriptions here.
+    fn on_unload(&mut self) {}
+}

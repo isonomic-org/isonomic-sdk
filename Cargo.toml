@@ -1,6 +1,13 @@
 [workspace]
 resolver = "2"
-members = ["crates/proto", "crates/client", "crates/testkit"]
+members = [
+    "crates/proto",
+    "crates/client",
+    "crates/testkit",
+    "crates/app",
+    "examples/hello-app",
+    "xtask",
+]
 
 [workspace.package]
 version = "0.0.1"
@@ -11,7 +18,17 @@ publish = false
 isonomic-proto = { path = "crates/proto", features = ["tokio"] }
 isonomic-client = { path = "crates/client" }
 isonomic-testkit = { path = "crates/testkit" }
+isonomic-app = { path = "crates/app" }
+# Isonomic UI is a sibling checkout pinned to the commit in UI_REF, the same
+# way the engine and the window pin this repo. Only the app crate (and apps)
+# depend on it.
+isonomic-ui = { path = "../isonomic-ui/crates/ui", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
 tokio = { version = "1", features = ["io-util", "net", "rt", "sync", "time", "macros"] }
+
+# The UI crate's copy of GPUI's macros, which resolve GPUI paths through
+# Isonomic UI. The UI workspace applies the same patch.
+[patch.crates-io]
+gpui-pre-macros = { path = "../isonomic-ui/vendor/gpui-pre-macros" }
