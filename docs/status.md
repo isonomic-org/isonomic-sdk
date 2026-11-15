@@ -14,7 +14,7 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 **Verified**
 
 - Locally on Linux, against the same GPUI snapshot the UI crate pins: fmt, clippy `-D warnings`, 51 tests (one is the xtask's), the suite green 10 times in a row before the xtask and 3 more after. An engine-style consumer of `proto`, `client` and `testkit` still builds with no `../isonomic-ui`.
-- CI against the real Isonomic UI checkout waits on three things: a `ui` input in the shared workflow (requested in isonomic-org/.github `docs/requests.md`), the `UI_DEPLOY_KEY` secret, and moving `.github/ci-next.yml` to `.github/workflows/ci.yml` (the connector cannot write workflow files). That workflow calls the shared one with the UI checkout, GPUI's Linux packages, and `cargo xtask frozen-fixtures`, the append-only fixture check.
+- CI: `ci.yml` calls the shared workflow with its new `ui` input (isonomic-org/.github#1), GPUI's Linux packages, and `cargo xtask frozen-fixtures`, the append-only fixture check. The UI checkout needs the `UI_DEPLOY_KEY` secret (a read-only deploy key on isonomic-ui).
 
 **Decisions**
 
