@@ -39,7 +39,7 @@ async fn event(stream: &mut SessionStream) -> Result<SessionEvent, String> {
 }
 
 async fn purge(agents: &Agents) -> Outcome {
-    ok(agents.purge().await, "purge").map(|_| ())
+    ok(agents.purge(None).await, "purge").map(|_| ())
 }
 
 /// The built-in preset is listed and readable; invalid text is refused with
@@ -144,6 +144,20 @@ pub async fn isolated(target: Target) -> Outcome {
         refused(renamed, ErrorCode::NotFound, "rename")?;
         let sent = other.send_text(&session, "Hijack").await;
         refused(sent, ErrorCode::NotFound, "send")?;
+        let owner_id = "com.isonomic.conformance.agents-owner";
+        let purged = other.purge(Some(owner_id)).await;
+        refused(
+            purged,
+            ErrorCode::CapabilityDenied,
+            "purge naming the owner",
+        )?;
+        let pending = other.approvals(Some(owner_id)).await;
+        refused(
+            pending,
+            ErrorCode::CapabilityDenied,
+            "approvals naming the owner",
+        )?;
+        ok(owner.open(&session).await, "the owner's session after that")?;
         let (listed, _) = ok(other.list(ListSessions::default()).await, "list")?;
         ensure(listed.iter().all(|s| s.id != session), || {
             "another app's session is listed".into()
@@ -160,7 +174,7 @@ pub async fn purge_own(target: Target) -> Outcome {
     let theirs = agents(&target, "agents-kept").await?;
     let gone = ok(mine.create(PRESET).await, "create mine")?;
     let kept = ok(theirs.create(PRESET).await, "create theirs")?;
-    let report = ok(mine.purge().await, "purge")?;
+    let report = ok(mine.purge(None).await, "purge")?;
     let result = async {
         ensure(report.sessions >= 1, || {
             format!("purge reported {report:?}")

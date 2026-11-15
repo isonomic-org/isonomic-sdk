@@ -48,7 +48,7 @@ The checks speak the wire alone. They grant their own apps through `apps.grant` 
 | `agents.presets` | List and read the built-in `chat` preset; refuse invalid preset text with `invalid_preset` |
 | `agents.registry` | Show a created session in `sessions.list`, and a rename, an archive and a restore in the next read |
 | `agents.replay` | Start a session's log with `session.start` at seq 1; replay from a seq starting at the next event |
-| `agents.isolated` | Answer another app's open, subscribe, rename and send with `not_found`, and leave its sessions out of the list |
+| `agents.isolated` | Answer another app's open, subscribe, rename and send with `not_found`; refuse purge and `approvals.list` naming another app with `capability_denied`; leave its sessions out of the list |
 | `agents.purge_own` | Delete the caller's sessions on purge and leave every other app's |
 | `agents.unknown_subscription` | Refuse unsubscribing from a stream that is not open with `unknown_subscription` |
 | `tokens.shutdown_refused` | Refuse `system.shutdown` to an app, and keep answering |

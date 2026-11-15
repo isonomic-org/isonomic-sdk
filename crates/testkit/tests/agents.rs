@@ -162,7 +162,7 @@ async fn an_approval_needs_the_persons_user_action() {
         .agents()
         .with(|host| host.model.calls(&[("post", "{\"text\":\"hi\"}")]));
     agents.send_text(&session, "Post hi.").await.unwrap();
-    let pending = agents.approvals().await.unwrap();
+    let pending = agents.approvals(None).await.unwrap();
     assert_eq!(pending.len(), 1);
     let approval = pending[0].request.approval.clone();
     let refused = agents
@@ -250,7 +250,7 @@ async fn purge_removes_only_the_callers_sessions() {
     let mine = chat.create("test").await.unwrap();
     chat.send_text(&mine, "Hi").await.unwrap();
     let theirs = notes.create("test").await.unwrap();
-    let report = chat.purge().await.unwrap();
+    let report = chat.purge(None).await.unwrap();
     assert_eq!(report.sessions, 1);
     assert!(report.events > 0);
     assert_eq!(code(chat.open(&mine).await), ErrorCode::NotFound);
@@ -285,7 +285,7 @@ async fn an_approval_is_named_by_its_session_as_well_as_its_id() {
         .agents()
         .with(|host| host.model.calls(&[("post", "{}")]));
     agents.send_text(&held, "Post.").await.unwrap();
-    let approval = agents.approvals().await.unwrap()[0]
+    let approval = agents.approvals(None).await.unwrap()[0]
         .request
         .approval
         .clone();
@@ -319,7 +319,7 @@ async fn an_approval_is_named_by_its_session_as_well_as_its_id() {
 }
 
 #[tokio::test]
-async fn only_the_shell_names_another_apps_scope() {
+async fn only_the_shell_names_another_app() {
     use isonomic_proto::agents::{ListApprovals, PurgeSessions};
     use isonomic_proto::{Call, Reply};
     let engine = TestEngine::new();
@@ -327,18 +327,17 @@ async fn only_the_shell_names_another_apps_scope() {
     let notes = app(&engine, "com.isonomic.notes");
     let mine = chat.agents().create("test").await.unwrap();
     notes.agents().create("test").await.unwrap();
-    let scope = Some("com.isonomic.chat".into());
-    let reach = Call::SessionsPurge(PurgeSessions {
-        scope: scope.clone(),
-    });
-    assert_eq!(code(notes.call(reach).await), ErrorCode::NotFound);
-    let listed = Call::ApprovalsList(ListApprovals {
-        scope: scope.clone(),
-    });
+    let named = Some("com.isonomic.chat".into());
+    let reach = Call::SessionsPurge(PurgeSessions { app: named.clone() });
+    assert_eq!(code(notes.call(reach).await), ErrorCode::CapabilityDenied);
+    let everything = Call::SessionsPurge(PurgeSessions { app: None });
+    let refused = engine.client().call(everything).await;
+    assert_eq!(code(refused), ErrorCode::BadRequest);
+    let listed = Call::ApprovalsList(ListApprovals { app: named.clone() });
     let shell = engine.client();
     let reply = shell.call(listed).await.unwrap();
     assert!(matches!(reply, Reply::Approvals(list) if list.is_empty()));
-    let purge = Call::SessionsPurge(PurgeSessions { scope });
+    let purge = Call::SessionsPurge(PurgeSessions { app: named });
     let Reply::Purged(report) = shell.call(purge).await.unwrap() else {
         panic!("not a purge report");
     };

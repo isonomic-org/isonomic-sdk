@@ -72,8 +72,9 @@ fn not_in_session(what: &str) -> WireError {
     WireError::new(ErrorCode::NotFound, message)
 }
 
-/// The caller a scoped call acts as: an app may name only itself; the shell
-/// acts for the app it names.
+/// The caller a call naming an app acts as. `proto::auth` has already
+/// refused an app naming another app, and the shell's unnamed purge; the
+/// shell acts for the app it names.
 fn scoped(caller: &HostCaller, scope: Option<&AppId>) -> Result<HostCaller, WireError> {
     match (scope, caller.scope.app()) {
         (None, _) => Ok(caller.clone()),
@@ -125,11 +126,11 @@ fn answer(memory: &MemoryHost, caller: &HostCaller, call: Call) -> Result<Reply,
         Call::SessionsContinue(r) => done(run(memory, host.continue_reply(caller, &r.session))),
         Call::SessionsCancel(r) => done(run(memory, host.cancel(caller, &r.session))),
         Call::SessionsPurge(r) => {
-            let caller = scoped(caller, r.scope.as_ref())?;
+            let caller = scoped(caller, r.app.as_ref())?;
             run(memory, host.purge(&caller)).map(|r| Reply::Purged(map::purged(r)))
         }
         Call::ApprovalsList(r) => {
-            let scope = r.scope;
+            let scope = r.app;
             scoped(caller, scope.as_ref())?;
             run(memory, host.list_approvals(caller)).map(|list| {
                 let list = list
