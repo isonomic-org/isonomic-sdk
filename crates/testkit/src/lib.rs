@@ -15,11 +15,13 @@ mod conn;
 mod events;
 mod faults;
 mod models;
+mod sql;
 mod system;
 
 pub use blobs::{FakeBlobs, DEFAULT_LIMIT as DEFAULT_BLOB_LIMIT};
 pub use isonomic_proto::auth::Interface;
 pub use models::{FakeModels, Gate, Step};
+pub use sql::{FakeSql, SqlCall};
 
 use std::collections::HashMap;
 use std::io;
@@ -59,6 +61,7 @@ pub(crate) struct State {
     pub(crate) cancels: watch::Sender<u32>,
     pub(crate) blobs: Mutex<blobs::BlobsState>,
     pub(crate) events: Mutex<events::EventsState>,
+    pub(crate) sql: Mutex<sql::SqlState>,
     pub(crate) faults: Mutex<HashMap<Interface, faults::Fault>>,
     next_token: AtomicU64,
 }
@@ -129,6 +132,7 @@ impl TestEngine {
                 cancels: watch::channel(0).0,
                 blobs: Mutex::new(blobs::BlobsState::default()),
                 events: Mutex::new(events::EventsState::default()),
+                sql: Mutex::new(sql::SqlState::default()),
                 faults: Mutex::new(HashMap::new()),
                 next_token: AtomicU64::new(1),
             }),
@@ -194,6 +198,13 @@ impl TestEngine {
     /// The fake blob store: its limit and what apps stored.
     pub fn blobs(&self) -> FakeBlobs {
         FakeBlobs {
+            state: Arc::clone(&self.state),
+        }
+    }
+
+    /// The fake database: scripted results and the statements apps ran.
+    pub fn sql(&self) -> FakeSql {
+        FakeSql {
             state: Arc::clone(&self.state),
         }
     }
