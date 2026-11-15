@@ -2,7 +2,7 @@
 
 use std::sync::atomic::Ordering;
 
-use isonomic_proto::{Call, ErrorCode, HardwareProfile, Reply, ServiceState, WireError};
+use isonomic_proto::{Call, ErrorCode, Reply, ServiceState, WireError};
 
 use crate::State;
 
@@ -34,11 +34,9 @@ pub(crate) fn answer(state: &State, call: Call) -> Result<Reply, WireError> {
             lines.drain(..lines.len().saturating_sub(keep));
             Ok(Reply::Logs { service, lines })
         }
-        Call::SystemProfile => Ok(Reply::Profile(HardwareProfile {
-            profile: "standard".to_string(),
-            total_memory_bytes: 16 << 30,
-            available_memory_bytes: 8 << 30,
-        })),
+        Call::SystemProfile => Ok(Reply::Profile(
+            state.downloads.lock().unwrap().profile.clone(),
+        )),
         Call::SystemRetry { service } => {
             let services = state.system.lock().unwrap().services.clone();
             let Some(current) = services.iter().find(|s| s.name == service) else {

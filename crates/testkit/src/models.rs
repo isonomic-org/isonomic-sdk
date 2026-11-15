@@ -9,7 +9,7 @@
 use std::sync::Arc;
 
 use isonomic_proto::auth::{authorize_model, Caller};
-use isonomic_proto::models::{ModelDetail, ModelState, StreamRequest, Usage};
+use isonomic_proto::models::{ModelDetail, StreamRequest, Usage};
 use isonomic_proto::{
     Call, ErrorCode, Event, MemoryRefusal, ModelChunk, ModelInfo, Reply, ServerMessage, StopReason,
     Token, WireError,
@@ -38,7 +38,7 @@ impl Gate {
         self.0.send_replace(true);
     }
 
-    async fn wait(&self) {
+    pub(crate) async fn wait(&self) {
         let _ = self.0.subscribe().wait_for(|open| *open).await;
     }
 }
@@ -56,15 +56,17 @@ pub enum Step {
 }
 
 pub(crate) struct FakeModel {
-    info: ModelInfo,
-    size_bytes: Option<u64>,
+    pub(crate) info: ModelInfo,
+    pub(crate) size_bytes: Option<u64>,
+    /// Its file is on this machine. `false` until `models.download` ends.
+    pub(crate) installed: bool,
     script: Option<Vec<Step>>,
     refusal: Option<MemoryRefusal>,
     failure: Option<WireError>,
 }
 
 pub(crate) struct ModelsState {
-    models: Vec<FakeModel>,
+    pub(crate) models: Vec<FakeModel>,
     default_chat: Option<String>,
     default_embeddings: Option<String>,
     remote_enabled: bool,
@@ -86,6 +88,7 @@ impl Default for ModelsState {
         let local = |info: ModelInfo| FakeModel {
             info,
             size_bytes: Some(2 << 30),
+            installed: true,
             script: None,
             refusal: None,
             failure: None,
@@ -114,7 +117,7 @@ impl FakeModels {
         f(&mut self.state.models.lock().unwrap())
     }
 
-    fn with_model(&self, id: &str, f: impl FnOnce(&mut FakeModel)) {
+    pub(crate) fn with_model(&self, id: &str, f: impl FnOnce(&mut FakeModel)) {
         self.with(|m| match m.models.iter_mut().find(|m| m.info.id == id) {
             Some(model) => f(model),
             None => panic!("no fake model {id}"),
@@ -127,6 +130,7 @@ impl FakeModels {
             m.models.retain(|existing| existing.info.id != info.id);
             m.models.push(FakeModel {
                 size_bytes: (!info.remote).then_some(2 << 30),
+                installed: true,
                 info,
                 script: None,
                 refusal: None,
@@ -337,6 +341,12 @@ fn resolve(
             "remote models are switched off",
         ));
     }
+    if !model.installed {
+        return Err(WireError::new(
+            ErrorCode::ModelUnavailable,
+            format!("model {id} is not installed; download it first"),
+        ));
+    }
     if let Some(error) = &model.failure {
         return Err(error.clone());
     }
@@ -379,7 +389,7 @@ pub(crate) async fn dispatch(
                             info: found.info.clone(),
                             size_bytes: found.size_bytes,
                             license: (!found.info.remote).then(|| "Test License".to_string()),
-                            state: ModelState::Stopped,
+                            state: crate::downloads::state_of(state, found),
                         })
                     })
                 }
@@ -422,6 +432,9 @@ pub(crate) async fn dispatch(
                     return None;
                 }
             }
+        }
+        Call::ModelsDownload(_) | Call::ModelsDownloadCancel(_) | Call::ModelsRecommended(_) => {
+            return crate::downloads::dispatch(state, conn, id, token, call).await;
         }
         other => Err(WireError::new(
             ErrorCode::UnknownMethod,

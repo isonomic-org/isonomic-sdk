@@ -14,6 +14,7 @@ mod agents;
 mod agents_map;
 mod blobs;
 mod conn;
+mod downloads;
 mod events;
 mod faults;
 mod models;
@@ -24,6 +25,7 @@ pub use agents::FakeAgents;
 pub use blobs::{FakeBlobs, DEFAULT_LIMIT as DEFAULT_BLOB_LIMIT};
 /// harness-host, whose `MemoryHost` serves the agents interface here.
 pub use harness_host;
+pub use downloads::{DownloadStep, MEMORY_FLOOR};
 pub use isonomic_proto::auth::Interface;
 pub use models::{FakeModels, Gate, Step};
 pub use sql::{FakeSql, SqlCall};
@@ -36,7 +38,8 @@ use std::time::Duration;
 
 use isonomic_client::{AppClient, BoxedStream, Client, Connector, Options};
 use isonomic_proto::{
-    ErrorCode, Manifest, ServiceState, ServiceStatus, SystemStatus, Token, WireError,
+    ErrorCode, HardwareProfile, Manifest, ServiceState, ServiceStatus, SystemStatus, Token,
+    WireError,
 };
 use tokio::sync::{broadcast, watch};
 
@@ -69,6 +72,7 @@ pub(crate) struct State {
     pub(crate) blobs: Mutex<blobs::BlobsState>,
     pub(crate) events: Mutex<events::EventsState>,
     pub(crate) sql: Mutex<sql::SqlState>,
+    pub(crate) downloads: Mutex<downloads::DownloadsState>,
     pub(crate) faults: Mutex<HashMap<Interface, faults::Fault>>,
     pub(crate) agents: Mutex<agents::AgentsState>,
     next_token: AtomicU64,
@@ -160,6 +164,7 @@ impl TestEngine {
                 blobs: Mutex::new(blobs::BlobsState::default()),
                 events: Mutex::new(events::EventsState::default()),
                 sql: Mutex::new(sql::SqlState::default()),
+                downloads: Mutex::new(downloads::DownloadsState::default()),
                 faults: Mutex::new(HashMap::new()),
                 agents: Mutex::new(agents::AgentsState::default()),
                 next_token: AtomicU64::new(1),
@@ -243,6 +248,12 @@ impl TestEngine {
         FakeSql {
             state: Arc::clone(&self.state),
         }
+    }
+
+    /// The machine `system.profile` describes and `models.recommended`
+    /// chooses for. `standard` at the 16 GiB floor by default.
+    pub fn set_profile(&self, profile: HardwareProfile) {
+        self.state.downloads.lock().unwrap().profile = profile;
     }
 
     /// Make every call on `interface` wait `delay` before it is answered.

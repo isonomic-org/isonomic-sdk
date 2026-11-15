@@ -13,6 +13,9 @@ Needs the `models` capability. An app sees and uses only the models its manifest
 | `models.stream` | `StreamRequest` | `stream { subscription, model }`, then `model_chunk` events |
 | `models.cancel` | `{ subscription }` | `cancelled {}`; the stream's last chunk then has `stop: cancelled` |
 | `models.embed` | `{ model?, input: [text] }` | `embeddings { model, vectors }`, one per input, in order |
+| `models.download` | `{ model }` | `downloading { subscription, model, total_bytes }`, then `download_progress` events. Shell only |
+| `models.download_cancel` | `{ model }` | `cancelled {}`; every subscriber's stream ends `cancelled`. Shell only |
+| `models.recommended` | `{ profile? }` | `recommended { model, profile, size_bytes }`: the local model to start with. Shell only |
 
 `model` left out means the user's default chat (or embeddings) model; the reply names the one chosen.
 
@@ -50,6 +53,23 @@ A `model_chunk` may carry any of: `text`, `reasoning`, `tool_calls` (deltas: the
 
 Only the app that opened a stream can cancel it. Dropping a `ModelStream` in the client cancels it.
 
+## Installing a model
+
+The window's first run, V1 local models only. All three calls are the shell's: `proto::auth` refuses them to every app token, whatever its capabilities.
+
+- **State.** `models.info` says `not_installed` for a local model whose file is not on the machine yet, and `downloading` while it is fetched; `size_bytes` is the size to show before starting. A model that is not installed refuses streams and embeddings with `model_unavailable`.
+- **The first model.** `models.recommended {}` names the model for this machine's profile (`system.profile`), or for the `profile` asked about. Below every local model's needs (V1's floor is 16 GiB) it answers `insufficient_memory`, with `required_bytes` and `available_bytes`.
+- **The download is the engine's.** `models.download` starts it, or attaches to it if it is already running. The first event says where it stands, so a window that closed and came back calls `models.download` again and carries on. Dropping a `DownloadStream` only stops following it. An installed model answers with one final `installed` event.
+- **Progress.** `download_progress { model, received_bytes, total_bytes }`. The last event has `outcome`: `installed` (the model is then `stopped`, ready to load), `failed` (with `error`), or `cancelled`.
+- **Cancel** names the model, since several windows may follow one download. `unknown_subscription` when none is running. A remote model answers `unsupported`; there is nothing to download.
+
+```json
+{"type":"request","id":123,"method":"models.download","params":{"model":"chat-medium"}}
+{"type":"response","id":123,"result":{"downloading":{"subscription":30,"model":"chat-medium","total_bytes":5368709120}}}
+{"type":"event","subscription":30,"event":"download_progress","data":{"model":"chat-medium","received_bytes":1342177280,"total_bytes":5368709120}}
+{"type":"event","subscription":30,"event":"download_progress","data":{"model":"chat-medium","received_bytes":5368709120,"total_bytes":5368709120,"outcome":"installed"}}
+```
+
 ## Errors
 
 | Code | When |
@@ -69,3 +89,5 @@ Only the app that opened a stream can cancel it. Dropping a `ModelStream` in the
 ## Testing
 
 `TestEngine::models()` scripts the fake: `add`, `script` (steps of chunks, `Hold(gate)` and `Fail`), `refuse` and `admit`, `fail` and `recover`, `set_remote_enabled`, and `requests` / `cancels` for assertions. Without a script, `chat-small` echoes the last user message word by word.
+
+Installing: `uninstall(model)` makes a model `not_installed`, and `installed(model)` reads it back. `script_download(model, steps)` plays `DownloadStep::Progress(bytes)`, `Hold(gate)` and `Fail(error)`; without a script a download arrives in four quarters. `recommend(profile, model)` sets the first model per profile (`chat-small` for `standard` and `high`, none for `low`). `TestEngine::set_profile(HardwareProfile)` sets what `system.profile` says and what `models.recommended` chooses for, so a test can run a machine below `MEMORY_FLOOR`.

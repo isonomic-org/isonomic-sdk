@@ -2,6 +2,18 @@
 
 Newest first. Each entry names what the engine (isonomic-capsule) and the window (isonomic-desktop) must do when they move `SDK_REF` to it.
 
+## Unreleased: installing local models (isonomic-sdk #21)
+
+**Wire (additive, still version 0):** methods `models.download { model }` → `downloading { subscription, model, total_bytes }` with `download_progress` events, `models.download_cancel { model }` → `cancelled {}`, and `models.recommended { profile? }` → `recommended { model, profile, size_bytes }`. `ModelState` gains `not_installed` and `downloading`. All three methods are shell only.
+
+**For the engine:**
+- Serve `models.download`, `models.download_cancel` and `models.recommended` (`docs/interfaces/models.md`, "Installing a model"). `proto::auth` already refuses them to app tokens.
+- Own the download, so it outlives the window. Attach a second `models.download` to the running one, starting with its current progress. End every subscriber with `installed`, `failed` (with the error) or `cancelled`.
+- Report `not_installed` and `downloading` in `models.info`, and refuse streams and embeddings on a model that is not installed with `model_unavailable`.
+- Answer `models.recommended` from the hardware profile, with `insufficient_memory` below V1's 16 GiB floor.
+
+**For the window:** `Models::recommended(profile)`, `download(model)` → `DownloadStream` (`total_bytes`, `next`), and `cancel_download(model)`, on the shell's client. After a reconnect, call `download` again to pick the download back up. In tests, `TestEngine::set_profile` and `models().uninstall`, `script_download` and `recommend`.
+
 ## Unreleased: Isonomic UI through the SDK
 
 **Wire:** no change.
