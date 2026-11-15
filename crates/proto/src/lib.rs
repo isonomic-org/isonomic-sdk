@@ -82,6 +82,10 @@ pub enum Call {
     /// Stop every service in order, then the engine.
     #[serde(rename = "system.shutdown")]
     SystemShutdown,
+    /// Start a degraded service again, clearing its restart window. The
+    /// outcome arrives as `service_status` events.
+    #[serde(rename = "system.retry")]
+    SystemRetry { service: String },
     /// Shell only: record an app's approved manifest and issue its token.
     #[serde(rename = "apps.grant")]
     AppsGrant { manifest: Box<Manifest> },
@@ -199,6 +203,7 @@ impl Call {
         "system.logs",
         "system.profile",
         "system.shutdown",
+        "system.retry",
         "apps.grant",
         "models.list",
         "models.info",
@@ -230,6 +235,7 @@ impl Call {
             Call::SystemLogs { .. } => "system.logs",
             Call::SystemProfile => "system.profile",
             Call::SystemShutdown => "system.shutdown",
+            Call::SystemRetry { .. } => "system.retry",
             Call::AppsGrant { .. } => "apps.grant",
             Call::ModelsList => "models.list",
             Call::ModelsInfo { .. } => "models.info",
@@ -261,7 +267,8 @@ impl Call {
             | Call::SystemUnsubscribe { .. }
             | Call::SystemLogs { .. }
             | Call::SystemProfile
-            | Call::SystemShutdown => Interface::System,
+            | Call::SystemShutdown
+            | Call::SystemRetry { .. } => Interface::System,
             Call::AppsGrant { .. } => Interface::Apps,
             Call::ModelsList
             | Call::ModelsInfo { .. }
@@ -327,6 +334,8 @@ pub enum Reply {
     },
     Profile(HardwareProfile),
     ShuttingDown {},
+    /// Answer to `system.retry`: the service is starting again.
+    Retrying {},
     /// Answer to `apps.grant`.
     Granted {
         app: String,
@@ -462,6 +471,8 @@ pub enum ErrorCode {
     /// The frame was not a valid message.
     BadRequest,
     UnknownService,
+    /// `system.retry` on a service that is not degraded.
+    NotDegraded,
     UnknownSubscription,
     Internal,
     /// The engine does not implement this method (yet).
