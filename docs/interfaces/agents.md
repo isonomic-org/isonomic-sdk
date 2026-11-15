@@ -89,4 +89,6 @@ The testkit serves every agents call with harness-host's `MemoryHost` (at the co
 
 A purged session's stream sends nothing more; the wire has no end-of-stream event for it.
 
+The host still indexes approval, question and call ids across sessions (isonomic-harness #30). Until it takes the session, the testkit checks that the named session holds the approval, question or call, and answers `not_found` otherwise. `scope` on `sessions.purge` and `approvals.list` follows the rule above: an app may name only itself, and the shell acts for the app it names.
+
 The conformance suite's `agents.` group runs against this host and the engine's (`docs/conformance.md`).

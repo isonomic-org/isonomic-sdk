@@ -12,7 +12,18 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 - **Every granted app is first-party.** Manifests carry no app kind yet. View and third-party deciding stays tested in harness-host.
 - **Conformance sends no input.** The engine's model is real, so turns stay in testkit tests.
 
-**Gap:** a purged session's stream goes quiet: the wire has no end-of-stream event for session streams.
+**For consumers** (review of #16, items 10 and 11):
+
+- `wire.welcome` requires `schema`. An engine fails conformance on its next SDK pin bump until its `welcome` sends `SchemaVersion::CURRENT`.
+- Declare harness with exactly the workspace's URL and `rev` string (`ssh://git@github.com/isonomic-org/isonomic-harness.git`, `7a73ca695254d415332ef39bae2b100e4f791b6c`). Any other spelling makes cargo build two copies of harness-core, whose types do not match. CI must pass `harness: true` to the shared workflow.
+
+**Gaps, for the next pull request** (review items 6 to 9; 6 to 8 change the wire):
+
+- A purged session's stream goes quiet: no end-of-stream event for session streams.
+- No call gives an app the user-action token `approvals.decide` needs.
+- `artifacts.get` returns the body inline; bodies over about 750 KB exceed the 1 MiB frame. It should be chunked like blobs.
+- The client skips a malformed known event silently, and `SessionStream` does not check sequence continuity.
+- Until isonomic-harness #30, the testkit checks the (session, id) target itself.
 
 ## 2026-11-15 · The `agents` interface: wire and client (S0, agents brief Part B)
 

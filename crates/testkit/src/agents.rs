@@ -14,7 +14,8 @@ use std::sync::Arc;
 use harness_host::{
     AppKind, Caller as HostCaller, CapabilityToken, HostError, MemoryHost, UserActionToken,
 };
-use isonomic_proto::agents::{ApprovalId, ForkReason, SessionEvent, SessionId};
+use isonomic_proto::agents::schema::Event as LogEvent;
+use isonomic_proto::agents::{AppId, ApprovalId, ForkReason, SessionEvent, SessionId};
 use isonomic_proto::auth::Caller;
 use isonomic_proto::{Call, ErrorCode, Event, Reply, ServerMessage, Token, WireError};
 
@@ -65,6 +66,26 @@ fn run<T>(
     memory.block_on(call)
 }
 
+/// Ids are minted per session, and the call named another session.
+fn not_in_session(what: &str) -> WireError {
+    let message = format!("no such {what} in this session");
+    WireError::new(ErrorCode::NotFound, message)
+}
+
+/// The caller a scoped call acts as: an app may name only itself; the shell
+/// acts for the app it names.
+fn scoped(caller: &HostCaller, scope: Option<&AppId>) -> Result<HostCaller, WireError> {
+    match (scope, caller.scope.app()) {
+        (None, _) => Ok(caller.clone()),
+        (Some(app), Some(own)) if app == own => Ok(caller.clone()),
+        (Some(_), Some(_)) => Err(WireError::new(
+            ErrorCode::NotFound,
+            "no such app for this caller",
+        )),
+        (Some(app), None) => Ok(HostCaller::app(&app.to_string(), AppKind::FirstParty)),
+    }
+}
+
 fn answer(memory: &MemoryHost, caller: &HostCaller, call: Call) -> Result<Reply, WireError> {
     let host = &memory.host;
     let done = |r: Result<(), HostError>| r.map(|()| Reply::Done {});
@@ -103,12 +124,28 @@ fn answer(memory: &MemoryHost, caller: &HostCaller, call: Call) -> Result<Reply,
         }
         Call::SessionsContinue(r) => done(run(memory, host.continue_reply(caller, &r.session))),
         Call::SessionsCancel(r) => done(run(memory, host.cancel(caller, &r.session))),
-        Call::SessionsPurge => {
-            run(memory, host.purge(caller)).map(|r| Reply::Purged(map::purged(r)))
+        Call::SessionsPurge(r) => {
+            let caller = scoped(caller, r.scope.as_ref())?;
+            run(memory, host.purge(&caller)).map(|r| Reply::Purged(map::purged(r)))
         }
-        Call::ApprovalsList => run(memory, host.list_approvals(caller))
-            .map(|list| Reply::Approvals(list.into_iter().map(map::approval).collect())),
+        Call::ApprovalsList(r) => {
+            let scope = r.scope;
+            scoped(caller, scope.as_ref())?;
+            run(memory, host.list_approvals(caller)).map(|list| {
+                let list = list
+                    .into_iter()
+                    .filter(|a| scope.as_ref().is_none_or(|app| &a.owner == app));
+                Reply::Approvals(list.map(map::approval).collect())
+            })
+        }
         Call::ApprovalsDecide(r) => {
+            run(memory, host.open_session(caller, &r.session)).map_err(map::error)?;
+            let asked = memory.log(&r.session).iter().any(
+                |e| matches!(&e.event, LogEvent::ApprovalRequest(a) if a.approval == r.approval),
+            );
+            if !asked {
+                return Err(not_in_session("approval"));
+            }
             let token = r.user_action.map(UserActionToken);
             let decision = map::decision(r.decision);
             done(run(
@@ -117,6 +154,10 @@ fn answer(memory: &MemoryHost, caller: &HostCaller, call: Call) -> Result<Reply,
             ))
         }
         Call::QuestionsAnswer(r) => {
+            let open = run(memory, host.open_session(caller, &r.session)).map_err(map::error)?;
+            if !open.questions.contains(&r.question) {
+                return Err(not_in_session("question"));
+            }
             let question = r.question.clone();
             done(run(
                 memory,
@@ -128,13 +169,21 @@ fn answer(memory: &MemoryHost, caller: &HostCaller, call: Call) -> Result<Reply,
             host.register_client_tools(caller, &r.session, r.specs),
         )),
         Call::ToolsResult(r) => {
+            run(memory, host.open_session(caller, &r.session)).map_err(map::error)?;
+            let asked = memory
+                .log(&r.session)
+                .iter()
+                .any(|e| matches!(&e.event, LogEvent::ToolCall(c) if c.call == r.call));
+            if !asked {
+                return Err(not_in_session("tool call"));
+            }
             let call = r.call.clone();
             done(run(
                 memory,
                 host.client_tool_result(caller, &call, map::outcome(r)),
             ))
         }
-        Call::PresetsList => run(memory, host.list_presets(caller))
+        Call::PresetsList(_) => run(memory, host.list_presets(caller))
             .map(|list| Reply::Presets(list.into_iter().map(map::preset_summary).collect())),
         Call::PresetsGet(r) => run(memory, host.get_preset(caller, &r.preset))
             .map(|p| Reply::Preset(Box::new(map::preset(p)))),

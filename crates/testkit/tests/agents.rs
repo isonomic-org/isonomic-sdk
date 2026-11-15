@@ -165,19 +165,31 @@ async fn an_approval_needs_the_persons_user_action() {
     let pending = agents.approvals().await.unwrap();
     assert_eq!(pending.len(), 1);
     let approval = pending[0].request.approval.clone();
-    let refused = agents.decide(&approval, DecisionInput::Allow, None).await;
+    let refused = agents
+        .decide(&session, &approval, DecisionInput::Allow, None)
+        .await;
     assert_eq!(code(refused), ErrorCode::MissingUserAction);
     let forged = agents
-        .decide(&approval, DecisionInput::Allow, Some("forged"))
+        .decide(&session, &approval, DecisionInput::Allow, Some("forged"))
         .await;
     assert_eq!(code(forged), ErrorCode::MissingUserAction);
     let person = engine.agents().user_action(Some(id), &approval);
     agents
-        .decide(&approval, DecisionInput::Allow, Some(&person))
+        .decide(
+            &session,
+            &approval,
+            DecisionInput::Allow,
+            Some(person.as_str()),
+        )
         .await
         .unwrap();
     let again = agents
-        .decide(&approval, DecisionInput::Allow, Some(&person))
+        .decide(
+            &session,
+            &approval,
+            DecisionInput::Allow,
+            Some(person.as_str()),
+        )
         .await;
     assert_eq!(code(again), ErrorCode::AlreadyDecided);
     let log = engine.agents().log(&session);
@@ -203,6 +215,7 @@ async fn a_client_tool_call_reaches_the_app_and_its_result_closes_the_step() {
     };
     assert_eq!(call.kind, ToolKind::Client);
     let result = ClientToolResult {
+        session: session.clone(),
         call: call.call.clone(),
         content: vec![],
         error: None,
@@ -257,4 +270,80 @@ async fn unsubscribing_ends_only_the_callers_own_stream() {
         .await;
     assert_eq!(code(theirs), ErrorCode::UnknownSubscription);
     drop(stream);
+}
+
+#[tokio::test]
+async fn an_approval_is_named_by_its_session_as_well_as_its_id() {
+    let engine = TestEngine::new();
+    let id = "com.isonomic.chat";
+    let agents = app(&engine, id).agents();
+    let held = agents.create("test").await.unwrap();
+    let other = agents.create("test").await.unwrap();
+    let specs = vec![tool("post", vec![Effect::ActsOutward])];
+    agents.register_client_tools(&held, specs).await.unwrap();
+    engine
+        .agents()
+        .with(|host| host.model.calls(&[("post", "{}")]));
+    agents.send_text(&held, "Post.").await.unwrap();
+    let approval = agents.approvals().await.unwrap()[0]
+        .request
+        .approval
+        .clone();
+    let person = engine.agents().user_action(Some(id), &approval);
+    let elsewhere = agents
+        .decide(
+            &other,
+            &approval,
+            DecisionInput::Allow,
+            Some(person.as_str()),
+        )
+        .await;
+    assert_eq!(code(elsewhere), ErrorCode::NotFound);
+    let answered = isonomic_proto::agents::AnswerQuestion {
+        session: other.clone(),
+        question: "q-1".into(),
+        selected: vec![],
+        text: Some("Yes".into()),
+        skipped: false,
+    };
+    assert_eq!(code(agents.answer(answered).await), ErrorCode::NotFound);
+    agents
+        .decide(
+            &held,
+            &approval,
+            DecisionInput::Allow,
+            Some(person.as_str()),
+        )
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn only_the_shell_names_another_apps_scope() {
+    use isonomic_proto::agents::{ListApprovals, PurgeSessions};
+    use isonomic_proto::{Call, Reply};
+    let engine = TestEngine::new();
+    let chat = app(&engine, "com.isonomic.chat");
+    let notes = app(&engine, "com.isonomic.notes");
+    let mine = chat.agents().create("test").await.unwrap();
+    notes.agents().create("test").await.unwrap();
+    let scope = Some("com.isonomic.chat".into());
+    let reach = Call::SessionsPurge(PurgeSessions {
+        scope: scope.clone(),
+    });
+    assert_eq!(code(notes.call(reach).await), ErrorCode::NotFound);
+    let listed = Call::ApprovalsList(ListApprovals {
+        scope: scope.clone(),
+    });
+    let shell = engine.client();
+    let reply = shell.call(listed).await.unwrap();
+    assert!(matches!(reply, Reply::Approvals(list) if list.is_empty()));
+    let purge = Call::SessionsPurge(PurgeSessions { scope });
+    let Reply::Purged(report) = shell.call(purge).await.unwrap() else {
+        panic!("not a purge report");
+    };
+    assert_eq!(report.sessions, 1);
+    assert_eq!(code(chat.agents().open(&mine).await), ErrorCode::NotFound);
+    let (left, _) = shell.agents().list(Default::default()).await.unwrap();
+    assert_eq!(left.len(), 1, "the other app's session stays");
 }
