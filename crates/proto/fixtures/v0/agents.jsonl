@@ -52,9 +52,9 @@
 {"type":"response","id":103,"error":{"code":"not_found","message":"no such session"}}
 {"type":"event","subscription":21,"event":"session_event","data":{"session":"s-1","seq":15,"at":1700000000015,"turn":"t-3","type":"reaction","emoji":"thumbs_up","to_seq":13}}
 {"type":"welcome","version":0,"engine":"isonomic-engine","schema":{"version":1,"revision":2}}
-{"type":"request","id":104,"method":"sessions.purge","params":{"scope":"com.isonomic.chat"}}
+{"type":"request","id":104,"method":"sessions.purge","params":{"app":"com.isonomic.chat"}}
 {"type":"response","id":104,"result":{"purged":{"sessions":1,"events":12,"blobs":0}}}
-{"type":"request","id":105,"method":"approvals.list","params":{"scope":"com.isonomic.chat"}}
+{"type":"request","id":105,"method":"approvals.list","params":{"app":"com.isonomic.chat"}}
 {"type":"response","id":105,"result":{"approvals":[]}}
 {"type":"request","id":106,"token":"tok-chat-1","method":"presets.put","params":{"text":"name = 3\n"}}
 {"type":"response","id":106,"error":{"code":"invalid_preset","message":"name: expected a string"}}
@@ -70,3 +70,7 @@
 {"type":"response","id":111,"error":{"code":"session_failed","message":"The session failed and takes no more input."}}
 {"type":"request","id":112,"token":"tok-chat-1","method":"tools.register_client","params":{"session":"s-1","specs":[{"name":"open_map","description":"Show a place on the map","input_schema":{"type":"object"},"kind":"engine","concurrency":"parallel"}]}}
 {"type":"response","id":112,"error":{"code":"invalid_tools","message":"open_map is not a client tool."}}
+{"type":"request","id":113,"token":"tok-notes-1","method":"approvals.list","params":{"app":"com.isonomic.chat"}}
+{"type":"response","id":113,"error":{"code":"capability_denied","message":"app com.isonomic.notes may not reach the agent sessions of com.isonomic.chat"}}
+{"type":"request","id":114,"method":"sessions.purge","params":{}}
+{"type":"response","id":114,"error":{"code":"bad_request","message":"the shell must name the app whose sessions to purge"}}

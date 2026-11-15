@@ -11,7 +11,7 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 - **harness-core by git, pinned.** The brief asks for the event types at a pinned revision; a git dependency keeps one copy of them for every app. It needs SSH access to isonomic-harness wherever the proto builds (the shared workflow's new `harness` input; isonomic-org/.github#4).
 - **The SDK's own argument types.** The host's types are not serializable and pull in the loop and policy crates; the proto keeps apps on harness-core alone, and the engine maps.
 - **Targets are (session, id).** Approval, question and call ids are per session in the harness, so the calls that answer one also name the session (review of #16; the host side is isonomic-harness #30).
-- **Every call takes params.** `sessions.purge`, `approvals.list` and `presets.list` take a struct that accepts `{}`, so a filter or scope can be added without a new method.
+- **Every call takes params.** `sessions.purge`, `approvals.list` and `presets.list` take a struct that accepts `{}`, so a filter can be added without a new method. Purge and approvals.list take `app`, named like `events`' scope: only the shell names another app (checked in `proto::auth`), and the shell's purge must name one.
 - **The schema is published, not frozen.** harness schema v1 can still change; a re-pin of `harness-core` may need fixture edits, which means a new protocol version once the agents lines are on main.
 - **Unknown stays readable.** A session event or block from a newer revision decodes as `Unknown` (harness-core's catch-all), and a fixture proves it.
 

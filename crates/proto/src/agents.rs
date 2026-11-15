@@ -78,21 +78,21 @@ pub struct ListSessions {
     pub limit: u32,
 }
 
-/// `sessions.purge`: the caller's own sessions unless a scope is named.
+/// `sessions.purge`: one app's sessions and what they own. An app's `{}`
+/// means its own; the shell must name the app (never "everything").
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PurgeSessions {
-    /// One app's sessions. Only the shell names another app; an app may
-    /// name only itself.
+    /// Whose sessions. Only the shell names another app, as for events.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub scope: Option<AppId>,
+    pub app: Option<AppId>,
 }
 
 /// `approvals.list`: every approval the caller may see, or one app's.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ListApprovals {
-    /// One app's approvals, for the shell's sheet.
+    /// One app's approvals. Only the shell names another app.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub scope: Option<AppId>,
+    pub app: Option<AppId>,
 }
 
 /// `presets.list`. No filter yet; a struct so one can be added.

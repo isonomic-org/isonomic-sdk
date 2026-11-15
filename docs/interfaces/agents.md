@@ -23,10 +23,10 @@ Arguments and results (`CreateSession`, `SessionSummary`, `PendingApproval`, …
 | `sessions.send` | `{ session, content: [Block], client_ref? }` | `accepted { queued }` |
 | `sessions.continue` | `{ session }` | `done {}`; extends the last sealed partial reply |
 | `sessions.cancel` | `{ session }` | `done {}`; safe to repeat |
-| `sessions.purge` | `{ scope? }` | `purged { sessions, events, blobs }`: every session of the calling app, or of the app the shell names in `scope` |
+| `sessions.purge` | `{ app? }` | `purged { sessions, events, blobs }`: every session of the calling app (`{}`), or of the app the shell names; the shell must name one |
 | `sessions.subscribe` | `{ session, from_seq? }` | `session_stream { subscription }`, then `session_event` and `live_delta` events |
 | `sessions.unsubscribe` | `{ subscription }` | `unsubscribed {}` |
-| `approvals.list` | `{ scope? }` | `approvals [{ session, app, request }]`; the shell may name one app in `scope` |
+| `approvals.list` | `{ app? }` | `approvals [{ session, app, request }]`; the shell may narrow to one `app` |
 | `approvals.decide` | `{ session, approval, decision: allow\|deny\|{text}, user_action? }` | `done {}` |
 | `questions.answer` | `{ session, question, selected?, text?, skipped? }` | `done {}` |
 | `tools.register_client` | `{ session, specs: [ToolSpec] }` | `done {}`; replaces the app's client tools for that session |
@@ -57,6 +57,7 @@ A client tool call arrives as a `tool.call` event with `kind: client`; answer it
 
 - **Approvals need a person.** `approvals.decide` takes the user-action token the window minted when the person acted. The shell and the session's first-party app may decide; Views and third-party code only request (`not_allowed_to_decide`). Words that are not a clear yes are a denial.
 - **Client tools are the app's own.** `tools.register_client` applies to the calling app's token and that session only; `tools.result` is accepted only from the app that registered the tool.
+- **Only the shell names another app.** `app` on `sessions.purge` and `approvals.list` works as on `events`: an app may name only itself (`capability_denied` otherwise, from `proto::auth`), and the shell may name any. The shell's purge with no `app` is `bad_request`, never "purge everything".
 - **Purge is the app's own data.** `sessions.purge` stops the app's running turns, then deletes its sessions' logs, attachments and artifacts. Nothing of any other app's is touched.
 
 ## Errors

@@ -137,9 +137,13 @@ impl Agents {
             .await
     }
 
-    /// Delete every session of this app, and what they own.
-    pub async fn purge(&self) -> Result<PurgeReport, ClientError> {
-        match self.call(Call::SessionsPurge(Default::default())).await? {
+    /// Delete every session of an app, and what they own. An app passes
+    /// `None` for its own; the shell must name the app.
+    pub async fn purge(&self, app: Option<&str>) -> Result<PurgeReport, ClientError> {
+        let call = Call::SessionsPurge(PurgeSessions {
+            app: app.map(AppId::from),
+        });
+        match self.call(call).await? {
             Reply::Purged(report) => Ok(report),
             _ => Err(ClientError::UnexpectedReply),
         }
@@ -168,9 +172,13 @@ impl Agents {
         })
     }
 
-    /// Approvals waiting for a decision in the caller's sessions.
-    pub async fn approvals(&self) -> Result<Vec<PendingApproval>, ClientError> {
-        match self.call(Call::ApprovalsList(Default::default())).await? {
+    /// Approvals waiting for a decision in the caller's sessions, or, for
+    /// the shell, in one app's when `app` names it.
+    pub async fn approvals(&self, app: Option<&str>) -> Result<Vec<PendingApproval>, ClientError> {
+        let call = Call::ApprovalsList(ListApprovals {
+            app: app.map(AppId::from),
+        });
+        match self.call(call).await? {
             Reply::Approvals(pending) => Ok(pending),
             _ => Err(ClientError::UnexpectedReply),
         }

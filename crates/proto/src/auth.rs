@@ -7,7 +7,7 @@
 //! (`system`, `apps`) are refused to every app token.
 
 use crate::manifest::{Capabilities, Manifest};
-use crate::{Call, ErrorCode, WireError};
+use crate::{agents, Call, ErrorCode, WireError};
 
 /// The namespace a method belongs to: the part of its name before the dot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -67,7 +67,13 @@ fn denied(app: &str, what: impl std::fmt::Display) -> WireError {
 /// checked again by the engine once it has chosen.
 pub fn authorize(caller: Caller<'_>, call: &Call) -> Result<(), WireError> {
     let Caller::App { id, capabilities } = caller else {
-        return Ok(());
+        return match call {
+            Call::SessionsPurge(purge) if purge.app.is_none() => Err(WireError::new(
+                ErrorCode::BadRequest,
+                "the shell must name the app whose sessions to purge",
+            )),
+            _ => Ok(()),
+        };
     };
     let interface = call.interface();
     if interface.shell_only() {
@@ -117,9 +123,22 @@ pub fn authorize(caller: Caller<'_>, call: &Call) -> Result<(), WireError> {
             _ => Ok(()),
         },
         Interface::Sql if capabilities.sql.is_none() => Err(denied(id, "use sql")),
-        // Which sessions, presets and artifacts an app reaches is the host's
-        // decision: another app's ids answer `not_found` there.
         Interface::Agents if capabilities.agents.is_none() => Err(denied(id, "use agents")),
+        // As for events: an app's own scope, or the shell's naming any app.
+        // Which sessions, presets and artifacts an app reaches beyond that
+        // is the host's decision: another app's ids answer `not_found`.
+        Interface::Agents => match call {
+            Call::SessionsPurge(agents::PurgeSessions { app: Some(app) })
+            | Call::ApprovalsList(agents::ListApprovals { app: Some(app) })
+                if app.as_str() != id =>
+            {
+                Err(denied(
+                    id,
+                    format_args!("reach the agent sessions of {app}"),
+                ))
+            }
+            _ => Ok(()),
+        },
         _ => Ok(()),
     }
 }

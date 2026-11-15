@@ -266,3 +266,42 @@ fn a_session_event_from_a_newer_schema_decodes_as_unknown() {
     assert_eq!(unknown.kind.0, "reaction");
     assert!(crate::agents::SchemaVersion::CURRENT.readable());
 }
+
+#[test]
+fn only_the_shell_names_another_apps_agent_sessions() {
+    use crate::agents::{ListApprovals, PurgeSessions};
+    let mut chat = hello();
+    chat.capabilities.agents = Some(AgentsAccess {});
+    let app = Caller::App {
+        id: &chat.id,
+        capabilities: &chat.capabilities,
+    };
+    let purge = |app: Option<&str>| {
+        Call::SessionsPurge(PurgeSessions {
+            app: app.map(Into::into),
+        })
+    };
+    let approvals = |app: Option<&str>| {
+        Call::ApprovalsList(ListApprovals {
+            app: app.map(Into::into),
+        })
+    };
+    for call in [
+        purge(None),
+        purge(Some("com.isonomic.hello")),
+        approvals(None),
+    ] {
+        assert!(authorize(app, &call).is_ok(), "{call:?}");
+    }
+    for call in [
+        purge(Some("com.isonomic.notes")),
+        approvals(Some("com.isonomic.notes")),
+    ] {
+        let error = authorize(app, &call).unwrap_err();
+        assert_eq!(error.code, ErrorCode::CapabilityDenied, "{call:?}");
+    }
+    assert!(authorize(Caller::Shell, &purge(Some("com.isonomic.notes"))).is_ok());
+    assert!(authorize(Caller::Shell, &approvals(None)).is_ok());
+    let everything = authorize(Caller::Shell, &purge(None)).unwrap_err();
+    assert_eq!(everything.code, ErrorCode::BadRequest);
+}
