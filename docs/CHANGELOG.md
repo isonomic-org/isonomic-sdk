@@ -2,6 +2,11 @@
 
 Newest first. Each entry names what the engine (isonomic-capsule) and the window (isonomic-desktop) must do when they move `SDK_REF` to it.
 
+## Unreleased: `test-support` builds outside this workspace
+
+**Wire:** no change.
+
+**For apps:** `isonomic-app`'s `test-support` feature now turns on Tokio's multi-thread runtime, which `TestHost` uses. An app crate outside this workspace no longer needs to add it (requested by isonomic-chat, O6).
 ## Unreleased: the testkit's agent host, and the `agents.` conformance group
 
 **Wire:** no change.
