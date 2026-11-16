@@ -84,6 +84,11 @@ impl TestHost {
         self.requests.all()
     }
 
+    /// Every problem apps reported, with the app that reported it.
+    pub fn reports(&self) -> Vec<(String, crate::Problem)> {
+        self.requests.reports()
+    }
+
     /// The context the window would give `A`: a token granted from
     /// `A::manifest()`, its settings, and the window's side of its
     /// attention signal.

@@ -84,6 +84,8 @@ pub struct AppContext {
     settings: Settings,
     attention: Arc<watch::Sender<Attention>>,
     window: crate::requests::Window,
+    /// When this app's last report was taken, shared by every clone.
+    reported: Arc<std::sync::Mutex<Option<std::time::Instant>>>,
 }
 
 impl AppContext {
@@ -106,6 +108,7 @@ impl AppContext {
             settings,
             attention: Arc::new(attention),
             window: None,
+            reported: Arc::default(),
         };
         (cx, watched)
     }
@@ -120,6 +123,23 @@ impl AppContext {
     /// Ask the window to do something only it may, such as installing a
     /// model. `true` when the window took it on. The outcome shows where it
     /// always does: a model's state in `models.info`, say.
+    /// Report a handled problem: the window adds the app's id and version,
+    /// scrubs it and shows the person the problem-report notice. `true` when
+    /// the window took it. At most one a [`REPORT_INTERVAL`](crate::REPORT_INTERVAL):
+    /// a second within it answers `false` and reaches nothing. One the
+    /// window refused does not count.
+    pub fn report(&self, problem: crate::Problem) -> bool {
+        let mut last = self.reported.lock().unwrap_or_else(|p| p.into_inner());
+        if last.is_some_and(|at| at.elapsed() < crate::REPORT_INTERVAL) {
+            return false;
+        }
+        let taken = self.request(crate::WindowRequest::Report(problem));
+        if taken {
+            *last = Some(std::time::Instant::now());
+        }
+        taken
+    }
+
     pub fn request(&self, request: crate::WindowRequest) -> bool {
         match &self.window {
             Some(window) => window.request(&self.id, request),

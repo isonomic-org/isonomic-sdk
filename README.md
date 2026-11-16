@@ -8,6 +8,7 @@ The one contract between the Isonomic window and the Isonomic engine, over a Uni
 | `isonomic-client` | Async client: one multiplexed connection, reconnect, a live status view that callers await instead of polling, subscriptions, and the token-scoped `AppClient` an app is given. |
 | `isonomic-testkit` | An in-memory engine that speaks the real protocol and enforces tokens, with a scriptable fake per interface, for tests. |
 | `isonomic-conformance` | The contract as checks against any engine connection. The testkit passes them here; the engine runs them against its own socket. |
+| `isonomic-reports` | Problem reports: format 1, the scrubber and the service-log filters the window and the engine share. Builds without Isonomic UI. |
 | `isonomic-app` | The `App` trait every first-party app implements, the `AppContext` it is given, registration for the window, and a headless test host. The only crate that depends on Isonomic UI. |
 | `examples/hello-app` | The smallest app: lists its models and streams one reply, tested in a headless window. |
 
@@ -15,6 +16,7 @@ The one contract between the Isonomic window and the Isonomic engine, over a Uni
 
 - `docs/guide/build-an-app.md`: the manifest, the trait, the scoped client, testing, registering in the window.
 - `docs/interfaces/<name>.md`: every method, event and error, with real JSON.
+- `docs/reports.md`: the problem-report format and what never goes in a report.
 - `docs/conformance.md`: the checks every engine must pass, and how to run them.
 - `docs/versioning.md`: what may change without a version bump, and how fixtures freeze the rest.
 - `docs/CHANGELOG.md`: what each change means for the engine and the window.

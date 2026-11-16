@@ -7,6 +7,28 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+
+## Unreleased: problem reports, shared (`isonomic-reports`), and `AppContext::report`
+
+**Wire:** no change.
+
+**New crate `isonomic-reports`**, which builds without Isonomic UI (`docs/reports.md`): format 1's `Report` with both sides' kinds and components, `scrub`, `backtrace::frames` and `short_path`, and the service-log `filter`s.
+
+**For the engine** (isonomic-capsule `crates/reports`):
+- Depend on `isonomic-reports` and delete your copies of `scrub.rs`, `frames`/`short_path`, the format types in `lib.rs`, and the generic parts of `filter.rs`.
+- Keep `Source::of` and your model-server prefix list: call `filter::database_log`, `filter::allow_listed(lines, YOUR_PREFIXES)` and `filter::any_log`.
+- `Component::Engine`, `Service` and `ModelServer` and `Kind::ServiceFailed` and `ModelServerFailed` are as you had them. `System.macos` is now `os_version`, still written as `macos`.
+- Keep the store, the reporter, the log ring, the panic hook and the watchers.
+
+**For the window** (isonomic-desktop `crates/reports`):
+- Depend on `isonomic-reports` and delete your `scrub.rs`, your `frames`/`short_path`, and the format types.
+- **The scrubber gains the engine's key rule**, so tokens, digests and long IDs in window reports are now removed.
+- `Report` gains no field you lack. `System.macos` is `os_version`.
+- Keep the store, the setting, the guard, the watchdog and the panic hook with `blame`.
+- Handle `WindowRequest::Report(Problem)`: add the app's id and version and write an `app_error`. The SDK already keeps each app to one a minute.
+
+**For apps:** `AppContext::report(Problem { summary, detail })`, and `TestHost::reports()` in tests.
+
 ## Unreleased: Isonomic UI at b4c9670
 
 **Wire:** no change.

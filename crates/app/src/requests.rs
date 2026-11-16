@@ -12,7 +12,25 @@ pub enum WindowRequest {
     /// the person. The app learns the outcome from `models.info` (`stopped`
     /// once installed), not from the request.
     InstallModel { model: String },
+    /// Report a handled problem. The window adds the app's id and version,
+    /// scrubs it with `isonomic-reports`, and shows the person the
+    /// problem-report notice. Made by [`AppContext::report`](crate::AppContext::report),
+    /// which keeps to one a minute.
+    Report(Problem),
 }
+
+/// A handled problem an app reports.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Problem {
+    /// One line: what went wrong, in plain words. No content the person
+    /// typed.
+    pub summary: String,
+    /// Optional detail, such as an error code or the step that failed.
+    pub detail: Option<String>,
+}
+
+/// An app reports at most one problem in this long.
+pub const REPORT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(60);
 
 /// The window's side: it decides what to do with each request. `true` when
 /// it took the request on, `false` when it cannot (it does not handle that
@@ -31,6 +49,16 @@ impl RecordedRequests {
     /// Every request so far, oldest first, with the app that made it.
     pub fn all(&self) -> Vec<(String, WindowRequest)> {
         self.seen.lock().unwrap().clone()
+    }
+
+    /// The problems reported so far, oldest first, with the app.
+    pub fn reports(&self) -> Vec<(String, Problem)> {
+        let seen = self.seen.lock().unwrap();
+        let reported = seen.iter().filter_map(|(app, request)| match request {
+            WindowRequest::Report(problem) => Some((app.clone(), problem.clone())),
+            _ => None,
+        });
+        reported.collect()
     }
 }
 
