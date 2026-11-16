@@ -9,6 +9,10 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
+## 2026-11-16 · Isonomic UI at 527d955
+
+`UI_REF` moves to 527d955: stable ids for sidebar rows, menu items, palette rows (`command-<command id>`) and model picker rows (from the picker's id). The changed ids and `PopupMenuItem::Item`'s new `id` touch nothing in the SDK, its tests or hello-app. Every test passes on it.
+
 ## 2026-11-16 · Isonomic UI at a1b30e1
 
 `UI_REF` moves to a1b30e1: the sans in Light, and `Wordmark` in `isonomic_ui_extra::wordmark`. Additive only.

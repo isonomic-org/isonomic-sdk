@@ -11,6 +11,19 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+## Unreleased: Isonomic UI at 527d955 (stable ids)
+
+**Wire:** no change.
+
+**For Chat and the window:** move `../isonomic-ui` to `527d955a9b2a79187961fa4be195a779b91164be`, the commit in `UI_REF`. Sidebar rows and menu items take an owner-set id. Model picker ids derive from the picker's id (`model_picker::list_id`, `row_id`).
+
+**Not purely additive.** Tests that find elements by id need updating:
+- Palette rows were `command-<id>-<index>`; they are now `command-<command id>`, with a `-meta` element.
+- Picker rows were `("model", index)` and the list `"models"`; both now derive from the picker's id.
+- `PopupMenuItem::Item` gained `id`, so patterns and literals that name every field need it.
+
+No SDK code, test or example names these ids.
+
 ## Unreleased: Isonomic UI at a1b30e1 (the wordmark)
 
 **Wire:** no change. Additive only.
