@@ -56,3 +56,55 @@ async fn an_app_asks_the_window_and_the_window_decides() {
         vec![("com.isonomic.chat".to_string(), install)]
     );
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn an_app_reports_a_problem_at_most_once_a_minute() {
+    use isonomic_app::{Problem, RecordedRequests, WindowRequest, WindowRequests};
+    let engine = TestEngine::new();
+    let store = Arc::new(MemorySettings::default());
+    let client = engine.client().scoped(Token::new("t"));
+    let problem = |summary: &str| Problem {
+        summary: summary.into(),
+        detail: Some("step: sync".into()),
+    };
+    let (alone, _) = AppContext::new("com.isonomic.notes", client.clone(), store.clone());
+    assert!(!alone.report(problem("no window")), "no window, no taker");
+    let window = Arc::new(RecordedRequests::default());
+    let (notes, _) = AppContext::new("com.isonomic.notes", client.clone(), store.clone());
+    let notes = notes.with_window(window.clone());
+    assert!(notes.report(problem("sync failed")));
+    assert!(
+        !notes.clone().report(problem("again")),
+        "one a minute, across clones"
+    );
+    let (chat, _) = AppContext::new("com.isonomic.chat", client.clone(), store.clone());
+    assert!(
+        chat.with_window(window.clone())
+            .report(problem("send failed")),
+        "per app"
+    );
+    assert_eq!(
+        window.reports(),
+        vec![
+            ("com.isonomic.notes".to_string(), problem("sync failed")),
+            ("com.isonomic.chat".to_string(), problem("send failed")),
+        ]
+    );
+
+    /// A window that refuses reports.
+    struct Busy;
+    impl WindowRequests for Busy {
+        fn request(&self, _app: &str, request: WindowRequest) -> bool {
+            !matches!(request, WindowRequest::Report(_))
+        }
+    }
+    let (busy, _) = AppContext::new("com.isonomic.files", client, store);
+    let busy = busy.with_window(Arc::new(Busy));
+    assert!(!busy.report(problem("refused")));
+    let recorded = Arc::new(RecordedRequests::default());
+    let busy = busy.with_window(recorded.clone());
+    assert!(
+        busy.report(problem("taken")),
+        "a refusal does not use up the minute"
+    );
+}

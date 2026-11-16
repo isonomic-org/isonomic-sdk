@@ -6,6 +6,20 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
+
+## 2026-11-16 · Problem reports, shared (issue #35)
+
+**Built:**
+- `isonomic-reports`: format 1, the scrubber (the window's rules plus the engine's key rule), backtrace helpers and service-log filters, taken from the window's and the engine's copies.
+- `AppContext::report(Problem)` as `WindowRequest::Report`, one per app per minute, and `TestHost::reports()`.
+- 14 unit tests and 5 planted-content tests.
+
+**Decisions**
+
+- **Generic filters.** The engine's copy named its bundled services and a model server's log prefixes. Those are third-party names, so they stay in the engine. The crate takes the prefixes as an argument.
+- **Today's rules, unchanged.** Two limits are pinned by tests and raised with the orchestrator: short quoted text (40 characters or fewer) stays in a message, and an ID shorter than 24 characters is not caught by the key rule.
+- **One trait for the window.** A report is a `WindowRequest` (it is `#[non_exhaustive]`), so the window's handler compiles unchanged and answers `false` until it handles reports.
+
 ## 2026-11-16 · Isonomic UI at b4c9670: no alias needed
 
 `UI_REF` moves to b4c9670. The UI's macros now recognise `isonomic-app` as the facade, the follow-up filed from #24. A scratch crate outside the workspace, depending on `isonomic-app` alone with no `gpui` alias, derives components in two modules, runs `#[isonomic_app::ui::test]` and names `extra::run_status_bar::RunStatusBar`. hello-app drops its alias. The guide and the app crate's docs say the alias is optional.

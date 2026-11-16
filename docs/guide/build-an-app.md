@@ -150,6 +150,8 @@ Errors are typed. `ClientError::Engine(error)` carries a stable `error.code` (`c
 
 Some things only the window may do. An app asks with `cx.request(WindowRequest::InstallModel { model })`: the window runs its download step with the person, and the model's state in `models.info` shows the outcome. `request` returns `true` when the window took it on. The window supplies the handler (`AppContext::with_window(impl WindowRequests)`); in tests, `TestHost::requests()` lists every request made.
 
+A handled problem the person should know about goes the same way: `cx.report(Problem { summary, detail })`. Write the summary in plain words, with nothing the person typed. The window adds the app's id and version, scrubs it and shows the problem-report notice. An app reports at most one a minute (`REPORT_INTERVAL`); `report` returns `false` past that. In tests, `TestHost::reports()` (`docs/reports.md`).
+
 ## 5. Agent sessions
 
 With the `agents` capability, `cx.client().agents()` runs agent sessions in the engine's host: create one from a preset, send input, and follow its events. Every method and rule is in `docs/interfaces/agents.md`; the event types are harness-core's, under `isonomic_proto::agents::schema`.

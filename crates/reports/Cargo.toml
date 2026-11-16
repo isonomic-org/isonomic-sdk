@@ -1,0 +1,9 @@
+[package]
+name = "isonomic-reports"
+description = "Problem reports in format 1, and what never goes in one: shared by the window and the engine"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde_json.workspace = true
