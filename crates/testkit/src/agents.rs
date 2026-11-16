@@ -17,7 +17,7 @@ use harness_host::{
 use isonomic_proto::agents::{
     ApprovalId, EndReason, ForkReason, PresetId, SessionEnded, SessionEvent, SessionId,
 };
-use isonomic_proto::auth::Caller;
+use isonomic_proto::auth::{authorize_model, Caller};
 use isonomic_proto::{Call, ErrorCode, Event, Reply, ServerMessage, Token, WireError};
 
 use crate::agents_map as map;
@@ -162,15 +162,25 @@ fn answer(memory: &MemoryHost, caller: &HostCaller, call: Call) -> Result<Reply,
     reply.map_err(map::error)
 }
 
-/// The model an app's own preset runs on; `None` for a built-in preset, or
-/// one the host does not find (it answers that itself).
-fn own_preset_model(state: &State, caller: Caller<'_>, preset: &PresetId) -> Option<String> {
+/// Every model an app's own preset names: its reply model and its title
+/// model. None for a built-in preset, or one the host does not find (it
+/// answers that itself).
+fn own_preset_models(state: &State, caller: Caller<'_>, preset: &PresetId) -> Vec<String> {
     let mut agents = state.agents.lock().unwrap();
     let host_caller = agents.caller(caller);
     let memory = &agents.memory;
-    let stored = run(memory, memory.host.get_preset(&host_caller, preset)).ok()?;
-    stored.owner.as_ref()?;
-    Some(stored.preset.as_ref()?.model.id.clone())
+    let Ok(stored) = run(memory, memory.host.get_preset(&host_caller, preset)) else {
+        return vec![];
+    };
+    match (&stored.owner, &stored.preset) {
+        (Some(_), Some(parsed)) => {
+            let model = &parsed.model;
+            std::iter::once(model.id.clone())
+                .chain(model.title_model.clone())
+                .collect()
+        }
+        _ => vec![],
+    }
 }
 
 /// Answer one agents call, or `None` when a subscription answered itself.
@@ -197,10 +207,18 @@ pub(crate) async fn dispatch(
         // holds: an app cannot reach a model through a preset it stored.
         // Built-in presets are the engine's choice and are not checked.
         Call::SessionsCreate(create) if matches!(caller, Caller::App { .. }) => {
-            if let Some(model) = own_preset_model(state, caller, &create.preset) {
-                if let Err(error) = crate::models::session_model(state, caller, &model) {
-                    return Some(failure(id, error));
-                }
+            let models = own_preset_models(state, caller, &create.preset);
+            // Every name against the manifest first, then whether each runs.
+            let named = models
+                .iter()
+                .try_for_each(|m| authorize_model(caller, m, false));
+            let runs = || {
+                models
+                    .iter()
+                    .try_for_each(|m| crate::models::session_model(state, caller, m))
+            };
+            if let Err(error) = named.and_then(|()| runs()) {
+                return Some(failure(id, error));
             }
             Call::SessionsCreate(create)
         }

@@ -263,13 +263,27 @@ pub async fn model_rules(target: Target) -> Outcome {
         "presets.put",
     )?;
     let through = agents.create(&stored.id.to_string()).await;
-    let result = refused_with(
+    let reply = refused_with(
         through,
         ErrorCode::CapabilityDenied,
         "a model reached through the app's own preset",
     );
+    let titled = preset_on("conformance-titled", "conformance-allowed").replace(
+        "reasoning = \"off\"\n",
+        "reasoning = \"off\"\ntitle_model = \"conformance-other\"\n",
+    );
+    let stored = ok(
+        agents.put_preset(&titled).await,
+        "presets.put with a title model",
+    )?;
+    let title = agents.create(&stored.id.to_string()).await;
+    let title = refused_with(
+        title,
+        ErrorCode::CapabilityDenied,
+        "a title model reached through the app's own preset",
+    );
     purge(&agents).await?;
-    result
+    reply.and(title)
 }
 
 /// Purging a session ends its stream with `session_ended`, told apart from
