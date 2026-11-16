@@ -17,7 +17,7 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 **Decisions**
 
 - **Generic filters.** The engine's copy named its bundled services and a model server's log prefixes. Those are third-party names, so they stay in the engine. The crate takes the prefixes as an argument.
-- **Today's rules, unchanged.** Two limits are pinned by tests and raised with the orchestrator: short quoted text (40 characters or fewer) stays in a message, and an ID shorter than 24 characters is not caught by the key rule.
+- **Two limits, then closed (16 Nov, the orchestrator's decision):** quoted text now goes at any length, and the person's ID goes in either form at any length (`[id removed]`). `system.macos` stays format 1's key.
 - **One trait for the window.** A report is a `WindowRequest` (it is `#[non_exhaustive]`), so the window's handler compiles unchanged and answers `false` until it handles reports.
 
 ## 2026-11-16 · Isonomic UI at b4c9670: no alias needed
