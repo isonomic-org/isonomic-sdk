@@ -84,7 +84,7 @@ impl FakeIdentity {
         self.state.identity.lock().unwrap().kit.now = unix_secs;
     }
 
-    /// Whether this Mac's ID has apps and chats: then `kit_restore` is
+    /// Whether this computer's ID has apps and chats: then `kit_restore` is
     /// refused even with `replace_unused`.
     pub fn set_in_use(&self, in_use: bool) {
         self.state.identity.lock().unwrap().kit.in_use = in_use;

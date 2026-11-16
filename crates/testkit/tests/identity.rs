@@ -199,6 +199,43 @@ mod kit {
                 .await,
         );
         assert!(damaged.contains("damaged"), "{damaged}");
+
+        // Another ID written into a valid kit: the check no longer holds.
+        let mut edited: serde_json::Value = serde_json::from_str(&kit.kit).unwrap();
+        edited["id"] = "isonomic:someone-else".into();
+        let edited = refusal(
+            shell
+                .kit_restore(restore(&edited.to_string(), kit.words.clone(), false))
+                .await,
+        );
+        assert!(edited.contains("damaged"), "{edited}");
+
+        // A generation at the end of its range, with a check that holds, is
+        // refused, not wrapped.
+        let mut last: serde_json::Value = serde_json::from_str(&kit.kit).unwrap();
+        // The body in the document's own field order, as its check covers.
+        let body = format!(
+            r#"{{"format":{},"version":{},"id":{},"generation":{},"made":{}}}"#,
+            last["format"],
+            last["version"],
+            last["id"],
+            u32::MAX,
+            last["made"]
+        );
+        use sha2::Digest;
+        let check: String = sha2::Sha256::digest(body.as_bytes())
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
+        last["generation"] = u32::MAX.into();
+        last["check"] = check.into();
+        let words = kit_words(u32::MAX);
+        let overflow = refusal(
+            shell
+                .kit_restore(restore(&last.to_string(), words, false))
+                .await,
+        );
+        assert!(overflow.contains("damaged"), "{overflow}");
         assert!(!new.identity().made(), "nothing was made");
 
         shell.identity().await.unwrap();

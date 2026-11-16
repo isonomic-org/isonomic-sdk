@@ -38,13 +38,34 @@ const FORMAT: &str = "isonomic-test-kit";
 pub const NOTE: &str =
     "Your old recovery kit no longer works. Save these new words and the new kit file now.";
 
+/// What the document says, before its check.
 #[derive(Serialize, Deserialize)]
-struct Document {
+struct Body {
     format: String,
     version: u32,
     id: String,
     generation: u32,
     made: u64,
+}
+
+/// The document as saved: the body, and `check`, the SHA-256 (hex) of the
+/// body's JSON. A document whose ID or any other field was changed no
+/// longer matches its check and is refused as damaged, as the engine's
+/// real kit is.
+#[derive(Serialize, Deserialize)]
+struct Document {
+    #[serde(flatten)]
+    body: Body,
+    check: String,
+}
+
+fn check_of(body: &Body) -> String {
+    use sha2::{Digest, Sha256};
+    let json = serde_json::to_vec(body).expect("a kit body serializes");
+    Sha256::digest(&json)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
 }
 
 /// The kit side of the person's ID.
@@ -75,14 +96,15 @@ fn refused(message: &str) -> WireError {
 }
 
 fn document(id: &str, kit: &KitState) -> String {
-    let document = Document {
+    let body = Body {
         format: FORMAT.into(),
         version: 1,
         id: id.into(),
         generation: kit.generation,
         made: kit.made.unwrap_or(kit.now),
     };
-    serde_json::to_string(&document).expect("a kit document serializes")
+    let check = check_of(&body);
+    serde_json::to_string(&Document { body, check }).expect("a kit document serializes")
 }
 
 pub(crate) fn export(identity: &mut IdentityState, person_asked: bool) -> Result<Reply, WireError> {
@@ -108,10 +130,18 @@ pub(crate) fn restore(
 ) -> Result<Reply, WireError> {
     let damaged =
         "This file is not an Isonomic recovery kit, or it is damaged. Nothing was changed.";
-    let saved: Document = serde_json::from_str(&restore.kit).map_err(|_| refused(damaged))?;
+    let sent: Document = serde_json::from_str(&restore.kit).map_err(|_| refused(damaged))?;
+    if sent.check != check_of(&sent.body) {
+        return Err(refused(damaged));
+    }
+    let saved = sent.body;
     if saved.format != FORMAT || saved.version != 1 {
         return Err(refused(damaged));
     }
+    let next = saved
+        .generation
+        .checked_add(1)
+        .ok_or_else(|| refused(damaged))?;
     if isonomic_words::check(restore.words.reveal()).is_err() {
         return Err(refused(
             "These words don't add up. Check each one against your paper and try again. Nothing was changed.",
@@ -130,18 +160,18 @@ pub(crate) fn restore(
     }
     if identity.made && kit.in_use {
         return Err(refused(
-            "This Mac already has an Isonomic ID with apps and chats. Nothing was changed.",
+            "This computer already has an Isonomic ID with apps and chats. Nothing was changed.",
         ));
     }
     if identity.made && !restore.replace_unused {
         return Err(refused(
-            "This Mac already has an Isonomic ID. Restoring replaces it only if you choose to. Nothing was changed.",
+            "This computer already has an Isonomic ID. Restoring replaces it only if you choose to. Nothing was changed.",
         ));
     }
     identity.id = saved.id;
     identity.made = true;
     let kit = &mut identity.kit;
-    kit.generation = saved.generation + 1;
+    kit.generation = next;
     kit.made = Some(kit.now);
     kit.saved_at = None;
     kit.exported_at = Some(kit.now);

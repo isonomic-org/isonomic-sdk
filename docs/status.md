@@ -15,9 +15,21 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 - **The restore reply** carries `note`, the engine's plain message, so the wording lives in one place.
 - **The word list:** the new crate `isonomic-words` bundles the standard 2048-word English list. It's pinned by its published SHA-256 (`2f5eed53…dbda`), and a test holds the file to that hash. It gives `is_word`, `completions`, `complete` and the 24-word checksum `check`. The engine has no list yet, so it takes this one. The test engine checks words with it too.
-- **The words:** `identity::RecoveryWords`, a JSON array whose `Debug` prints only a count. Every call, reply and assertion that holds words prints redacted.
+- **The words:** `identity::RecoveryWords`, a JSON array.
+  - Its `Debug` prints only a count, so every call, reply and assertion that holds words prints redacted.
+  - `Serialize` stays transparent, so a JSON log would print the words (documented).
+  - Its hand-written `Deserialize` refuses in fixed text.
+  - `decode_client` never repeats a malformed `identity.kit_*` request.
+- **First review (DO NOT MERGE), fixed in the second push:**
+  - A string-valued `words` was echoed in the `bad_request` message. Params sent as one string were echoed too, which the review did not list.
+  - New lines named the computer by its maker's product name; they now say "this computer".
+  - The test engine's document had no check; it now has one, and an edited ID is refused.
+  - The generation now uses `checked_add`.
+  - `sha2` is a workspace dependency.
+  - Tests cover every leak path found.
+  - Constant-time comparison and zeroing on drop are a follow-up for the engine: isonomic-capsule #81.
 - **Fixtures** use only the word-list standard's public 256-bit test vectors.
-- **The test engine's kit:** deterministic (public vectors by generation, its own JSON document, an injected kit clock). It restores across test engines and refuses wrong words, damaged or spent kits, a used Mac, and an unused one without `replace_unused`.
+- **The test engine's kit:** deterministic (public vectors by generation, its own JSON document, an injected kit clock). It restores across test engines and refuses wrong words, damaged or spent kits, a used computer, and an unused one without `replace_unused`.
 - **Conformance:** the checks `identity.kit_apps_refused` and `identity.kit_export_needs_person`. No check exports a kit.
 - **Consumers on the old wire:** an older engine answers `unknown_method`. An older client never sends these calls, and would read `recovery_refused` as `unrecognized`.
 

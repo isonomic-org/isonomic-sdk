@@ -105,7 +105,7 @@ pub enum ErrorCode {
     IdentityUnavailable,
     /// A recovery kit call the engine refused: an export the person did
     /// not ask for, words that are not the kit's, a damaged or spent kit,
-    /// or a Mac whose ID is already in use. The message is plain words for
+    /// or a computer whose ID is already in use. The message is plain words for
     /// the window to show; nothing was changed.
     RecoveryRefused,
     /// A code from a newer engine.

@@ -44,11 +44,24 @@ pub fn decode_client(body: &[u8]) -> FromClient {
                 ),
             }
         }
-        (Some("request"), Some(id), _) => FromClient::Rejected {
+        (Some("request"), Some(id), method) => FromClient::Rejected {
             id,
-            error: bad(failure.to_string()),
+            error: bad(shaped(method, failure)),
         },
-        _ => FromClient::Garbage(bad(failure.to_string())),
+        (_, _, method) => FromClient::Garbage(bad(shaped(method, failure))),
+    }
+}
+
+/// The message for a request that did not decode: serde's own, which can
+/// quote what was sent, except for the recovery kit's methods, whose
+/// params may hold the person's words. Those get fixed text.
+fn shaped(method: Option<&str>, failure: serde_json::Error) -> String {
+    match method {
+        Some(method) if method.starts_with("identity.kit_") => format!(
+            "{method}: the request does not have the shape this method takes \
+             (what was sent is not repeated, as it may hold recovery words)"
+        ),
+        _ => failure.to_string(),
     }
 }
 
