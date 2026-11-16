@@ -9,6 +9,10 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
+## 2026-11-16 · Isonomic UI at fa70c9b
+
+`UI_REF` moves to fa70c9b: a list indent per kind on `TextView` and `MessageActionBar::pager_quiet`. Additive only. Nothing in the SDK uses them, and every test passes on it.
+
 ## 2026-11-16 · The shell header
 
 The window's rail can fold into an app's sidebar (the window worker's sketch, isonomic-desktop's "Worker reports" at 12:54 UTC). An app opts in with `App::hosts_shell_header`. It places `AppContext::shell_header` beside its sidebar toggle and reports folding with `set_sidebar`. The window supplies the element through the `Shell` trait (`with_shell`) and follows `sidebar_changes`.
