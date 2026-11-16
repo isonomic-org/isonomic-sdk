@@ -11,6 +11,16 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+## Unreleased: Isonomic UI at 0a8f39d (the serif)
+
+**Wire:** no change. Additive only.
+
+**For Chat and the window:** move `../isonomic-ui` to `0a8f39dc05ef46b7363ad18664ab694d37c2974f`, the commit in `UI_REF`.
+- A bundled serif family. Apps name it as `isonomic_app::ui::assets::SERIF` and read it from `cx.theme().serif_font_family`, for display text such as a wordmark or a greeting.
+- `Clipboard::icon_size` and `MessageActionBar::icon_size`.
+
+`isonomic_app::ui::init` (Isonomic UI's `init`) registers the bundled sans, mono and serif before the theme resolves its families. The window already calls it; an app needs nothing more. hello-app's `tests/fonts.rs` checks both points against `isonomic-app` alone.
+
 ## Unreleased: Isonomic UI at ecd21d1
 
 **Wire:** no change.
