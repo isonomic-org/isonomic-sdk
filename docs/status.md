@@ -21,6 +21,10 @@ The window's rail can fold into an app's sidebar (the window worker's sketch, is
   - `TestHost::open` now runs `ui::init` once, because a component that reads the theme (the wordmark) panicked without it. The window has always done this.
   - `test-support` turns on `extra`.
   - The `request` and `report` docs on `AppContext` were swapped; they're fixed.
+  - **CI ran out of disk** linking this change's two new test binaries. Every test binary links the whole interface stack, so:
+    - `crates/app/tests/{extra,shell}.rs` are now modules of `context.rs`;
+    - hello-app's `tests/{fonts,shell}.rs` are now modules of `window.rs`;
+    - dependencies build without debug info (`[profile.dev.package."*"] debug = false`), and the workspace's own crates keep theirs.
 
 ## 2026-11-16 · Isonomic UI at 2b8a583
 
