@@ -24,7 +24,8 @@ The window's rail can fold into an app's sidebar (the window worker's sketch, is
   - **CI ran out of disk** linking this change's two new test binaries. Every test binary links the whole interface stack, so:
     - `crates/app/tests/{extra,shell}.rs` are now modules of `context.rs`;
     - hello-app's `tests/{fonts,shell}.rs` are now modules of `window.rs`;
-    - dependencies build without debug info (`[profile.dev.package."*"] debug = false`), and the workspace's own crates keep theirs.
+    - That leaves two such binaries for the app crate and hello-app, where main had four.
+    - Building dependencies without debug info was tried and dropped. It rebuilt every dependency next to CI's restored cache, and the cache save then ran out of disk. Trimming debug info needs a fresh cache, which means a change to the shared workflow.
 
 ## 2026-11-16 · Isonomic UI at 2b8a583
 

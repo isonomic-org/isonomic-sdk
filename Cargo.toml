@@ -42,8 +42,3 @@ tokio = { version = "1", features = ["io-util", "net", "rt", "sync", "time", "ma
 # Isonomic UI. The UI workspace applies the same patch.
 [patch.crates-io]
 gpui-pre-macros = { path = "../isonomic-ui/vendor/gpui-pre-macros" }
-
-# Dependencies build without debug info: each test binary links the whole
-# interface stack, and CI's disk is small. The workspace's own crates keep it.
-[profile.dev.package."*"]
-debug = false
