@@ -15,6 +15,7 @@ type Unload = fn(&AnyView, &mut gpui::App);
 #[derive(Clone)]
 pub struct Registration {
     manifest: Manifest,
+    hosts_shell_header: bool,
     build: Build,
     open_link: OpenLink,
     search: Search,
@@ -45,6 +46,7 @@ fn unload<A: App>(view: &AnyView, cx: &mut gpui::App) {
 pub fn register<A: App>() -> Registration {
     Registration {
         manifest: A::manifest(),
+        hosts_shell_header: A::hosts_shell_header(),
         build: A::build,
         open_link: open_link::<A>,
         search: search::<A>,
@@ -55,6 +57,12 @@ pub fn register<A: App>() -> Registration {
 impl Registration {
     pub fn manifest(&self) -> &Manifest {
         &self.manifest
+    }
+
+    /// The app's [`App::hosts_shell_header`]: whether the window leaves out
+    /// its rail beside it.
+    pub fn hosts_shell_header(&self) -> bool {
+        self.hosts_shell_header
     }
 
     /// Build the app's root view, with the context the window made for it
@@ -104,7 +112,8 @@ impl LoadedApp {
 }
 
 /// The simplest host for one app: a view that draws the app's root. The
-/// window's tab host does the same, with the rail around it.
+/// window's tab host does the same, with the rail around it unless the app
+/// hosts the shell header.
 pub struct Tab {
     app: LoadedApp,
 }

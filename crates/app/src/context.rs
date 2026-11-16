@@ -9,6 +9,9 @@ use serde::Serialize;
 use serde_json::Value;
 use tokio::sync::watch;
 
+use crate::shell::{Shell, Sidebar};
+use isonomic_ui as gpui;
+
 /// Whether an app wants the user to look at it. Drives the dot on the rail.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Attention {
@@ -86,6 +89,8 @@ pub struct AppContext {
     window: crate::requests::Window,
     /// When this app's last report was taken, shared by every clone.
     reported: Arc<std::sync::Mutex<Option<std::time::Instant>>>,
+    shell: Option<Arc<dyn Shell>>,
+    sidebar: Arc<watch::Sender<Sidebar>>,
 }
 
 impl AppContext {
@@ -109,6 +114,8 @@ impl AppContext {
             attention: Arc::new(attention),
             window: None,
             reported: Arc::default(),
+            shell: None,
+            sidebar: Arc::new(watch::channel(Sidebar::Expanded).0),
         };
         (cx, watched)
     }
@@ -120,9 +127,57 @@ impl AppContext {
         self
     }
 
-    /// Ask the window to do something only it may, such as installing a
-    /// model. `true` when the window took it on. The outcome shows where it
-    /// always does: a model's state in `models.info`, say.
+    /// The window's side of the shell header (see [`crate::shell`]). Without
+    /// one, [`shell_header`](Self::shell_header) draws nothing.
+    pub fn with_shell(mut self, shell: Arc<dyn Shell>) -> Self {
+        self.shell = Some(shell);
+        self
+    }
+
+    /// The window's element for the top of the app's sidebar, beside its
+    /// toggle: the wordmark or the app switcher when expanded, the app's
+    /// icon when collapsed. Draw it on every render of the sidebar, for
+    /// the state last given to [`set_sidebar`](Self::set_sidebar). An app
+    /// that places it draws no wordmark of its own, and says so with
+    /// [`App::hosts_shell_header`](crate::App::hosts_shell_header).
+    pub fn shell_header(&self, window: &mut gpui::Window, cx: &mut gpui::App) -> gpui::AnyElement {
+        use gpui::IntoElement as _;
+        match &self.shell {
+            Some(shell) => shell.header(&self.id, self.sidebar(), window, cx),
+            None => gpui::Empty.into_any_element(),
+        }
+    }
+
+    /// The room to leave for the window's controls (the traffic lights) in
+    /// the sidebar's current state: at the left of the top row when
+    /// expanded, above the header when collapsed.
+    pub fn shell_inset(&self) -> gpui::Pixels {
+        match &self.shell {
+            Some(shell) => shell.inset(self.sidebar()),
+            None => gpui::px(0.),
+        }
+    }
+
+    /// Tell the window whether the app's sidebar is collapsed, so it can
+    /// draw the collapsed header and keep its controls clear.
+    pub fn set_sidebar(&self, sidebar: Sidebar) {
+        self.sidebar.send_if_modified(|current| {
+            let changed = *current != sidebar;
+            *current = sidebar;
+            changed
+        });
+    }
+
+    /// The sidebar's state as last set. `Expanded` until the app says.
+    pub fn sidebar(&self) -> Sidebar {
+        *self.sidebar.borrow()
+    }
+
+    /// The window's subscription to [`set_sidebar`](Self::set_sidebar).
+    pub fn sidebar_changes(&self) -> watch::Receiver<Sidebar> {
+        self.sidebar.subscribe()
+    }
+
     /// Report a handled problem: the window adds the app's id and version,
     /// scrubs it and shows the person the problem-report notice. `true` when
     /// the window took it. At most one a [`REPORT_INTERVAL`](crate::REPORT_INTERVAL):
@@ -140,6 +195,9 @@ impl AppContext {
         taken
     }
 
+    /// Ask the window to do something only it may, such as installing a
+    /// model. `true` when the window took it on. The outcome shows where it
+    /// always does: a model's state in `models.info`, say.
     pub fn request(&self, request: crate::WindowRequest) -> bool {
         match &self.window {
             Some(window) => window.request(&self.id, request),

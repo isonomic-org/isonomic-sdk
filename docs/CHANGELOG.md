@@ -11,6 +11,41 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+## Unreleased: the shell header (the rail folded into an app's sidebar)
+
+**Wire:** no change. Additive to `isonomic-app`, plus one change to `test-support`, below.
+
+**What's new:**
+- `App::hosts_shell_header() -> bool`, `false` by default.
+- `Registration::hosts_shell_header()`.
+- `AppContext`:
+  - for the app: `shell_header(window, cx) -> AnyElement`, `shell_inset() -> Pixels`, `set_sidebar(Sidebar)` and `sidebar()`;
+  - for the window: `with_shell(Arc<dyn Shell>)` and `sidebar_changes() -> watch::Receiver<Sidebar>`.
+- The new `shell` module: `Sidebar { Expanded, Collapsed }`, the `Shell` trait (`header(app, sidebar, window, cx)`, `inset(sidebar)`) and `ProductWordmark` (feature `extra`).
+- `TestHost::shell_headers()`, and `OpenApp::sidebar` and `hosts_shell_header`.
+
+**`test-support` change:** `test-support` now turns on `extra`. `TestHost::open` now initialises Isonomic UI (`ui::init`) once per test, as the window does.
+
+**For Chat:**
+1. `fn hosts_shell_header() -> bool { true }`.
+2. In the sidebar's top row:
+   - expanded: `toggle`, then `app.shell_header(window, cx)`;
+   - collapsed: the header, then the toggle under it.
+   - In both, pad by `app.shell_inset()`.
+3. Call `app.set_sidebar(Sidebar::Collapsed | Expanded)` whenever the sidebar folds or opens.
+4. Remove Chat's own wordmark.
+
+**For the window:**
+1. For each registration, `registration.hosts_shell_header()` decides whether to draw the 56-px rail.
+2. Give each context a shell before opening the app:
+   - one app: `cx.with_shell(Arc::new(isonomic_app::shell::ProductWordmark::of(&manifest)))`;
+   - more than one: its own `impl Shell`, the ghost button with a caret and the menu of apps and Home.
+   - `inset(sidebar)` returns the traffic-light room.
+3. Subscribe with `cx.sidebar_changes()` before handing over the context, and draw the collapsed form and the traffic-light position from it.
+4. Turn on `isonomic-app`'s `extra` feature for `ProductWordmark`.
+
+Apps that leave `hosts_shell_header` false keep the rail.
+
 ## Unreleased: Isonomic UI at 2b8a583 (the composer)
 
 **Wire:** no change. Additive only.

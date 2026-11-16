@@ -26,6 +26,7 @@
 mod context;
 mod host;
 mod requests;
+pub mod shell;
 #[cfg(feature = "test-support")]
 pub mod testing;
 
@@ -70,6 +71,7 @@ pub use isonomic_client::{AppClient, ClientError, ModelStream, Models};
 pub use isonomic_proto::manifest::{BlobAccess, ConnectionAccess, ModelAccess, Schema, SqlAccess};
 pub use isonomic_proto::{Capabilities, Manifest};
 pub use requests::{Problem, RecordedRequests, WindowRequest, WindowRequests, REPORT_INTERVAL};
+pub use shell::{Shell, Sidebar};
 
 /// One result for the window's global search.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -97,6 +99,14 @@ pub trait App: 'static {
 
     /// Open a deep link addressed to this app. `true` if it was handled.
     fn open_link(&mut self, _url: &str) -> bool {
+        false
+    }
+
+    /// Whether the app places the window's shell header
+    /// ([`AppContext::shell_header`]) at the top of its sidebar and reports
+    /// its sidebar with [`AppContext::set_sidebar`]. `true` and the window
+    /// draws no rail beside the app; `false`, the default, and it keeps it.
+    fn hosts_shell_header() -> bool {
         false
     }
 

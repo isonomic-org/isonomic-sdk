@@ -16,14 +16,15 @@
 //! }
 //! ```
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use isonomic_client::Client;
 use isonomic_testkit::TestEngine;
-use isonomic_ui::{Entity, TestAppContext, WindowHandle};
+use isonomic_ui::{self as gpui, AnyElement, Entity, TestAppContext, Window, WindowHandle};
 use tokio::sync::watch;
 
+use crate::shell::{ProductWordmark, Shell, Sidebar};
 use crate::{
     register, App, AppContext, Attention, MemorySettings, RecordedRequests, Tab, WindowRequest,
 };
@@ -38,7 +39,28 @@ pub struct TestHost {
     client: Client,
     settings: Arc<MemorySettings>,
     requests: Arc<RecordedRequests>,
+    headers: Arc<Mutex<Vec<(String, Sidebar)>>>,
     runtime: tokio::runtime::Runtime,
+}
+
+/// The test host's shell: the window's one-app header
+/// ([`ProductWordmark`]), with every draw recorded.
+struct TestShell {
+    header: ProductWordmark,
+    drawn: Arc<Mutex<Vec<(String, Sidebar)>>>,
+}
+
+impl Shell for TestShell {
+    fn header(
+        &self,
+        app: &str,
+        sidebar: Sidebar,
+        window: &mut Window,
+        cx: &mut gpui::App,
+    ) -> AnyElement {
+        self.drawn.lock().unwrap().push((app.to_string(), sidebar));
+        self.header.header(app, sidebar, window, cx)
+    }
 }
 
 impl Default for TestHost {
@@ -61,6 +83,7 @@ impl TestHost {
             client,
             settings: Arc::new(MemorySettings::default()),
             requests: Arc::new(RecordedRequests::default()),
+            headers: Arc::default(),
             runtime,
         }
     }
@@ -89,9 +112,15 @@ impl TestHost {
         self.requests.reports()
     }
 
+    /// Every time an app drew the shell header, oldest first: the app and
+    /// the sidebar state it was drawn for.
+    pub fn shell_headers(&self) -> Vec<(String, Sidebar)> {
+        self.headers.lock().unwrap().clone()
+    }
+
     /// The context the window would give `A`: a token granted from
     /// `A::manifest()`, its settings, and the window's side of its
-    /// attention signal.
+    /// attention signal, with the one-app shell header.
     pub fn context<A: App>(&self) -> (AppContext, watch::Receiver<Attention>) {
         let manifest = A::manifest();
         let token = self.engine.grant(&manifest);
@@ -100,15 +129,37 @@ impl TestHost {
             self.client.scoped(token),
             self.settings.clone(),
         );
-        (cx.with_window(self.requests.clone()), attention)
+        let shell = TestShell {
+            header: ProductWordmark::of(&manifest),
+            drawn: self.headers.clone(),
+        };
+        let cx = cx
+            .with_window(self.requests.clone())
+            .with_shell(Arc::new(shell));
+        (cx, attention)
     }
 
-    /// Open `A` in a headless window, as the window would open its tab.
+    /// Open `A` in a headless window, as the window would open its tab,
+    /// with Isonomic UI initialised as the window does.
     pub fn open<A: App>(&self, cx: &mut TestAppContext) -> OpenApp {
+        // Isonomic UI as the window sets it up: theme, bundled fonts and the
+        // components' state, once per test.
+        cx.update(|app| {
+            if !app.has_global::<isonomic_ui::component::Theme>() {
+                isonomic_ui::init(app);
+            }
+        });
         let (context, attention) = self.context::<A>();
+        let sidebar = context.sidebar_changes();
         let registration = register::<A>();
+        let hosts_shell_header = registration.hosts_shell_header();
         let window = cx.add_window(|window, tab| Tab::open(&registration, context, window, tab));
-        OpenApp { window, attention }
+        OpenApp {
+            window,
+            attention,
+            sidebar,
+            hosts_shell_header,
+        }
     }
 }
 
@@ -117,6 +168,10 @@ pub struct OpenApp {
     pub window: WindowHandle<Tab>,
     /// What the rail would show for the app.
     pub attention: watch::Receiver<Attention>,
+    /// The app's sidebar as the window sees it.
+    pub sidebar: watch::Receiver<Sidebar>,
+    /// Whether the window would leave out its rail for the app.
+    pub hosts_shell_header: bool,
 }
 
 impl OpenApp {

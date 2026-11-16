@@ -9,6 +9,24 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
+## 2026-11-16 · The shell header
+
+The window's rail can fold into an app's sidebar (the window worker's sketch, isonomic-desktop's "Worker reports" at 12:54 UTC). An app opts in with `App::hosts_shell_header`. It places `AppContext::shell_header` beside its sidebar toggle and reports folding with `set_sidebar`. The window supplies the element through the `Shell` trait (`with_shell`) and follows `sidebar_changes`.
+
+- **One app:** `shell::ProductWordmark` gives "Isonomic <name>" through `Wordmark::product` when expanded, and the app's icon when collapsed.
+- **No flicker:** the opt-in is static, so the window decides on its rail before the first frame. Apps that don't opt in keep the rail.
+- **hello-app:** it hosts the header, with a toggle, and tests it.
+- **`TestHost`:** it supplies the one-app header and records each draw.
+- **Deviations:**
+  - `TestHost::open` now runs `ui::init` once, because a component that reads the theme (the wordmark) panicked without it. The window has always done this.
+  - `test-support` turns on `extra`.
+  - The `request` and `report` docs on `AppContext` were swapped; they're fixed.
+  - **CI ran out of disk** linking this change's two new test binaries. Every test binary links the whole interface stack, so:
+    - `crates/app/tests/{extra,shell}.rs` are now modules of `context.rs`;
+    - hello-app's `tests/{fonts,shell}.rs` are now modules of `window.rs`;
+    - That leaves two such binaries for the app crate and hello-app, where main had four.
+    - Building dependencies without debug info was tried and dropped. It rebuilt every dependency next to CI's restored cache, and the cache save then ran out of disk. Trimming debug info needs a fresh cache, which means a change to the shared workflow.
+
 ## 2026-11-16 · Isonomic UI at 2b8a583
 
 `UI_REF` moves to 2b8a583. New: `PromptComposer::set_quiet_focus`. The comfortable composer is 96 high when empty, the escape hint reads "Esc", and `Ban` and the photos item use the set's own drawings. Additive only. Nothing in the SDK uses them, and every test passes on it.

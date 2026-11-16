@@ -3,14 +3,17 @@
 //!
 //! Everything it reaches goes through its [`AppContext`]: the client
 //! scoped to its token, its settings, and its attention signal.
+//!
+//! Its sidebar hosts the window's shell header: the toggle, then the
+//! header, in the top row; the header above the toggle when collapsed.
 
 use isonomic_app::ui;
 
-use isonomic_app::{App, AppContext, Attention, Manifest, ModelAccess, SearchHit};
+use isonomic_app::{App, AppContext, Attention, Manifest, ModelAccess, SearchHit, Sidebar};
 use isonomic_proto::{Capabilities, Message, ModelInfo, StreamRequest};
 use ui::{
-    div, AnyView, AppContext as _, Context, IntoElement, ParentElement, Render, Styled, WeakEntity,
-    Window,
+    div, px, AnyView, AppContext as _, Context, InteractiveElement, IntoElement, ParentElement,
+    Render, StatefulInteractiveElement, Styled, WeakEntity, Window,
 };
 
 /// What the reply is doing.
@@ -23,6 +26,7 @@ pub enum Phase {
 }
 
 pub struct Hello {
+    app: AppContext,
     models: Vec<ModelInfo>,
     reply: String,
     phase: Phase,
@@ -45,12 +49,23 @@ impl Hello {
         &self.phase
     }
 
+    /// Fold or open the sidebar, and tell the window.
+    pub fn toggle_sidebar(&mut self, cx: &mut Context<Self>) {
+        let next = match self.app.sidebar() {
+            Sidebar::Expanded => Sidebar::Collapsed,
+            Sidebar::Collapsed => Sidebar::Expanded,
+        };
+        self.app.set_sidebar(next);
+        cx.notify();
+    }
+
     /// Deep links handed to it so far.
     pub fn opened(&self) -> &[String] {
         &self.opened
     }
 
     fn new(app: AppContext, cx: &mut Context<Self>) -> Self {
+        let kept = app.clone();
         cx.spawn(async move |this, cx| {
             let result = run(&app, &this, cx).await;
             let _ = this.update(cx, |hello, cx| {
@@ -64,6 +79,7 @@ impl Hello {
         })
         .detach();
         Self {
+            app: kept,
             models: Vec::new(),
             reply: String::new(),
             phase: Phase::Loading,
@@ -135,6 +151,10 @@ impl App for Hello {
         app.new(|view| Hello::new(cx, view)).into()
     }
 
+    fn hosts_shell_header() -> bool {
+        true
+    }
+
     fn open_link(&mut self, url: &str) -> bool {
         if !url.starts_with("isonomic://hello/") {
             return false;
@@ -162,19 +182,38 @@ impl App for Hello {
 }
 
 impl Render for Hello {
-    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let collapsed = self.app.sidebar() == Sidebar::Collapsed;
+        let toggle = div()
+            .id("sidebar-toggle")
+            .child(if collapsed { ">" } else { "<" })
+            .on_click(cx.listener(|hello, _, _, cx| hello.toggle_sidebar(cx)));
+        let header = self.app.shell_header(window, cx);
+        let top = div().pt(self.app.shell_inset());
+        let top = if collapsed {
+            top.flex().flex_col().child(header).child(toggle)
+        } else {
+            top.flex().flex_row().gap_2().child(toggle).child(header)
+        };
+        let sidebar = div().flex_none().child(top);
+        let sidebar = if collapsed {
+            sidebar.w(px(56.))
+        } else {
+            sidebar
+        };
         let status = match &self.phase {
             Phase::Loading => "Loading models".to_string(),
             Phase::Streaming => "Answering".to_string(),
             Phase::Done => "Done".to_string(),
             Phase::Failed(message) => format!("Failed: {message}"),
         };
-        div()
+        let main = div()
             .flex()
             .flex_col()
             .gap_2()
             .child(div().child(status))
             .children(self.models.iter().map(|m| div().child(m.name.clone())))
-            .child(div().child(self.reply.clone()))
+            .child(div().child(self.reply.clone()));
+        div().flex().flex_row().child(sidebar).child(main)
     }
 }
