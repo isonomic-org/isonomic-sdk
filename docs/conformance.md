@@ -50,7 +50,7 @@ The checks speak the wire alone. They grant their own apps through `apps.grant` 
 | `agents.replay` | Start a session's log with `session.start` at seq 1; replay from a seq starting at the next event |
 | `agents.isolated` | Answer another app's open, subscribe, rename and send with `not_found`; refuse purge and `approvals.list` naming another app with `capability_denied`; leave its sessions out of the list |
 | `agents.purge_own` | Delete the caller's sessions on purge and leave every other app's |
-| `agents.model_rules` | Refuse with `capability_denied` a session on a model outside the app's manifest, whether named on `sessions.create` or reached through a preset the app stored |
+| `agents.model_rules` | Refuse with `capability_denied` a session on a model outside the app's manifest, whether named on `sessions.create` or reached through a preset the app stored (its reply model or its title model) |
 | `agents.session_ended` | End a session's stream with `session_ended` when the session is purged |
 | `agents.unknown_subscription` | Refuse unsubscribing from a stream that is not open with `unknown_subscription` |
 | `tokens.shutdown_refused` | Refuse `system.shutdown` to an app, and keep answering |

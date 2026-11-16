@@ -124,8 +124,19 @@ async fn the_picked_model_runs_the_session_and_shows_on_its_summary() {
 
 /// A preset of the app's own that runs on `model`.
 fn preset_on(id: &str, model: &str) -> String {
+    preset_with(id, model, None)
+}
+
+/// The same, with a title model, and the title step on so it would run.
+fn preset_with(id: &str, model: &str, title_model: Option<&str>) -> String {
+    let title = title_model.map_or(String::new(), |t| format!("title_model = \"{t}\"\n"));
+    let post = if title_model.is_some() {
+        "\n[post_turn]\ntitle = \"model\"\n"
+    } else {
+        ""
+    };
     format!(
-        "id = \"{id}\"\nversion = 1\nname = \"Own\"\nclass = \"interactive\"\n\n[persona]\nprompt = \"Be brief.\"\n\n[model]\nid = \"{model}\"\nmax_output_tokens = 256\nreasoning = \"off\"\n\n[limits]\ntokens = 20000\nsteps = 8\nwall_ms = 60000\n"
+        "id = \"{id}\"\nversion = 1\nname = \"Own\"\nclass = \"interactive\"\n\n[persona]\nprompt = \"Be brief.\"\n\n[model]\nid = \"{model}\"\nmax_output_tokens = 256\nreasoning = \"off\"\n{title}\n[limits]\ntokens = 20000\nsteps = 8\nwall_ms = 60000\n{post}"
     )
 }
 
@@ -159,4 +170,23 @@ async fn an_apps_own_preset_cannot_reach_a_model_its_manifest_does_not_allow() {
         .unwrap();
     agents.create(&small.id.to_string()).await.unwrap();
     agents.create("test").await.unwrap();
+}
+
+#[tokio::test]
+async fn a_stored_presets_title_model_is_held_to_the_rule_too() {
+    use isonomic_proto::manifest::ModelAccess;
+    let engine = TestEngine::new();
+    let mut chat = manifest("com.isonomic.chat", true);
+    chat.capabilities.models = Some(ModelAccess {
+        ids: vec!["chat-small".into()],
+        ..Default::default()
+    });
+    let agents = engine.client().scoped(engine.grant(&chat)).agents();
+    let text = preset_with("titled", "chat-small", Some("chat-large"));
+    let stored = agents.put_preset(&text).await.unwrap();
+    let refused = agents.create(&stored.id.to_string()).await;
+    assert_eq!(code(refused), ErrorCode::CapabilityDenied);
+    let fine = preset_with("titled-ok", "chat-small", Some("chat-small"));
+    let stored = agents.put_preset(&fine).await.unwrap();
+    agents.create(&stored.id.to_string()).await.unwrap();
 }
