@@ -83,6 +83,7 @@ pub struct AppContext {
     client: AppClient,
     settings: Settings,
     attention: Arc<watch::Sender<Attention>>,
+    window: crate::requests::Window,
 }
 
 impl AppContext {
@@ -104,8 +105,26 @@ impl AppContext {
             client,
             settings,
             attention: Arc::new(attention),
+            window: None,
         };
         (cx, watched)
+    }
+
+    /// The window's handler for [`AppContext::request`]. Without one, every
+    /// request answers `false`.
+    pub fn with_window(mut self, window: Arc<dyn crate::WindowRequests>) -> Self {
+        self.window = Some(window);
+        self
+    }
+
+    /// Ask the window to do something only it may, such as installing a
+    /// model. `true` when the window took it on. The outcome shows where it
+    /// always does: a model's state in `models.info`, say.
+    pub fn request(&self, request: crate::WindowRequest) -> bool {
+        match &self.window {
+            Some(window) => window.request(&self.id, request),
+            None => false,
+        }
     }
 
     /// The app's id, from its manifest.

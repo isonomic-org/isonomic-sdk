@@ -184,6 +184,7 @@ async fn only_local_known_models_download() {
         context_length: None,
         capabilities: vec!["chat".into()],
         remote: true,
+        recommended: false,
     });
     let models = engine.client().models();
     assert_eq!(
@@ -317,4 +318,35 @@ async fn a_dropped_connection_leaves_the_download_running_to_resume() {
     let last = to_end(&mut resumed).await.pop().unwrap();
     assert_eq!(last.outcome, Some(DownloadOutcome::Installed));
     assert!(engine.models().installed("chat-small"));
+}
+
+#[tokio::test]
+async fn the_recommended_model_is_marked_for_apps_too() {
+    let engine = TestEngine::new();
+    let token = engine.grant(&Manifest {
+        id: "com.isonomic.chat".into(),
+        name: "Chat".into(),
+        version: "0.1.0".into(),
+        icon: "chat".into(),
+        capabilities: Capabilities {
+            models: Some(ModelAccess {
+                any: true,
+                ..Default::default()
+            }),
+            ..Default::default()
+        },
+        schemas: vec![],
+    });
+    let app = engine.client().scoped(token).models();
+    let listed = app.list().await.unwrap();
+    let marked: Vec<&str> = listed
+        .iter()
+        .filter(|m| m.recommended)
+        .map(|m| m.id.as_str())
+        .collect();
+    assert_eq!(marked, ["chat-small"]);
+    assert!(app.info("chat-small").await.unwrap().info.recommended);
+    assert!(!app.info("embed-small").await.unwrap().info.recommended);
+    engine.models().recommend("standard", None);
+    assert!(app.list().await.unwrap().iter().all(|m| !m.recommended));
 }

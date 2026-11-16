@@ -43,6 +43,7 @@ impl Agents {
             preset: PresetId::new(preset),
             title: None,
             location_opt_in: false,
+            model: None,
         })
         .await
     }
@@ -169,6 +170,7 @@ impl Agents {
             client: self.client.clone(),
             token: self.token.clone(),
             last_seq: from_seq,
+            ended: false,
         })
     }
 
@@ -256,18 +258,66 @@ impl Agents {
         }
     }
 
-    /// An artifact version, latest when `version` is `None`.
+    /// An artifact version, latest when `version` is `None`, with its whole
+    /// body: read in chunks of at most `CHUNK_BYTES`, as blobs are.
     pub async fn artifact(
         &self,
         artifact: &ArtifactId,
         version: Option<u32>,
     ) -> Result<ArtifactVersion, ClientError> {
-        let call = Call::ArtifactsGet(GetArtifact {
-            artifact: artifact.clone(),
-            version,
+        let mut whole: Option<ArtifactVersion> = None;
+        loop {
+            let offset = whole.as_ref().map_or(0, |w| w.bytes.0.len() as u64);
+            let call = Call::ArtifactsGet(GetArtifact {
+                artifact: artifact.clone(),
+                // Pin the version the first chunk found, so a new one
+                // written meanwhile cannot mix in.
+                version: whole.as_ref().map_or(version, |w| Some(w.meta.version)),
+                offset,
+                length: None,
+            });
+            let Reply::Artifact(chunk) = self.call(call).await? else {
+                return Err(ClientError::UnexpectedReply);
+            };
+            let chunk = *chunk;
+            let total = chunk.meta.bytes;
+            let empty = chunk.bytes.0.is_empty();
+            // An engine that ignores `offset`, mixes versions or overruns
+            // the body would corrupt it: refuse rather than return it.
+            let pinned = whole
+                .as_ref()
+                .is_none_or(|w| w.meta.version == chunk.meta.version);
+            let fits = offset + chunk.bytes.0.len() as u64 <= total;
+            if chunk.offset != offset || !pinned || !fits {
+                return Err(ClientError::UnexpectedReply);
+            }
+            match &mut whole {
+                None => whole = Some(ArtifactVersion { offset: 0, ..chunk }),
+                Some(w) => w.bytes.0.extend_from_slice(&chunk.bytes.0),
+            }
+            let w = whole.as_ref().unwrap_or_else(|| unreachable!());
+            if w.bytes.0.len() as u64 >= total || empty {
+                return whole.ok_or(ClientError::UnexpectedReply);
+            }
+        }
+    }
+
+    /// Shell only: the user-action token for a person's decision on
+    /// `approval` in `session`, for `app` to pass to `decide` (the shell's
+    /// own when `None`). The window calls this when the person acts.
+    pub async fn user_action(
+        &self,
+        session: &SessionId,
+        approval: &ApprovalId,
+        app: Option<&str>,
+    ) -> Result<String, ClientError> {
+        let call = Call::ApprovalsUserAction(MintUserAction {
+            session: session.clone(),
+            approval: approval.clone(),
+            app: app.map(AppId::from),
         });
         match self.call(call).await? {
-            Reply::Artifact(found) => Ok(*found),
+            Reply::UserAction { token } => Ok(token),
             _ => Err(ClientError::UnexpectedReply),
         }
     }
@@ -293,6 +343,15 @@ pub enum SessionUpdate {
     /// Reply text as it streams. Drop deltas once the `assistant` event for
     /// their step arrives.
     Delta(LiveDelta),
+    /// The session is gone (purged): nothing more will come, and `next`
+    /// then returns `None`. Do not subscribe again. A `None` with no
+    /// `Ended` before it means the connection dropped: subscribe again from
+    /// `last_seq()`.
+    Ended(EndReason),
+    /// Events between `after` and `next` never arrived (one was malformed,
+    /// say). Subscribe again from `last_seq()`, which is still `after`, to
+    /// read them; this stream skips the event that showed the gap.
+    Gap { after: Seq, next: Seq },
 }
 
 /// A session's events. Dropping it unsubscribes.
@@ -301,6 +360,7 @@ pub struct SessionStream {
     client: Client,
     token: Option<Token>,
     last_seq: Seq,
+    ended: bool,
 }
 
 impl SessionStream {
@@ -314,16 +374,32 @@ impl SessionStream {
         self.last_seq
     }
 
-    /// The next update. `None` once the connection drops or the session is
-    /// purged.
+    /// The next update. After a purge, `Ended` and then `None`; a `None`
+    /// without `Ended` means the connection dropped.
     pub async fn next(&mut self) -> Option<SessionUpdate> {
+        if self.ended {
+            return None;
+        }
         loop {
             match self.events.next().await? {
+                Event::SessionEvent(event) if event.seq <= self.last_seq => continue,
+                Event::SessionEvent(event) if event.seq != self.last_seq + 1 => {
+                    let after = self.last_seq;
+                    return Some(SessionUpdate::Gap {
+                        after,
+                        next: event.seq,
+                    });
+                }
                 Event::SessionEvent(event) => {
                     self.last_seq = event.seq;
                     return Some(SessionUpdate::Event(event));
                 }
                 Event::LiveDelta(delta) => return Some(SessionUpdate::Delta(delta)),
+                // The session is gone (purged): say so once, then end.
+                Event::SessionEnded(end) => {
+                    self.ended = true;
+                    return Some(SessionUpdate::Ended(end.reason));
+                }
                 _ => continue,
             }
         }

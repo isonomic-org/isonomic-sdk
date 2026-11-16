@@ -245,6 +245,15 @@ fn attach(
     (0, receiver)
 }
 
+/// The model recommended for this machine's profile, if any.
+pub(crate) fn recommended_id(state: &State) -> Option<String> {
+    let downloads = state.downloads.lock().unwrap();
+    downloads
+        .recommended
+        .get(&downloads.profile.profile)
+        .cloned()
+}
+
 fn recommended(state: &State, request: RecommendModel) -> Result<Reply, WireError> {
     let (profile, model, total) = {
         let downloads = state.downloads.lock().unwrap();

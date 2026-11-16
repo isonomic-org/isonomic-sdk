@@ -53,3 +53,6 @@
 {"type":"response","id":130,"result":{"downloading":{"subscription":33,"model":"chat-custom"}}}
 {"type":"event","subscription":33,"event":"download_progress","data":{"model":"chat-custom","received_bytes":268435456}}
 {"type":"response","id":131,"result":{"recommended":{"model":"chat-custom","profile":"high"}}}
+{"type":"request","id":132,"token":"tok-hello-1","method":"models.list"}
+{"type":"response","id":132,"result":{"models":[{"id":"chat-small","name":"Chat Small","context_length":8192,"capabilities":["chat"],"recommended":true},{"id":"embed-small","name":"Embed Small","context_length":8192,"capabilities":["embeddings"]}]}}
+{"type":"response","id":133,"result":{"model":{"id":"chat-small","name":"Chat Small","context_length":8192,"capabilities":["chat"],"recommended":true,"size_bytes":2684354560,"license":"Test License","state":"stopped"}}}

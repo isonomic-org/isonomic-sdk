@@ -24,7 +24,9 @@ use isonomic_testkit::TestEngine;
 use isonomic_ui::{Entity, TestAppContext, WindowHandle};
 use tokio::sync::watch;
 
-use crate::{register, App, AppContext, Attention, MemorySettings, Tab};
+use crate::{
+    register, App, AppContext, Attention, MemorySettings, RecordedRequests, Tab, WindowRequest,
+};
 
 /// How long [`wait_until`] waits before failing the test.
 pub const WAIT: Duration = Duration::from_secs(10);
@@ -35,6 +37,7 @@ pub struct TestHost {
     engine: TestEngine,
     client: Client,
     settings: Arc<MemorySettings>,
+    requests: Arc<RecordedRequests>,
     runtime: tokio::runtime::Runtime,
 }
 
@@ -57,6 +60,7 @@ impl TestHost {
             engine,
             client,
             settings: Arc::new(MemorySettings::default()),
+            requests: Arc::new(RecordedRequests::default()),
             runtime,
         }
     }
@@ -74,17 +78,24 @@ impl TestHost {
         &self.settings
     }
 
+    /// Every request apps made of the window, with the app that made it.
+    /// The test host takes each one on.
+    pub fn requests(&self) -> Vec<(String, WindowRequest)> {
+        self.requests.all()
+    }
+
     /// The context the window would give `A`: a token granted from
     /// `A::manifest()`, its settings, and the window's side of its
     /// attention signal.
     pub fn context<A: App>(&self) -> (AppContext, watch::Receiver<Attention>) {
         let manifest = A::manifest();
         let token = self.engine.grant(&manifest);
-        AppContext::new(
+        let (cx, attention) = AppContext::new(
             &manifest.id,
             self.client.scoped(token),
             self.settings.clone(),
-        )
+        );
+        (cx.with_window(self.requests.clone()), attention)
     }
 
     /// Open `A` in a headless window, as the window would open its tab.

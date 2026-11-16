@@ -50,6 +50,33 @@ fn zero32(n: &u32) -> bool {
     *n == 0
 }
 
+/// The longest model name `sessions.create` takes, in characters, once
+/// trimmed.
+pub const MAX_MODEL_NAME: usize = 128;
+
+/// The host's own bound on a model name, in bytes.
+pub const MAX_MODEL_NAME_BYTES: usize = 200;
+
+/// The model a `sessions.create` names, trimmed. Blank, longer than
+/// [`MAX_MODEL_NAME`] characters or [`MAX_MODEL_NAME_BYTES`] bytes, or
+/// holding a control character is `bad_request`. The engine, `proto::auth`
+/// and the testkit all check names here, so a name that passes is one the
+/// host records.
+pub fn model_name(name: &str) -> Result<&str, crate::WireError> {
+    let name = name.trim();
+    let bad = |why: &str| crate::WireError::new(crate::ErrorCode::BadRequest, why);
+    if name.is_empty() {
+        return Err(bad("the model name is blank"));
+    }
+    if name.chars().count() > MAX_MODEL_NAME || name.len() > MAX_MODEL_NAME_BYTES {
+        return Err(bad("the model name is too long"));
+    }
+    if name.chars().any(char::is_control) {
+        return Err(bad("the model name holds a control character"));
+    }
+    Ok(name)
+}
+
 /// `sessions.create`: the class comes from the preset.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CreateSession {
@@ -59,6 +86,10 @@ pub struct CreateSession {
     /// The person opted in to sharing a location with this session.
     #[serde(default, skip_serializing_if = "no")]
     pub location_opt_in: bool,
+    /// Run on this model in place of the preset's. An app may name only a
+    /// model its `models` capability allows, as for `models.stream`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
 }
 
 /// `sessions.list`. Every field narrows; none means all of the caller's.
@@ -225,6 +256,13 @@ pub struct GetArtifact {
     pub artifact: ArtifactId,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub version: Option<u32>,
+    /// Where to start reading the body. One reply carries at most
+    /// `blobs::CHUNK_BYTES`, as for `blobs.get`.
+    #[serde(default, skip_serializing_if = "zero")]
+    pub offset: u64,
+    /// Read fewer bytes than a full chunk.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub length: Option<u64>,
 }
 
 /// A fork's parent and the sequence number it forked at.
@@ -249,6 +287,9 @@ pub struct SessionSummary {
     pub archived: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub forked_from: Option<ForkedFrom>,
+    /// The model picked at creation; absent when the preset's model runs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
     pub created_at: u64,
     pub updated_at: u64,
     pub last_seq: Seq,
@@ -315,7 +356,39 @@ pub struct PresetDetail {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ArtifactVersion {
     pub meta: ArtifactEvent,
+    /// The body from `offset`, at most `blobs::CHUNK_BYTES`; `meta.bytes`
+    /// is its whole size.
     pub bytes: Bytes,
+    #[serde(default, skip_serializing_if = "zero")]
+    pub offset: u64,
+}
+
+/// `approvals.user_action`, shell only: the window mints the token when the
+/// person acts on an approval, and hands it to the app that will decide.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MintUserAction {
+    pub session: SessionId,
+    pub approval: ApprovalId,
+    /// The app that will call `approvals.decide`; absent for the shell.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub app: Option<AppId>,
+}
+
+/// Why a session stream ended.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EndReason {
+    /// The session was purged.
+    Purged,
+    #[serde(other)]
+    Unrecognized,
+}
+
+/// The last event of a session stream.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SessionEnded {
+    pub session: SessionId,
+    pub reason: EndReason,
 }
 
 /// What `sessions.purge` deleted.

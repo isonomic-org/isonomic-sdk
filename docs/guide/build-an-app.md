@@ -145,6 +145,10 @@ Never block the foreground thread, and never poll: await the client, and call `c
 
 Errors are typed. `ClientError::Engine(error)` carries a stable `error.code` (`capability_denied`, `insufficient_memory`, ...) and a readable `error.message`; `ClientError::Disconnected` means the engine is restarting, and the client reconnects by itself. `cx.client().live()` tells a view when it is back.
 
+### Asking the window
+
+Some things only the window may do. An app asks with `cx.request(WindowRequest::InstallModel { model })`: the window runs its download step with the person, and the model's state in `models.info` shows the outcome. `request` returns `true` when the window took it on. The window supplies the handler (`AppContext::with_window(impl WindowRequests)`); in tests, `TestHost::requests()` lists every request made.
+
 ## 5. Agent sessions
 
 With the `agents` capability, `cx.client().agents()` runs agent sessions in the engine's host: create one from a preset, send input, and follow its events. Every method and rule is in `docs/interfaces/agents.md`; the event types are harness-core's, under `isonomic_proto::agents::schema`.

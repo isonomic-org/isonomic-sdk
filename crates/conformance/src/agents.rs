@@ -32,6 +32,12 @@ async fn event(stream: &mut SessionStream) -> Result<SessionEvent, String> {
         match tokio::time::timeout(Duration::from_secs(5), stream.next()).await {
             Ok(Some(SessionUpdate::Event(event))) => return Ok(*event),
             Ok(Some(SessionUpdate::Delta(_))) => continue,
+            Ok(Some(SessionUpdate::Ended(reason))) => {
+                return Err(format!("the session stream ended: {reason:?}"))
+            }
+            Ok(Some(SessionUpdate::Gap { after, next })) => {
+                return Err(format!("the stream skipped from seq {after} to {next}"))
+            }
             Ok(None) => return Err("the session stream closed".into()),
             Err(_) => return Err("no session event within 5 s".into()),
         }
@@ -71,6 +77,7 @@ pub async fn registry(target: Target) -> Outcome {
         preset: PRESET.into(),
         title: Some("Conformance".into()),
         location_opt_in: false,
+        model: None,
     };
     let session = ok(agents.create_with(request).await, "sessions.create")?;
     let result = async {
@@ -209,4 +216,84 @@ pub async fn unknown_subscription(target: Target) -> Outcome {
     };
     let what = "sessions.unsubscribe";
     refused(app.call(call).await, ErrorCode::UnknownSubscription, what)
+}
+
+/// A preset an app may store, running on `model`.
+fn preset_on(id: &str, model: &str) -> String {
+    format!(
+        "id = \"{id}\"\nversion = 1\nname = \"Conformance\"\nclass = \"interactive\"\n\n\
+         [persona]\nprompt = \"Be brief.\"\n\n\
+         [model]\nid = \"{model}\"\nmax_output_tokens = 256\nreasoning = \"off\"\n\n\
+         [limits]\ntokens = 20000\nsteps = 8\nwall_ms = 60000\n"
+    )
+}
+
+/// A session's model follows the app's manifest whether it is named on
+/// `sessions.create` or reached through a preset the app stored.
+pub async fn model_rules(target: Target) -> Outcome {
+    use isonomic_proto::manifest::ModelAccess;
+    let capabilities = Capabilities {
+        agents: Some(AgentsAccess {}),
+        models: Some(ModelAccess {
+            ids: vec!["conformance-allowed".into()],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let app = target
+        .app(manifest("agents-models", capabilities, &[]))
+        .await?;
+    let agents = app.agents();
+    let named = CreateSession {
+        preset: PRESET.into(),
+        title: None,
+        location_opt_in: false,
+        model: Some("conformance-other".into()),
+    };
+    let refused = agents.create_with(named).await;
+    refused_with(
+        refused,
+        ErrorCode::CapabilityDenied,
+        "a named model outside the manifest",
+    )?;
+    let stored = ok(
+        agents
+            .put_preset(&preset_on("conformance-other", "conformance-other"))
+            .await,
+        "presets.put",
+    )?;
+    let through = agents.create(&stored.id.to_string()).await;
+    let result = refused_with(
+        through,
+        ErrorCode::CapabilityDenied,
+        "a model reached through the app's own preset",
+    );
+    purge(&agents).await?;
+    result
+}
+
+/// Purging a session ends its stream with `session_ended`, told apart from
+/// a dropped connection.
+pub async fn session_ended(target: Target) -> Outcome {
+    let agents = agents(&target, "agents-ended").await?;
+    let session = ok(agents.create(PRESET).await, "sessions.create")?;
+    let mut stream = ok(agents.subscribe(&session, 0).await, "subscribe")?;
+    event(&mut stream).await?;
+    ok(agents.purge(None).await, "purge")?;
+    loop {
+        match tokio::time::timeout(Duration::from_secs(5), stream.next()).await {
+            Ok(Some(SessionUpdate::Ended(_))) => return Ok(()),
+            Ok(Some(_)) => continue,
+            Ok(None) => return Err("the stream closed without session_ended".into()),
+            Err(_) => return Err("no session_ended within 5 s of the purge".into()),
+        }
+    }
+}
+
+fn refused_with<T: std::fmt::Debug>(
+    result: Result<T, isonomic_client::ClientError>,
+    code: ErrorCode,
+    what: &str,
+) -> Outcome {
+    refused(result, code, what)
 }

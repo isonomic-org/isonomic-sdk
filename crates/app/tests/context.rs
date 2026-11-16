@@ -35,3 +35,24 @@ async fn attention_reaches_the_window_and_settings_stay_per_app() {
         Some(serde_json::json!(320))
     );
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn an_app_asks_the_window_and_the_window_decides() {
+    use isonomic_app::{RecordedRequests, WindowRequest};
+    let engine = TestEngine::new();
+    let store = Arc::new(MemorySettings::default());
+    let client = engine.client().scoped(Token::new("t"));
+    let (alone, _) = AppContext::new("com.isonomic.chat", client.clone(), store.clone());
+    let install = WindowRequest::InstallModel {
+        model: "chat-small".into(),
+    };
+    assert!(!alone.request(install.clone()), "no window, no taker");
+    let window = Arc::new(RecordedRequests::default());
+    let (chat, _) = AppContext::new("com.isonomic.chat", client, store);
+    let chat = chat.with_window(window.clone());
+    assert!(chat.request(install.clone()));
+    assert_eq!(
+        window.all(),
+        vec![("com.isonomic.chat".to_string(), install)]
+    );
+}

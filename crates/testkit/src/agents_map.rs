@@ -3,6 +3,7 @@
 
 use harness_host as host;
 use isonomic_proto::agents as sdk;
+use isonomic_proto::blobs::CHUNK_BYTES;
 use isonomic_proto::{Bytes, ErrorCode, WireError};
 
 pub(crate) fn error(e: host::HostError) -> WireError {
@@ -45,6 +46,7 @@ pub(crate) fn create(r: sdk::CreateSession) -> (sdk::PresetId, host::CreateOptio
         title: r.title,
         location_opt_in: r.location_opt_in,
         limits: None,
+        model: r.model,
     };
     (r.preset, options)
 }
@@ -71,6 +73,7 @@ pub(crate) fn summary(s: host::SessionSummary) -> sdk::SessionSummary {
         forked_from: s
             .forked_from
             .map(|(session, seq)| sdk::ForkedFrom { session, seq }),
+        model: s.model,
         created_at: s.created_at,
         updated_at: s.updated_at,
         last_seq: s.last_seq,
@@ -180,11 +183,26 @@ pub(crate) fn preset(p: host::StoredPreset) -> sdk::PresetDetail {
     }
 }
 
-pub(crate) fn artifact(a: host::ArtifactVersion) -> sdk::ArtifactVersion {
-    sdk::ArtifactVersion {
-        meta: a.meta,
-        bytes: Bytes(a.bytes),
+/// One chunk of an artifact's body: at most `CHUNK_BYTES` from `offset`,
+/// fewer if `length` asks for fewer. Reading at or past the end of a
+/// non-empty body is `bad_request`, not an empty chunk.
+pub(crate) fn artifact(
+    a: host::ArtifactVersion,
+    offset: u64,
+    length: Option<u64>,
+) -> Result<sdk::ArtifactVersion, WireError> {
+    let len = a.bytes.len() as u64;
+    if offset > len || (offset == len && len > 0) {
+        let message = format!("offset {offset} is past the end of the {len}-byte body");
+        return Err(WireError::new(ErrorCode::BadRequest, message));
     }
+    let chunk = length.map_or(CHUNK_BYTES, |l| l.min(CHUNK_BYTES));
+    let end = offset.saturating_add(chunk).min(len);
+    Ok(sdk::ArtifactVersion {
+        meta: a.meta,
+        bytes: Bytes(a.bytes[offset as usize..end as usize].to_vec()),
+        offset,
+    })
 }
 
 pub(crate) fn purged(r: host::PurgeReport) -> sdk::PurgeReport {
@@ -192,5 +210,38 @@ pub(crate) fn purged(r: host::PurgeReport) -> sdk::PurgeReport {
         sessions: r.sessions,
         events: r.events,
         blobs: r.blobs,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn version(len: usize) -> host::ArtifactVersion {
+        let meta: sdk::ArtifactEvent = serde_json::from_value(serde_json::json!({
+            "artifact": "r-1", "version": 1, "op": "create", "title": "Notes",
+            "media_type": "text/plain", "blob": "b-1", "bytes": len, "call": "c-1"
+        }))
+        .unwrap();
+        host::ArtifactVersion {
+            meta,
+            bytes: (0..len).map(|i| (i % 251) as u8).collect(),
+        }
+    }
+
+    #[test]
+    fn an_artifact_body_comes_in_chunks() {
+        let len = CHUNK_BYTES as usize + 10;
+        let first = artifact(version(len), 0, None).unwrap();
+        assert_eq!(first.bytes.0.len() as u64, CHUNK_BYTES);
+        let rest = artifact(version(len), CHUNK_BYTES, None).unwrap();
+        assert_eq!((rest.offset, rest.bytes.0.len()), (CHUNK_BYTES, 10));
+        let small = artifact(version(len), 4, Some(3)).unwrap();
+        assert_eq!(small.bytes.0, vec![4, 5, 6]);
+        for past in [len as u64, len as u64 + 5] {
+            let error = artifact(version(len), past, None).unwrap_err();
+            assert_eq!(error.code, ErrorCode::BadRequest);
+        }
+        assert!(artifact(version(0), 0, None).unwrap().bytes.0.is_empty());
     }
 }

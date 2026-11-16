@@ -8,7 +8,7 @@ Needs the `models` capability. An app sees and uses only the models its manifest
 
 | Method | Params | Reply |
 | --- | --- | --- |
-| `models.list` | — | `models [ModelInfo]`, filtered to what the caller may use |
+| `models.list` | — | `models [ModelInfo]`, filtered to what the caller may use; `recommended: true` marks the model the engine recommends for this machine's profile |
 | `models.info` | `{ model }` | `model ModelDetail` |
 | `models.stream` | `StreamRequest` | `stream { subscription, model }`, then `model_chunk` events |
 | `models.cancel` | `{ subscription }` | `cancelled {}`; the stream's last chunk then has `stop: cancelled` |

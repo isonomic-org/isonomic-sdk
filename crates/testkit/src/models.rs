@@ -80,6 +80,16 @@ fn info(id: &str, capability: &str) -> ModelInfo {
         context_length: Some(8192),
         capabilities: vec![capability.to_string()],
         remote: false,
+        recommended: false,
+    }
+}
+
+/// The model as the caller sees it: `recommended` set on the one the
+/// engine recommends for this machine's profile.
+fn shown(model: &FakeModel, recommended: Option<&str>) -> ModelInfo {
+    ModelInfo {
+        recommended: recommended == Some(model.info.id.as_str()),
+        ..model.info.clone()
     }
 }
 
@@ -356,6 +366,31 @@ fn resolve(
     Ok((model.info.clone(), model.script.clone()))
 }
 
+/// May a session run on `id` for this caller? The checks `models.stream`
+/// makes, for `sessions.create { model }`.
+pub(crate) fn session_model(state: &State, caller: Caller<'_>, id: &str) -> Result<(), WireError> {
+    // The manifest first, so an app learns nothing about models it may not
+    // use; whether the model is remote needs the model, so that comes after.
+    authorize_model(caller, id, false)?;
+    let models = state.models.lock().unwrap();
+    let Some(model) = models.models.iter().find(|m| m.info.id == id) else {
+        return Err(WireError::new(
+            ErrorCode::UnknownModel,
+            format!("no model {id}"),
+        ));
+    };
+    authorize_model(caller, &model.info.id, model.info.remote)?;
+    if !model.info.supports("chat") {
+        let message = format!("model {id} does not do chat");
+        return Err(WireError::new(ErrorCode::Unsupported, message));
+    }
+    if !model.installed {
+        let message = format!("model {id} is not installed; download it first");
+        return Err(WireError::new(ErrorCode::ModelUnavailable, message));
+    }
+    Ok(())
+}
+
 /// Answer one `models.*` call. `None` when the answer was already sent.
 pub(crate) async fn dispatch(
     state: &Arc<State>,
@@ -367,16 +402,18 @@ pub(crate) async fn dispatch(
 ) -> Option<ServerMessage> {
     let answer = match call {
         Call::ModelsList => {
+            let recommended = crate::downloads::recommended_id(state);
             let models = state.models.lock().unwrap();
             let list = models
                 .models
                 .iter()
-                .map(|m| m.info.clone())
+                .map(|m| shown(m, recommended.as_deref()))
                 .filter(|info| visible(caller, info))
                 .collect();
             Ok(Reply::Models(list))
         }
         Call::ModelsInfo { model } => {
+            let recommended = crate::downloads::recommended_id(state);
             let models = state.models.lock().unwrap();
             match models.models.iter().find(|m| m.info.id == model) {
                 None => Err(WireError::new(
@@ -386,7 +423,7 @@ pub(crate) async fn dispatch(
                 Some(found) => {
                     authorize_model(caller, &found.info.id, found.info.remote).map(|()| {
                         Reply::Model(ModelDetail {
-                            info: found.info.clone(),
+                            info: shown(found, recommended.as_deref()),
                             size_bytes: found.size_bytes,
                             license: (!found.info.remote).then(|| "Test License".to_string()),
                             state: crate::downloads::state_of(state, found),

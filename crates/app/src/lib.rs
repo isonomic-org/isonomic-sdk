@@ -25,6 +25,7 @@
 
 mod context;
 mod host;
+mod requests;
 #[cfg(feature = "test-support")]
 pub mod testing;
 
@@ -66,6 +67,7 @@ pub use host::{register, LoadedApp, Registration, Tab};
 pub use isonomic_client::{AppClient, ClientError, ModelStream, Models};
 pub use isonomic_proto::manifest::{BlobAccess, ConnectionAccess, ModelAccess, Schema, SqlAccess};
 pub use isonomic_proto::{Capabilities, Manifest};
+pub use requests::{RecordedRequests, WindowRequest, WindowRequests};
 
 /// One result for the window's global search.
 #[derive(Debug, Clone, PartialEq, Eq)]

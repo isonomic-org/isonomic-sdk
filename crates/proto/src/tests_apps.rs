@@ -351,3 +351,39 @@ fn only_the_download_event_with_an_outcome_is_final() {
     assert!(progress(Some(DownloadOutcome::Installed)).is_final());
     assert!(progress(Some(DownloadOutcome::Cancelled)).is_final());
 }
+
+#[test]
+fn a_session_on_a_named_model_needs_that_model() {
+    use crate::agents::CreateSession;
+    let create = |model: Option<&str>| {
+        Call::SessionsCreate(CreateSession {
+            preset: "chat".into(),
+            title: None,
+            location_opt_in: false,
+            model: model.map(str::to_string),
+        })
+    };
+    let mut chat = hello();
+    chat.capabilities.agents = Some(AgentsAccess {});
+    chat.capabilities.models = Some(ModelAccess {
+        ids: vec!["chat-small".into()],
+        ..Default::default()
+    });
+    let app = Caller::App {
+        id: &chat.id,
+        capabilities: &chat.capabilities,
+    };
+    assert!(authorize(app, &create(None)).is_ok());
+    assert!(authorize(app, &create(Some("chat-small"))).is_ok());
+    let other = authorize(app, &create(Some("chat-large"))).unwrap_err();
+    assert_eq!(other.code, ErrorCode::CapabilityDenied);
+    chat.capabilities.models = None;
+    let bare = Caller::App {
+        id: &chat.id,
+        capabilities: &chat.capabilities,
+    };
+    assert!(authorize(bare, &create(None)).is_ok());
+    let none = authorize(bare, &create(Some("chat-small"))).unwrap_err();
+    assert_eq!(none.code, ErrorCode::CapabilityDenied);
+    assert!(authorize(Caller::Shell, &create(Some("chat-large"))).is_ok());
+}

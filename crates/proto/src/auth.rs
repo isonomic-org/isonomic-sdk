@@ -62,6 +62,14 @@ fn denied(app: &str, what: impl std::fmt::Display) -> WireError {
     )
 }
 
+/// The model a `sessions.create` names, if any.
+fn session_model(call: &Call) -> Option<&str> {
+    match call {
+        Call::SessionsCreate(create) => create.model.as_deref(),
+        _ => None,
+    }
+}
+
 /// May this caller make this call? Checks what the call itself names. A
 /// call that leaves a choice to the engine (a default model, say) is
 /// checked again by the engine once it has chosen.
@@ -80,10 +88,9 @@ pub fn authorize(caller: Caller<'_>, call: &Call) -> Result<(), WireError> {
         return Err(denied(id, format_args!("call {}", call.method())));
     }
     match interface {
-        // Installing models is the window's first-run job, not an app's.
-        Interface::Models if call.installs_models() => {
-            Err(denied(id, format_args!("call {}", call.method())))
-        }
+        // Installing models and minting a person's decision are the
+        // window's jobs, not an app's.
+        _ if call.window_only() => Err(denied(id, format_args!("call {}", call.method()))),
         Interface::Models => {
             let Some(models) = &capabilities.models else {
                 return Err(denied(id, "use models"));
@@ -128,6 +135,15 @@ pub fn authorize(caller: Caller<'_>, call: &Call) -> Result<(), WireError> {
         },
         Interface::Sql if capabilities.sql.is_none() => Err(denied(id, "use sql")),
         Interface::Agents if capabilities.agents.is_none() => Err(denied(id, "use agents")),
+        // A session on a model of the app's choosing: the same rule as
+        // `models.stream`. Whether it is remote is checked by the engine.
+        Interface::Agents if session_model(call).is_some() => {
+            let model = agents::model_name(session_model(call).unwrap_or_default())?;
+            match &capabilities.models {
+                Some(models) if models.names(model) => Ok(()),
+                _ => Err(denied(id, format_args!("use model {model}"))),
+            }
+        }
         // As for events: an app's own scope, or the shell's naming any app.
         // Which sessions, presets and artifacts an app reaches beyond that
         // is the host's decision: another app's ids answer `not_found`.
