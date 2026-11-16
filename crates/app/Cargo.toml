@@ -17,9 +17,9 @@ extra = ["component", "dep:isonomic-ui-extra"]
 # The shared toolkits, reached through the SDK; reserved, empty for now.
 editor = []
 node-graph = []
-# A headless host for app tests: an in-memory engine, a granted token, and
-# GPUI's test harness.
-test-support = ["dep:isonomic-testkit", "isonomic-ui/test-support", "tokio/rt-multi-thread"]
+# A headless host for app tests: an in-memory engine, a granted token,
+# GPUI's test harness, and the one-app shell header (so `extra` too).
+test-support = ["dep:isonomic-testkit", "isonomic-ui/test-support", "tokio/rt-multi-thread", "extra"]
 
 [dependencies]
 isonomic-client.workspace = true

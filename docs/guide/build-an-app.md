@@ -152,6 +152,40 @@ Some things only the window may do. An app asks with `cx.request(WindowRequest::
 
 A handled problem the person should know about goes the same way: `cx.report(Problem { summary, detail })`. Write the summary in plain words, with nothing the person typed. The window adds the app's id and version, scrubs it and shows the problem-report notice. An app reports at most one a minute (`REPORT_INTERVAL`); `report` returns `false` past that. In tests, `TestHost::reports()` (`docs/reports.md`).
 
+### The shell header
+
+The window draws no rail beside an app that hosts its shell header. The app's sidebar carries the window's part instead:
+
+```rust
+impl App for Chat {
+    fn hosts_shell_header() -> bool { true }
+    /* ... */
+}
+
+// In the sidebar's render:
+let header = self.app.shell_header(window, cx);
+let top = div().pt(self.app.shell_inset());
+let top = match self.app.sidebar() {
+    Sidebar::Expanded => top.flex().flex_row().child(toggle).child(header),
+    Sidebar::Collapsed => top.flex().flex_col().child(header).child(toggle),
+};
+
+// When the person folds or opens the sidebar:
+self.app.set_sidebar(Sidebar::Collapsed);
+```
+
+- **Placement.** `cx.shell_header(window, cx)` is the window's element.
+  - Expanded, it goes beside the sidebar toggle, which stays at the left of the top row.
+  - Collapsed, it goes at the top of the narrow rail, with the toggle under it.
+  - Draw it on every render of the sidebar.
+- **What the window puts there.** With one app, the plain wordmark in its product form ("Isonomic Chat", Isonomic UI's `Wordmark::product`) when expanded, and the app's icon when collapsed. With more than one, a ghost button with a caret that opens the window's menu of apps and Home.
+- **No wordmark of your own.** An app that places the header draws no wordmark itself.
+- **The sidebar's state.** `cx.set_sidebar(Sidebar::Expanded | Sidebar::Collapsed)` tells the window. It draws the header for that state and keeps the traffic lights clear. `cx.sidebar()` reads the state back; it is `Expanded` until the app says otherwise.
+- **The inset.** `cx.shell_inset()` is the room to leave for the window's controls: at the left of the top row when expanded, above the header when collapsed. Without a window shell it is zero.
+- **Opting in.** `App::hosts_shell_header()` defaults to `false`. Such an app keeps the window's rail, so it needn't change. The window reads the flag before its first frame, so the rail never flickers.
+
+In tests, `TestHost` supplies the one-app header (`shell::ProductWordmark`) and records each draw: `host.shell_headers()` lists `(app, Sidebar)`. `open.sidebar` is the window's subscription, and `open.hosts_shell_header` is the flag.
+
 ## 5. Agent sessions
 
 With the `agents` capability, `cx.client().agents()` runs agent sessions in the engine's host: create one from a preset, send input, and follow its events. Every method and rule is in `docs/interfaces/agents.md`; the event types are harness-core's, under `isonomic_proto::agents::schema`.
@@ -201,7 +235,8 @@ fn it_streams_a_reply(cx: &mut TestAppContext) {
 - `agents()` is harness-host's `MemoryHost`: `reply(text)` scripts the model, `advance(ms)` moves the clock, `user_action(app, session, approval)` stands in for the person, and `log(session)` reads what was stored (`docs/interfaces/agents.md`).
 - `slow(interface, delay)`, `fail(interface, error)` and `recover(interface)` make any interface slow or failing, to test spinners and error states.
 - `wait_until` wakes on the view's notifications; it never sleeps on a timer.
-- `open.attention` is what the rail would show.
+- `open.attention` is what the rail would show; `open.sidebar` and `host.shell_headers()` are the shell header's side (above).
+- `host.open` initialises Isonomic UI as the window does, so components that need the theme draw.
 - No socket, no engine binary, no network: these tests run anywhere, including CI on Linux.
 
 ## 7. Registering it in the window
@@ -213,6 +248,11 @@ let apps = [isonomic_app::register::<Hello>(), /* ... */];
 ```
 
 For each app the window grants a token from the manifest (`client.grant(manifest)`), makes the context (`AppContext::new(id, client.scoped(token), settings)`), and opens the app in a tab (`registration.open(cx, window, app)`, or `Tab::open`). It keeps the `LoadedApp` to route deep links, search and unload, and watches the attention receiver for the rail.
+
+For the shell header:
+1. `registration.hosts_shell_header()` says whether to leave out the rail.
+2. The window gives the context its header with `AppContext::with_shell(Arc<dyn Shell>)`. `shell::ProductWordmark::of(&manifest)` is the one-app form. With more apps, the window's own `Shell` returns its switcher. Both implement `header(app, sidebar, window, cx)` and `inset(sidebar)`.
+3. `cx.sidebar_changes()`, taken before the context is handed to the app, is the window's `watch::Receiver<Sidebar>`.
 
 ## Checklist
 
