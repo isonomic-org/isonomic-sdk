@@ -9,12 +9,14 @@
 //!   keys and IDs, overlong messages).
 //! - [`backtrace`]: backtraces as functions and crate-relative places.
 //! - [`filter`]: the stricter rules for service logs.
+//! - [`id`]: a report's own id, for dropping duplicates.
 //!
 //! Where a report is kept, the setting that allows it, and the panic hook
 //! stay with each side: they differ.
 
 pub mod backtrace;
 pub mod filter;
+pub mod id;
 pub mod scrub;
 
 use serde_json::{json, Map, Value};
@@ -107,6 +109,10 @@ pub enum Component {
 /// One report, before it is written.
 #[derive(Debug, Clone)]
 pub struct Report {
+    /// The report's own id (32 hex characters), made by [`Report::new`].
+    /// Written as the top-level `id`, never scrubbed. `None` writes none,
+    /// like a file from before ids.
+    pub id: Option<String>,
     pub kind: Kind,
     pub component: Component,
     pub message: String,
@@ -123,6 +129,7 @@ pub struct Report {
 impl Report {
     pub fn new(kind: Kind, component: Component, message: impl Into<String>) -> Self {
         Self {
+            id: Some(id::new_id()),
             kind,
             component,
             message: message.into(),
@@ -200,6 +207,9 @@ impl Report {
             "tab": self.tab,
         });
         if let Value::Object(map) = &mut doc {
+            if let Some(id) = &self.id {
+                map.insert("id".into(), Value::String(id.clone()));
+            }
             map.extend(extra);
             for (key, value) in &self.extra {
                 map.insert(key.clone(), value.clone());
@@ -296,5 +306,21 @@ mod tests {
         assert_eq!(doc["component"]["id"], "engine/model-server");
         assert_eq!(doc["model"]["id"], "chat-small");
         assert_eq!(doc["model"]["last_exit"], "signal 9");
+    }
+
+    #[test]
+    fn a_report_carries_its_own_id_unscrubbed() {
+        let report = Report::new(Kind::Panic, Component::Window, "fell over");
+        let id = report.id.clone().expect("an id");
+        assert!(id::is_id(&id));
+        let doc = report.to_json(&build(), &system(), Some("/Users/omar"), 1);
+        assert_eq!(doc["id"], id.as_str(), "not [key removed]");
+        assert_eq!(id::report_id(&doc, "1-panic.json", "capsule-1"), id);
+        let mut older = report.clone();
+        older.id = None;
+        assert!(older
+            .to_json(&build(), &system(), None, 1)
+            .get("id")
+            .is_none());
     }
 }

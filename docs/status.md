@@ -9,6 +9,10 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
+## 2026-11-16 · Report ids
+
+Format 1 gains an optional top-level `id` (32 hex characters, made by `Report::new`, never scrubbed). `id::report_id` returns it, or for an older file derives a stable one from the file name and the Capsule's id. There is no random-number dependency: the bits come from the standard library's random hasher keys, so an id is unique, not secret.
+
 ## 2026-11-16 · Isonomic UI at 4f1207b
 
 `UI_REF` moves to 4f1207b, with the options Chat needs to match the design. The three non-additive points (`PaletteCommand`'s `icon` and `meta`, `PopupMenuItem::Item`'s `destructive`, `IconName`'s derives) touch nothing in the SDK. hello-app and every test pass on it, and a crate outside the workspace still builds against `isonomic-app` alone.
