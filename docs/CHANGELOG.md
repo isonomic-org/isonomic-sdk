@@ -6,6 +6,22 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+
+## Unreleased: Isonomic UI at b4c9670
+
+**Wire:** no change.
+
+**For the engine and the window:** move `../isonomic-ui` to `b4c967050e0f0b91d880b96ec2e33dd9ea6019ee`, the commit in `UI_REF`. Additive since 2e3116b:
+- `extra::run_status_bar::{RunStatusBar, RunStatus}`;
+- `PromptComposer::set_attach(false, cx)` to hide attaching;
+- focus fixes in four components outside version 1.
+
+**For apps:** the UI's macros now find `isonomic-app` by themselves and expand to `isonomic_app::ui::` paths. So `use isonomic_app::ui as gpui;` is no longer needed: import from `isonomic_app::ui` and write `#[ui::test]`. Two things must hold, and both do:
+- `isonomic-app` exposes the whole of Isonomic UI as `ui`;
+- the app's workspace root carries the SDK's `gpui-pre-macros` patch line.
+
+The old alias still works. hello-app now uses `isonomic_app::ui` directly.
+
 ## Unreleased: the person's Isonomic ID (`identity`, needs-master)
 
 **Wire (additive, still version 0):** the shell-only interface `identity`. `identity.get {}` answers `identity { id, created }`, and the new error code is `identity_unavailable`. `proto::auth` refuses the interface to every app token. Nothing else about identity is on the wire in version 1 (`docs/interfaces/identity.md`).

@@ -5,6 +5,11 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
+
+## 2026-11-16 · Isonomic UI at b4c9670: no alias needed
+
+`UI_REF` moves to b4c9670. The UI's macros now recognise `isonomic-app` as the facade, the follow-up filed from #24. A scratch crate outside the workspace, depending on `isonomic-app` alone with no `gpui` alias, derives components in two modules, runs `#[isonomic_app::ui::test]` and names `extra::run_status_bar::RunStatusBar`. hello-app drops its alias. The guide and the app crate's docs say the alias is optional.
+
 ## 2026-11-16 · The person's Isonomic ID (needs-master)
 
 **Built:** the shell-only interface `identity` (`identity.get` → `identity { id, created }`, error `identity_unavailable`), `Client::identity()`, the testkit's `FakeIdentity`, 8 fixture lines, 3 testkit tests and the conformance check `identity.stable`. Omar moved the Isonomic ID into version 1 on 16 Nov.

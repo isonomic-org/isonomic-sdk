@@ -18,12 +18,13 @@ isonomic-testkit = { path = "../isonomic-sdk/crates/testkit" }
 
 The SDK is a sibling checkout pinned by commit (`SDK_REF`). **Isonomic UI comes through the SDK** as `isonomic_app::ui`, at the commit in the SDK's `UI_REF`, and is compiled into the window once. An app's front end is a configuration of those shared components; its back end is its own logic on the SDK. Do not depend on `isonomic-ui` yourself and do not keep a `UI_REF` of your own: the SDK's pin is the only one. GPUI comes only through it; name it nowhere else.
 
-Import the components under the name `gpui`, which the UI's macros expand to, in every module that derives a component or runs `#[gpui::test]`:
+Import the components from `isonomic_app::ui`. The UI's macros (derives, `#[ui::test]`) find it there by themselves, so an app needs no alias:
 
 ```rust
-use isonomic_app::ui as gpui;
-use gpui::{div, IntoElement, ParentElement, Render, Window};
+use isonomic_app::ui::{self, div, IntoElement, ParentElement, Render, Window};
 ```
+
+The older `use isonomic_app::ui as gpui;` still works, for code written that way.
 
 The build still needs the UI's source next to the SDK: a checkout of `../isonomic-ui` at the SDK's `UI_REF`, and in your workspace root the same patch line the SDK has, `gpui-pre-macros = { path = "../isonomic-ui/vendor/gpui-pre-macros" }` under `[patch.crates-io]`.
 
@@ -180,9 +181,9 @@ while let Some(update) = stream.next().await {
 `isonomic_app::testing` (feature `test-support`) runs the app in a headless window against the in-memory engine, under a token granted from the app's own manifest. The testkit enforces that token exactly as the engine does, so a test fails if the app calls anything its manifest does not allow.
 
 ```rust
-use isonomic_app::ui as gpui;
+use isonomic_app::ui;
 
-#[gpui::test]
+#[ui::test]
 fn it_streams_a_reply(cx: &mut TestAppContext) {
     let host = TestHost::new();
     let open = host.open::<Hello>(cx);

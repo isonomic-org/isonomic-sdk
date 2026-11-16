@@ -4,14 +4,14 @@
 //! Everything it reaches goes through its [`AppContext`]: the client
 //! scoped to its token, its settings, and its attention signal.
 
-use isonomic_app::ui as gpui;
+use isonomic_app::ui;
 
-use gpui::{
+use isonomic_app::{App, AppContext, Attention, Manifest, ModelAccess, SearchHit};
+use isonomic_proto::{Capabilities, Message, ModelInfo, StreamRequest};
+use ui::{
     div, AnyView, AppContext as _, Context, IntoElement, ParentElement, Render, Styled, WeakEntity,
     Window,
 };
-use isonomic_app::{App, AppContext, Attention, Manifest, ModelAccess, SearchHit};
-use isonomic_proto::{Capabilities, Message, ModelInfo, StreamRequest};
 
 /// What the reply is doing.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -76,7 +76,7 @@ impl Hello {
 async fn run(
     app: &AppContext,
     this: &WeakEntity<Hello>,
-    cx: &mut gpui::AsyncApp,
+    cx: &mut ui::AsyncApp,
 ) -> Result<(), String> {
     let models = app.client().models();
     let list = models.list().await.map_err(|e| e.to_string())?;
@@ -131,7 +131,7 @@ impl App for Hello {
         }
     }
 
-    fn build(cx: AppContext, _window: &mut Window, app: &mut gpui::App) -> AnyView {
+    fn build(cx: AppContext, _window: &mut Window, app: &mut ui::App) -> AnyView {
         app.new(|view| Hello::new(cx, view)).into()
     }
 
