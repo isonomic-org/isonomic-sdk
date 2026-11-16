@@ -82,3 +82,7 @@
 {"type":"response","id":117,"error":{"code":"unknown_model","message":"no model chat-huge"}}
 {"type":"request","id":118,"token":"tok-chat-1","method":"sessions.create","params":{"preset":"chat","model":"chat-medium"}}
 {"type":"response","id":118,"error":{"code":"model_unavailable","message":"model chat-medium is not installed; download it first"}}
+{"type":"request","id":119,"token":"tok-chat-1","method":"sessions.open","params":{"session":"s-6"}}
+{"type":"response","id":119,"result":{"session_snapshot":{"summary":{"id":"s-6","app":"com.isonomic.chat","class":"interactive","preset":{"id":"chat","version":2},"title":"Trip to Lisbon","status":"active","model":"chat-small","created_at":1700000000000,"updated_at":1700000000500,"last_seq":4}}}}
+{"type":"request","id":120,"token":"tok-chat-1","method":"sessions.create","params":{"preset":"chat","model":"  "}}
+{"type":"response","id":120,"error":{"code":"bad_request","message":"the model name is blank"}}

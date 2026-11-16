@@ -139,7 +139,7 @@ pub fn authorize(caller: Caller<'_>, call: &Call) -> Result<(), WireError> {
         // A session on a model of the app's choosing: the same rule as
         // `models.stream`. Whether it is remote is checked by the engine.
         Interface::Agents if session_model(call).is_some() => {
-            let model = session_model(call).unwrap_or_default();
+            let model = agents::model_name(session_model(call).unwrap_or_default())?;
             match &capabilities.models {
                 Some(models) if models.names(model) => Ok(()),
                 _ => Err(denied(id, format_args!("use model {model}"))),

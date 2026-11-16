@@ -50,6 +50,24 @@ fn zero32(n: &u32) -> bool {
     *n == 0
 }
 
+/// The longest model name `sessions.create` takes, in bytes, once trimmed.
+pub const MAX_MODEL_NAME: usize = 128;
+
+/// The model a `sessions.create` names, trimmed. Blank or longer than
+/// [`MAX_MODEL_NAME`] is `bad_request`; the engine and the testkit both
+/// check names here.
+pub fn model_name(name: &str) -> Result<&str, crate::WireError> {
+    let name = name.trim();
+    let bad = |why: &str| crate::WireError::new(crate::ErrorCode::BadRequest, why);
+    if name.is_empty() {
+        return Err(bad("the model name is blank"));
+    }
+    if name.len() > MAX_MODEL_NAME {
+        return Err(bad("the model name is longer than 128 bytes"));
+    }
+    Ok(name)
+}
+
 /// `sessions.create`: the class comes from the preset.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CreateSession {
@@ -253,6 +271,9 @@ pub struct SessionSummary {
     pub archived: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub forked_from: Option<ForkedFrom>,
+    /// The model picked at creation; absent when the preset's model runs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
     pub created_at: u64,
     pub updated_at: u64,
     pub last_seq: Seq,

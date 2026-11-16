@@ -435,3 +435,41 @@ async fn a_session_may_name_a_model_its_app_may_use() {
         ErrorCode::CapabilityDenied
     );
 }
+
+#[tokio::test]
+async fn the_picked_model_runs_the_session_and_shows_on_its_summary() {
+    use isonomic_proto::agents::CreateSession;
+    use isonomic_proto::manifest::ModelAccess;
+    let engine = TestEngine::new();
+    let mut chat = manifest("com.isonomic.chat", true);
+    chat.capabilities.models = Some(ModelAccess {
+        ids: vec!["chat-small".into()],
+        ..Default::default()
+    });
+    let agents = engine.client().scoped(engine.grant(&chat)).agents();
+    let on = |model: &str| CreateSession {
+        preset: "test".into(),
+        title: None,
+        location_opt_in: false,
+        model: Some(model.into()),
+    };
+    let picked = agents.create_with(on("  chat-small ")).await.unwrap();
+    agents.send_text(&picked, "Hi").await.unwrap();
+    let asked = engine
+        .agents()
+        .with(|host| host.model.requests.lock().unwrap().last().cloned());
+    assert_eq!(asked.expect("a model request").model, "chat-small");
+    let summary = agents.open(&picked).await.unwrap().summary;
+    assert_eq!(summary.model.as_deref(), Some("chat-small"));
+    let preset = agents.create("test").await.unwrap();
+    assert_eq!(agents.open(&preset).await.unwrap().summary.model, None);
+    assert_eq!(
+        code(agents.create_with(on("   ")).await),
+        ErrorCode::BadRequest
+    );
+    let long = "m".repeat(isonomic_proto::agents::MAX_MODEL_NAME + 1);
+    assert_eq!(
+        code(agents.create_with(on(&long)).await),
+        ErrorCode::BadRequest
+    );
+}

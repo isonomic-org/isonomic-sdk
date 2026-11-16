@@ -22,9 +22,9 @@ isonomic-testkit = { path = "crates/testkit" }
 isonomic-conformance = { path = "crates/conformance" }
 # Session event types, re-exported by the proto. Pinned: change only with a
 # changelog entry. CI fetches it with the shared workflow's `harness` input.
-harness-core = { git = "ssh://git@github.com/isonomic-org/isonomic-harness.git", rev = "f0612113f6dcc8e11528642137e6dd9b24f48165" }
+harness-core = { git = "ssh://git@github.com/isonomic-org/isonomic-harness.git", rev = "61438c9dfd36e515cfe2d1f4e06fda9d3be5320e" }
 # The host the testkit runs agent sessions on, at the same commit.
-harness-host = { git = "ssh://git@github.com/isonomic-org/isonomic-harness.git", rev = "f0612113f6dcc8e11528642137e6dd9b24f48165" }
+harness-host = { git = "ssh://git@github.com/isonomic-org/isonomic-harness.git", rev = "61438c9dfd36e515cfe2d1f4e06fda9d3be5320e" }
 isonomic-app = { path = "crates/app" }
 # Isonomic UI is a sibling checkout pinned to the commit in UI_REF, the same
 # way the engine and the window pin this repo. Only the app crate (and apps)

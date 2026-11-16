@@ -166,16 +166,19 @@ pub(crate) async fn dispatch(
     token: Option<Token>,
     call: Call,
 ) -> Option<ServerMessage> {
-    if let Call::SessionsCreate(create) = &call {
-        if let Some(model) = &create.model {
-            if let Err(error) = crate::models::session_model(state, caller, model) {
-                return Some(failure(id, error));
+    let call = match call {
+        Call::SessionsCreate(mut create) if create.model.is_some() => {
+            let named = create.model.take().unwrap_or_default();
+            let checked = isonomic_proto::agents::model_name(&named)
+                .and_then(|name| crate::models::session_model(state, caller, name).map(|()| name));
+            match checked {
+                Ok(name) => create.model = Some(name.to_string()),
+                Err(error) => return Some(failure(id, error)),
             }
-            // FOLLOW-UP: pass the model to the host once harness-host takes a
-            // create-time model override. Until then the session runs on
-            // the preset's model.
+            Call::SessionsCreate(create)
         }
-    }
+        call => call,
+    };
     match call {
         Call::SessionsSubscribe(r) => {
             let opened = {

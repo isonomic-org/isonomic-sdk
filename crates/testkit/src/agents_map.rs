@@ -45,6 +45,7 @@ pub(crate) fn create(r: sdk::CreateSession) -> (sdk::PresetId, host::CreateOptio
         title: r.title,
         location_opt_in: r.location_opt_in,
         limits: None,
+        model: r.model,
     };
     (r.preset, options)
 }
@@ -71,6 +72,7 @@ pub(crate) fn summary(s: host::SessionSummary) -> sdk::SessionSummary {
         forked_from: s
             .forked_from
             .map(|(session, seq)| sdk::ForkedFrom { session, seq }),
+        model: s.model,
         created_at: s.created_at,
         updated_at: s.updated_at,
         last_seq: s.last_seq,
