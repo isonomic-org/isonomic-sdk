@@ -32,19 +32,21 @@ pub mod testing;
 use isonomic_ui as gpui;
 
 /// Isonomic UI, the components every app's front end is made of, at the
-/// commit in the SDK's `UI_REF`. Import it under the name `gpui`, which its
-/// macros expand to:
+/// commit in the SDK's `UI_REF`. Its macros find it here by themselves: an
+/// app that depends on `isonomic-app` alone needs no alias.
 ///
 /// ```ignore
-/// use isonomic_app::ui as gpui;
-/// use gpui::{div, IntoElement, ParentElement, Render};
+/// use isonomic_app::ui::{self, div, IntoElement, ParentElement, Render};
 ///
 /// #[derive(IntoElement)]
 /// struct Badge;
+///
+/// #[ui::test]
+/// fn renders(cx: &mut ui::TestAppContext) {}
 /// ```
 ///
-/// Put that `use` in every module that derives a component or runs
-/// `#[gpui::test]`.
+/// The app's workspace root needs the same `gpui-pre-macros` patch line as
+/// the SDK's. The older `use isonomic_app::ui as gpui;` still works.
 pub use isonomic_ui as ui;
 
 /// Isonomic UI's extra components: the prompt composer, the thinking

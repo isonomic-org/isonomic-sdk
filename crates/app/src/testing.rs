@@ -5,9 +5,9 @@
 //! calling something its manifest does not allow.
 //!
 //! ```ignore
-//! use isonomic_app::ui as gpui;
+//! use isonomic_app::ui;
 //!
-//! #[gpui::test]
+//! #[ui::test]
 //! fn shows_the_models(cx: &mut TestAppContext) {
 //!     let host = TestHost::new();
 //!     let open = host.open::<Hello>(cx);
