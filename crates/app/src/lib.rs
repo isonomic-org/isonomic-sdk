@@ -25,6 +25,7 @@
 
 mod context;
 mod host;
+mod requests;
 #[cfg(feature = "test-support")]
 pub mod testing;
 
@@ -63,6 +64,7 @@ pub mod node_graph {}
 
 pub use context::{AppContext, Attention, MemorySettings, Settings, SettingsStore};
 pub use host::{register, LoadedApp, Registration, Tab};
+pub use requests::{RecordedRequests, WindowRequest, WindowRequests};
 pub use isonomic_client::{AppClient, ClientError, ModelStream, Models};
 pub use isonomic_proto::manifest::{BlobAccess, ConnectionAccess, ModelAccess, Schema, SqlAccess};
 pub use isonomic_proto::{Capabilities, Manifest};
