@@ -5,7 +5,7 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 ## 2026-11-16 · Every model a stored preset names
 
-**Built:** the testkit holds both models a stored preset names, `[model] id` and `title_model`, to the app's manifest. It checks every name against the manifest before it asks whether any of them runs. `agents.model_rules` gains the title-model case. From the final check of #30.
+**Built:** the testkit holds both models a stored preset names, `[model] id` and `title_model`, to the app's manifest. It checks every name against the manifest before it asks whether any of them runs. `agents.model_rules` gains the title-model case. From the final check of #30. Harness moves to ae4f1a7 (chat preset version 3, window-fit compaction); no SDK test depended on the preset's version or text.
 
 ## 2026-11-16 · Wire follow-ups and the model picker (#30, needs-master)
 
