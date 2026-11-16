@@ -9,8 +9,8 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 **Built:**
 - **`lib.rs` split:** `reply.rs` holds `Reply` and `Event`, `error.rs` holds `WireError` and `ErrorCode`. Paths are unchanged.
-- **Model picker:** `ModelInfo.recommended`; `sessions.create { model? }`, passed to the host's create-time override; `SessionSummary.model`. `agents::model_name` trims and bounds a name to 128 bytes, used by `proto::auth` and the testkit.
-- **Harness at 61438c9:** the create-time model, and chat preset version 2. No SDK test depended on preset version 1.
+- **Model picker:** `ModelInfo.recommended`; `sessions.create { model? }`, passed to the host's create-time override; `SessionSummary.model`. `agents::model_name` trims a name and refuses one over 128 characters (the engine's bound) or 200 bytes (the host's), or with a control character; `proto::auth` and the testkit use it.
+- **Harness at 9a3809f:** the create-time model, and chat preset version 2. No SDK test depended on preset version 1.
 - **From the #16 review:**
   - `session_ended` closes a session stream.
   - `approvals.user_action` (shell only) mints the person's token for (session, approval, app).

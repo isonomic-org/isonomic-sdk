@@ -5,16 +5,16 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 ## Unreleased: the model picker, and the agents follow-ups (#30)
 
-**Build:** harness moves to `61438c9dfd36e515cfe2d1f4e06fda9d3be5320e` (the create-time model override, and chat preset version 2). Every consumer declares it exactly so:
+**Build:** harness moves to `9a3809f376e5f7307727f01fad0973b64b8d9e9d` (the create-time model override and its follow-ups, and chat preset version 2). Every consumer declares it exactly so:
 
 ```toml
-harness-core = { git = "ssh://git@github.com/isonomic-org/isonomic-harness.git", rev = "61438c9dfd36e515cfe2d1f4e06fda9d3be5320e" }
+harness-core = { git = "ssh://git@github.com/isonomic-org/isonomic-harness.git", rev = "9a3809f376e5f7307727f01fad0973b64b8d9e9d" }
 ```
 
 **Wire (additive, still version 0)**
 
 - `ModelInfo.recommended` (omitted when false), in `models.list` and `models.info`.
-- `sessions.create { model? }`: the session runs on that model. `proto::auth` lets an app name only a model its `models` capability allows (`capability_denied`), and `agents::model_name` trims it and refuses a blank or over-128-byte one (`bad_request`). `SessionSummary.model` reports it (absent for the preset's model).
+- `sessions.create { model? }`: the session runs on that model. `proto::auth` lets an app name only a model its `models` capability allows (`capability_denied`), and `agents::model_name` trims it and refuses a blank name, one over 128 characters or 200 bytes, or one with a control character (`bad_request`). `SessionSummary.model` reports it (absent for the preset's model).
 - `session_ended { session, reason }`, the last event of a session stream (`reason: purged`).
 - `approvals.user_action { session, approval, app? }` → `user_action { token }`, shell only.
 - `artifacts.get { offset?, length? }` and `artifact { offset? }`: at most `CHUNK_BYTES` a reply.

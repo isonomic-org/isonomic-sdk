@@ -50,20 +50,29 @@ fn zero32(n: &u32) -> bool {
     *n == 0
 }
 
-/// The longest model name `sessions.create` takes, in bytes, once trimmed.
+/// The longest model name `sessions.create` takes, in characters, once
+/// trimmed.
 pub const MAX_MODEL_NAME: usize = 128;
 
-/// The model a `sessions.create` names, trimmed. Blank or longer than
-/// [`MAX_MODEL_NAME`] is `bad_request`; the engine and the testkit both
-/// check names here.
+/// The host's own bound on a model name, in bytes.
+pub const MAX_MODEL_NAME_BYTES: usize = 200;
+
+/// The model a `sessions.create` names, trimmed. Blank, longer than
+/// [`MAX_MODEL_NAME`] characters or [`MAX_MODEL_NAME_BYTES`] bytes, or
+/// holding a control character is `bad_request`. The engine, `proto::auth`
+/// and the testkit all check names here, so a name that passes is one the
+/// host records.
 pub fn model_name(name: &str) -> Result<&str, crate::WireError> {
     let name = name.trim();
     let bad = |why: &str| crate::WireError::new(crate::ErrorCode::BadRequest, why);
     if name.is_empty() {
         return Err(bad("the model name is blank"));
     }
-    if name.len() > MAX_MODEL_NAME {
-        return Err(bad("the model name is longer than 128 bytes"));
+    if name.chars().count() > MAX_MODEL_NAME || name.len() > MAX_MODEL_NAME_BYTES {
+        return Err(bad("the model name is too long"));
+    }
+    if name.chars().any(char::is_control) {
+        return Err(bad("the model name holds a control character"));
     }
     Ok(name)
 }
