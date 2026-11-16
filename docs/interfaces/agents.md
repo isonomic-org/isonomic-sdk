@@ -35,7 +35,7 @@ Arguments and results (`CreateSession`, `SessionSummary`, `PendingApproval`, …
 | `presets.list` | `{}` | `presets [{ reference, owner?, name, diagnostics }]` |
 | `presets.get` | `{ preset }` | `preset { reference, owner?, text, diagnostics }` |
 | `presets.put` | `{ text }` (TOML) | `preset_saved { reference }` |
-| `artifacts.get` | `{ artifact, version?, offset?, length? }` | `artifact { meta, bytes, offset? }`: at most `CHUNK_BYTES` (512 KiB) of the body from `offset`, base64; `meta.bytes` is the whole size. `Agents::artifact` reads every chunk |
+| `artifacts.get` | `{ artifact, version?, offset?, length? }` | `artifact { meta, bytes, offset? }`: at most `CHUNK_BYTES` (512 KiB) of the body from `offset`, base64; `meta.bytes` is the whole size. Reading at or past the end of a non-empty body is `bad_request`. `Agents::artifact` reads every chunk and refuses a reply whose `offset` or version does not match what it asked for |
 | `artifacts.list` | `{ session }` | `artifacts [ArtifactEvent]` |
 
 ```json
@@ -48,7 +48,7 @@ Approval, question and call ids are minted per session, so two sessions can each
 
 ## Events
 
-A stream's last event is `session_ended { session, reason }` (`reason: purged`), after which `SessionStream::next` returns `None`. If a sequence number is ever skipped (a malformed event the client could not read, say), `next` returns `SessionUpdate::Gap { after, next }` instead of the event; subscribe again from `last_seq()` to read the missing ones.
+A stream's last event is `session_ended { session, reason }` (`reason: purged`): `SessionStream::next` returns `SessionUpdate::Ended(reason)`, then `None`. A `None` with no `Ended` before it means the connection dropped, so subscribe again from `last_seq()`; after `Ended`, do not, since the session is gone. If a sequence number is ever skipped (a malformed event the client could not read, say), `next` returns `SessionUpdate::Gap { after, next }` instead of the event; subscribe again from `last_seq()` to read the missing ones.
 
 
 A subscription first replays the durable events after `from_seq`, then sends new ones as they are written, with no gap or duplicate at the seam. Each `session_event` is one `SessionEvent` (`session`, `seq`, `at`, `turn?`, `step?`, then `type` and its fields). To resume after a reconnect, subscribe from the last `seq` seen (`SessionStream::last_seq`).
@@ -61,7 +61,8 @@ A client tool call arrives as a `tool.call` event with `kind: client`; answer it
 
 - **Approvals need a person.** `approvals.decide` takes the user-action token the window minted when the person acted. The shell and the session's first-party app may decide; Views and third-party code only request (`not_allowed_to_decide`). Words that are not a clear yes are a denial.
 - **Client tools are the app's own.** `tools.register_client` applies to the calling app's token and that session only; `tools.result` is accepted only from the app that registered the tool.
-- **A session's model is the app's to pick, within its manifest.** `sessions.create { model }` follows the rule of `models.stream`: an app names only a model its `models` capability allows (`capability_denied` otherwise, from `proto::auth`; a remote one also needs `remote`). An unknown model answers `unknown_model`, one that cannot chat `unsupported`, one that is not installed `model_unavailable`. Absent, the preset's model runs, as before.
+- **The person's token.** `approvals.user_action` mints a token for one approval in one session, for one decider (the app named, or the shell). It is good only for that decision and only until the approval is decided, by anyone; it carries no other power. An engine may also expire it sooner; the testkit never does.
+- **A session's model is the app's to pick, within its manifest.** `sessions.create { model }` follows the rule of `models.stream`: an app names only a model its `models` capability allows (`capability_denied` otherwise, from `proto::auth`; a remote one also needs `remote`). An unknown model answers `unknown_model`, one that cannot chat `unsupported`, one that is not installed `model_unavailable`. Absent, the preset's model runs, as before. The same rule holds for a preset the app stored itself: its `[model] id` must be one the manifest allows, or `sessions.create` answers `capability_denied`. Built-in presets are the engine's choice and are not checked.
 - **Only the shell names another app.** `app` on `sessions.purge` and `approvals.list` works as on `events`: an app may name only itself (`capability_denied` otherwise, from `proto::auth`), and the shell may name any. The shell's purge with no `app` is `bad_request`, never "purge everything". An app that misspells `app` sends a key the engine ignores, so the call reads as `{}` and acts on the app's own sessions: tolerant decoding working as designed, not a way past the rule.
 - **Purge is the app's own data.** `sessions.purge` stops the app's running turns, then deletes its sessions' logs, attachments and artifacts. Nothing of any other app's is touched.
 

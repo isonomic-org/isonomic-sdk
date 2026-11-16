@@ -184,20 +184,25 @@ pub(crate) fn preset(p: host::StoredPreset) -> sdk::PresetDetail {
 }
 
 /// One chunk of an artifact's body: at most `CHUNK_BYTES` from `offset`,
-/// fewer if `length` asks for fewer.
+/// fewer if `length` asks for fewer. Reading at or past the end of a
+/// non-empty body is `bad_request`, not an empty chunk.
 pub(crate) fn artifact(
     a: host::ArtifactVersion,
     offset: u64,
     length: Option<u64>,
-) -> sdk::ArtifactVersion {
-    let chunk = length.map_or(CHUNK_BYTES, |l| l.min(CHUNK_BYTES)) as usize;
-    let start = (offset as usize).min(a.bytes.len());
-    let end = start.saturating_add(chunk).min(a.bytes.len());
-    sdk::ArtifactVersion {
-        meta: a.meta,
-        bytes: Bytes(a.bytes[start..end].to_vec()),
-        offset,
+) -> Result<sdk::ArtifactVersion, WireError> {
+    let len = a.bytes.len() as u64;
+    if offset > len || (offset == len && len > 0) {
+        let message = format!("offset {offset} is past the end of the {len}-byte body");
+        return Err(WireError::new(ErrorCode::BadRequest, message));
     }
+    let chunk = length.map_or(CHUNK_BYTES, |l| l.min(CHUNK_BYTES));
+    let end = offset.saturating_add(chunk).min(len);
+    Ok(sdk::ArtifactVersion {
+        meta: a.meta,
+        bytes: Bytes(a.bytes[offset as usize..end as usize].to_vec()),
+        offset,
+    })
 }
 
 pub(crate) fn purged(r: host::PurgeReport) -> sdk::PurgeReport {
@@ -227,13 +232,16 @@ mod tests {
     #[test]
     fn an_artifact_body_comes_in_chunks() {
         let len = CHUNK_BYTES as usize + 10;
-        let first = artifact(version(len), 0, None);
+        let first = artifact(version(len), 0, None).unwrap();
         assert_eq!(first.bytes.0.len() as u64, CHUNK_BYTES);
-        let rest = artifact(version(len), CHUNK_BYTES, None);
+        let rest = artifact(version(len), CHUNK_BYTES, None).unwrap();
         assert_eq!((rest.offset, rest.bytes.0.len()), (CHUNK_BYTES, 10));
-        let small = artifact(version(len), 4, Some(3));
+        let small = artifact(version(len), 4, Some(3)).unwrap();
         assert_eq!(small.bytes.0, vec![4, 5, 6]);
-        let past = artifact(version(len), len as u64 + 5, None);
-        assert!(past.bytes.0.is_empty());
+        for past in [len as u64, len as u64 + 5] {
+            let error = artifact(version(len), past, None).unwrap_err();
+            assert_eq!(error.code, ErrorCode::BadRequest);
+        }
+        assert!(artifact(version(0), 0, None).unwrap().bytes.0.is_empty());
     }
 }

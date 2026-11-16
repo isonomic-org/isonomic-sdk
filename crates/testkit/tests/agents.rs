@@ -56,6 +56,7 @@ async fn until(stream: &mut SessionStream, last: &str) -> Vec<SessionEvent> {
             }
             SessionUpdate::Delta(_) => {}
             SessionUpdate::Gap { after, next } => panic!("gap from {after} to {next}"),
+            SessionUpdate::Ended(reason) => panic!("ended: {reason:?}"),
         }
     }
 }
@@ -399,11 +400,21 @@ async fn a_purged_sessions_stream_ends() {
     let mut stream = agents.subscribe(&session, 0).await.unwrap();
     until(&mut stream, "session.start").await;
     agents.purge(None).await.unwrap();
-    let ended = tokio::time::timeout(Duration::from_secs(5), async {
-        while stream.next().await.is_some() {}
+    let last = tokio::time::timeout(Duration::from_secs(5), async {
+        let mut last = None;
+        while let Some(update) = stream.next().await {
+            last = Some(update);
+        }
+        last
     })
-    .await;
-    assert!(ended.is_ok(), "the stream did not end after purge");
+    .await
+    .expect("the stream did not end after purge");
+    let purged = isonomic_proto::agents::EndReason::Purged;
+    assert_eq!(
+        last,
+        Some(SessionUpdate::Ended(purged)),
+        "told apart from a dropped connection"
+    );
 }
 
 #[tokio::test]

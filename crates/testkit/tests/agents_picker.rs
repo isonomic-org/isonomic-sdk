@@ -121,3 +121,42 @@ async fn the_picked_model_runs_the_session_and_shows_on_its_summary() {
     let control = agents.create_with(on("chat\u{7}small")).await;
     assert_eq!(code(control), ErrorCode::BadRequest);
 }
+
+/// A preset of the app's own that runs on `model`.
+fn preset_on(id: &str, model: &str) -> String {
+    format!(
+        "id = \"{id}\"\nversion = 1\nname = \"Own\"\nclass = \"interactive\"\n\n[persona]\nprompt = \"Be brief.\"\n\n[model]\nid = \"{model}\"\nmax_output_tokens = 256\nreasoning = \"off\"\n\n[limits]\ntokens = 20000\nsteps = 8\nwall_ms = 60000\n"
+    )
+}
+
+#[tokio::test]
+async fn an_apps_own_preset_cannot_reach_a_model_its_manifest_does_not_allow() {
+    use isonomic_proto::manifest::ModelAccess;
+    let engine = TestEngine::new();
+    engine.models().add(isonomic_proto::ModelInfo {
+        id: "chat-large".into(),
+        name: "Chat Large".into(),
+        context_length: Some(32768),
+        capabilities: vec!["chat".into()],
+        remote: false,
+        recommended: false,
+    });
+    let mut chat = manifest("com.isonomic.chat", true);
+    chat.capabilities.models = Some(ModelAccess {
+        ids: vec!["chat-small".into()],
+        ..Default::default()
+    });
+    let agents = engine.client().scoped(engine.grant(&chat)).agents();
+    let large = agents
+        .put_preset(&preset_on("large", "chat-large"))
+        .await
+        .unwrap();
+    let refused = agents.create(&large.id.to_string()).await;
+    assert_eq!(code(refused), ErrorCode::CapabilityDenied);
+    let small = agents
+        .put_preset(&preset_on("small", "chat-small"))
+        .await
+        .unwrap();
+    agents.create(&small.id.to_string()).await.unwrap();
+    agents.create("test").await.unwrap();
+}

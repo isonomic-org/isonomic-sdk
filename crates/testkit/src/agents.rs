@@ -15,7 +15,7 @@ use harness_host::{
     AppKind, Caller as HostCaller, CapabilityToken, HostError, MemoryHost, Update, UserActionToken,
 };
 use isonomic_proto::agents::{
-    ApprovalId, EndReason, ForkReason, SessionEnded, SessionEvent, SessionId,
+    ApprovalId, EndReason, ForkReason, PresetId, SessionEnded, SessionEvent, SessionId,
 };
 use isonomic_proto::auth::Caller;
 use isonomic_proto::{Call, ErrorCode, Event, Reply, ServerMessage, Token, WireError};
@@ -146,8 +146,11 @@ fn answer(memory: &MemoryHost, caller: &HostCaller, call: Call) -> Result<Reply,
             .map(|p| Reply::Preset(Box::new(map::preset(p)))),
         Call::PresetsPut(r) => run(memory, host.put_preset(caller, r.text))
             .map(|reference| Reply::PresetSaved { reference }),
-        Call::ArtifactsGet(r) => run(memory, host.get_artifact(caller, &r.artifact, r.version))
-            .map(|a| Reply::Artifact(Box::new(map::artifact(a, r.offset, r.length)))),
+        Call::ArtifactsGet(r) => {
+            let found = run(memory, host.get_artifact(caller, &r.artifact, r.version));
+            let chunk = map::artifact(found.map_err(map::error)?, r.offset, r.length)?;
+            return Ok(Reply::Artifact(Box::new(chunk)));
+        }
         Call::ArtifactsList(r) => {
             run(memory, host.list_artifacts(caller, &r.session)).map(Reply::Artifacts)
         }
@@ -157,6 +160,17 @@ fn answer(memory: &MemoryHost, caller: &HostCaller, call: Call) -> Result<Reply,
         }
     };
     reply.map_err(map::error)
+}
+
+/// The model an app's own preset runs on; `None` for a built-in preset, or
+/// one the host does not find (it answers that itself).
+fn own_preset_model(state: &State, caller: Caller<'_>, preset: &PresetId) -> Option<String> {
+    let mut agents = state.agents.lock().unwrap();
+    let host_caller = agents.caller(caller);
+    let memory = &agents.memory;
+    let stored = run(memory, memory.host.get_preset(&host_caller, preset)).ok()?;
+    stored.owner.as_ref()?;
+    Some(stored.preset.as_ref()?.model.id.clone())
 }
 
 /// Answer one agents call, or `None` when a subscription answered itself.
@@ -176,6 +190,17 @@ pub(crate) async fn dispatch(
             match checked {
                 Ok(name) => create.model = Some(name.to_string()),
                 Err(error) => return Some(failure(id, error)),
+            }
+            Call::SessionsCreate(create)
+        }
+        // A preset of the app's own names its model too, and the same rule
+        // holds: an app cannot reach a model through a preset it stored.
+        // Built-in presets are the engine's choice and are not checked.
+        Call::SessionsCreate(create) if matches!(caller, Caller::App { .. }) => {
+            if let Some(model) = own_preset_model(state, caller, &create.preset) {
+                if let Err(error) = crate::models::session_model(state, caller, &model) {
+                    return Some(failure(id, error));
+                }
             }
             Call::SessionsCreate(create)
         }

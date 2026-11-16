@@ -369,6 +369,9 @@ fn resolve(
 /// May a session run on `id` for this caller? The checks `models.stream`
 /// makes, for `sessions.create { model }`.
 pub(crate) fn session_model(state: &State, caller: Caller<'_>, id: &str) -> Result<(), WireError> {
+    // The manifest first, so an app learns nothing about models it may not
+    // use; whether the model is remote needs the model, so that comes after.
+    authorize_model(caller, id, false)?;
     let models = state.models.lock().unwrap();
     let Some(model) = models.models.iter().find(|m| m.info.id == id) else {
         return Err(WireError::new(

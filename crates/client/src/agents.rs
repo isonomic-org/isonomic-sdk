@@ -170,6 +170,7 @@ impl Agents {
             client: self.client.clone(),
             token: self.token.clone(),
             last_seq: from_seq,
+            ended: false,
         })
     }
 
@@ -281,6 +282,15 @@ impl Agents {
             let chunk = *chunk;
             let total = chunk.meta.bytes;
             let empty = chunk.bytes.0.is_empty();
+            // An engine that ignores `offset`, mixes versions or overruns
+            // the body would corrupt it: refuse rather than return it.
+            let pinned = whole
+                .as_ref()
+                .is_none_or(|w| w.meta.version == chunk.meta.version);
+            let fits = offset + chunk.bytes.0.len() as u64 <= total;
+            if chunk.offset != offset || !pinned || !fits {
+                return Err(ClientError::UnexpectedReply);
+            }
             match &mut whole {
                 None => whole = Some(ArtifactVersion { offset: 0, ..chunk }),
                 Some(w) => w.bytes.0.extend_from_slice(&chunk.bytes.0),
@@ -333,6 +343,11 @@ pub enum SessionUpdate {
     /// Reply text as it streams. Drop deltas once the `assistant` event for
     /// their step arrives.
     Delta(LiveDelta),
+    /// The session is gone (purged): nothing more will come, and `next`
+    /// then returns `None`. Do not subscribe again. A `None` with no
+    /// `Ended` before it means the connection dropped: subscribe again from
+    /// `last_seq()`.
+    Ended(EndReason),
     /// Events between `after` and `next` never arrived (one was malformed,
     /// say). Subscribe again from `last_seq()`, which is still `after`, to
     /// read them; this stream skips the event that showed the gap.
@@ -345,6 +360,7 @@ pub struct SessionStream {
     client: Client,
     token: Option<Token>,
     last_seq: Seq,
+    ended: bool,
 }
 
 impl SessionStream {
@@ -358,9 +374,12 @@ impl SessionStream {
         self.last_seq
     }
 
-    /// The next update. `None` once the connection drops or the session is
-    /// purged.
+    /// The next update. After a purge, `Ended` and then `None`; a `None`
+    /// without `Ended` means the connection dropped.
     pub async fn next(&mut self) -> Option<SessionUpdate> {
+        if self.ended {
+            return None;
+        }
         loop {
             match self.events.next().await? {
                 Event::SessionEvent(event) if event.seq <= self.last_seq => continue,
@@ -376,8 +395,11 @@ impl SessionStream {
                     return Some(SessionUpdate::Event(event));
                 }
                 Event::LiveDelta(delta) => return Some(SessionUpdate::Delta(delta)),
-                // The session is gone (purged): the stream ends.
-                Event::SessionEnded(_) => return None,
+                // The session is gone (purged): say so once, then end.
+                Event::SessionEnded(end) => {
+                    self.ended = true;
+                    return Some(SessionUpdate::Ended(end.reason));
+                }
                 _ => continue,
             }
         }

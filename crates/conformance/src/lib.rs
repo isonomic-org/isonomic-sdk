@@ -92,6 +92,8 @@ pub const CHECKS: &[Check] = &[
     check!("agents.isolated", agents::isolated),
     check!("agents.purge_own", agents::purge_own),
     check!("agents.unknown_subscription", agents::unknown_subscription),
+    check!("agents.model_rules", agents::model_rules),
+    check!("agents.session_ended", agents::session_ended),
     check!("tokens.shutdown_refused", tokens::shutdown_refused),
 ];
 
