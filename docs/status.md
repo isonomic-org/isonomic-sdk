@@ -8,6 +8,11 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
+
+## 2026-11-16 · Isonomic UI at 4f1207b
+
+`UI_REF` moves to 4f1207b, with the options Chat needs to match the design. The three non-additive points (`PaletteCommand`'s `icon` and `meta`, `PopupMenuItem::Item`'s `destructive`, `IconName`'s derives) touch nothing in the SDK. hello-app and every test pass on it, and a crate outside the workspace still builds against `isonomic-app` alone.
+
 ## 2026-11-16 · Isonomic UI at 66e93d3
 
 `UI_REF` moves to 66e93d3: the run status bar matches the design (`Running`, `Done`, `RunStatusButton`, `.elapsed`), and the ban icon is fixed. No SDK code matches `RunStatus`. hello-app and every test pass on it, and a crate outside the workspace still names `RunStatusBar` through `isonomic_app::extra`.
