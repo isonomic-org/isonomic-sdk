@@ -11,6 +11,16 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+## Unreleased: Isonomic UI at 2b8a583 (the composer)
+
+**Wire:** no change. Additive only.
+
+**For Chat and the window:** move `../isonomic-ui` to `2b8a583e499b8f142f87a3b1c26620edb612b851`, the commit in `UI_REF`.
+- New: `PromptComposer::set_quiet_focus`.
+- The comfortable composer is 96 high when empty.
+- The escape hint reads "Esc".
+- `Ban` and the composer's photos item use the icon set's own drawings.
+
 ## Unreleased: Isonomic UI at 527d955 (stable ids)
 
 **Wire:** no change.
