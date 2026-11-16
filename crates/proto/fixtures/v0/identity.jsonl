@@ -3,6 +3,6 @@
 {"type":"request","id":141,"method":"identity.get","params":{}}
 {"type":"response","id":141,"result":{"identity":{"id":"isonomic:7Q4K-M2XD-9PLV","created":false}}}
 {"type":"request","id":142,"method":"identity.get","params":{}}
-{"type":"response","id":142,"error":{"code":"identity_unavailable","message":"Your Mac's keychain did not let Isonomic save your ID. Unlock it and try again."}}
+{"type":"response","id":142,"error":{"code":"identity_unavailable","message":"The key store did not let Isonomic save your ID. Unlock it and try again."}}
 {"type":"request","id":143,"token":"tok-hello-1","method":"identity.get","params":{}}
 {"type":"response","id":143,"error":{"code":"capability_denied","message":"app com.isonomic.hello may not call identity.get"}}

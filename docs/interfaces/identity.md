@@ -30,7 +30,7 @@ Version 1 carries only this. Grants, activity logs and keys are not on the wire.
 | `capability_denied` | An app token |
 
 ```json
-{"type":"response","id":142,"error":{"code":"identity_unavailable","message":"Your Mac's keychain did not let Isonomic save your ID. Unlock it and try again."}}
+{"type":"response","id":142,"error":{"code":"identity_unavailable","message":"The key store did not let Isonomic save your ID. Unlock it and try again."}}
 ```
 
 ## Client
@@ -46,4 +46,4 @@ Version 1 carries only this. Grants, activity logs and keys are not on the wire.
 - `forget()` starts again as on a first run.
 - `made()` says whether the ID exists.
 
-The conformance check `identity.stable` asks the engine for the ID twice: it must be the same, non-blank, and `created: false` the second time.
+The conformance check `identity.stable` asks the engine for the ID twice: the second time on a connection of its own. It must be the same, non-blank, and `created: false` the second time.

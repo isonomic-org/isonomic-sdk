@@ -166,10 +166,29 @@ pub async fn bad_frame(target: Target) -> Outcome {
 }
 
 /// The person's ID is made once and is the same on every later call, and
-/// on every connection.
+/// on every connection: the second call comes from a connection of its own.
 pub async fn identity_stable(target: Target) -> Outcome {
     let first = ok(target.shell.identity().await, "identity.get")?;
-    let again = ok(target.shell.identity().await, "identity.get again")?;
+    let mut options = isonomic_client::Options::new("isonomic-conformance-second");
+    options.reconnect_min = Duration::from_millis(10);
+    options.reconnect_max = Duration::from_millis(200);
+    let second = isonomic_client::Client::start(
+        &tokio::runtime::Handle::current(),
+        target.connector.clone(),
+        options,
+    );
+    let mut live = second.live();
+    let waiting = tokio::time::timeout(Duration::from_secs(5), live.wait_for(|l| l.connected));
+    // Never hold the borrow `wait_for` returns.
+    let connected = matches!(waiting.await, Ok(Ok(_)));
+    drop(live);
+    ensure(connected, || {
+        "a second connection did not open within 5 s".into()
+    })?;
+    let again = ok(
+        second.identity().await,
+        "identity.get on a second connection",
+    )?;
     ensure(!again.created, || {
         "a second identity.get said created".into()
     })?;
