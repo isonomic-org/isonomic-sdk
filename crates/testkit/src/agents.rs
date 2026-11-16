@@ -14,7 +14,9 @@ use std::sync::Arc;
 use harness_host::{
     AppKind, Caller as HostCaller, CapabilityToken, HostError, MemoryHost, Update, UserActionToken,
 };
-use isonomic_proto::agents::{ApprovalId, ForkReason, SessionEvent, SessionId};
+use isonomic_proto::agents::{
+    ApprovalId, EndReason, ForkReason, SessionEnded, SessionEvent, SessionId,
+};
 use isonomic_proto::auth::Caller;
 use isonomic_proto::{Call, ErrorCode, Event, Reply, ServerMessage, Token, WireError};
 
@@ -145,7 +147,7 @@ fn answer(memory: &MemoryHost, caller: &HostCaller, call: Call) -> Result<Reply,
         Call::PresetsPut(r) => run(memory, host.put_preset(caller, r.text))
             .map(|reference| Reply::PresetSaved { reference }),
         Call::ArtifactsGet(r) => run(memory, host.get_artifact(caller, &r.artifact, r.version))
-            .map(|a| Reply::Artifact(Box::new(map::artifact(a)))),
+            .map(|a| Reply::Artifact(Box::new(map::artifact(a, r.offset, r.length)))),
         Call::ArtifactsList(r) => {
             run(memory, host.list_artifacts(caller, &r.session)).map(Reply::Artifacts)
         }
@@ -213,9 +215,32 @@ pub(crate) async fn dispatch(
                         return;
                     }
                 }
+                // The host ends a subscription when its session is purged.
+                let event = Event::SessionEnded(SessionEnded {
+                    session: r.session,
+                    reason: EndReason::Purged,
+                });
+                let _ = out
+                    .send(ServerMessage::Event {
+                        subscription,
+                        event,
+                    })
+                    .await;
             });
             conn.track(subscription, task, None, token);
             None
+        }
+        Call::ApprovalsUserAction(r) => {
+            let mut agents = state.agents.lock().unwrap();
+            let decider = match &r.app {
+                None => HostCaller::shell(),
+                Some(app) => agents.app(app.as_str()),
+            };
+            let token = agents
+                .memory
+                .user_action(&decider, &r.session, &r.approval)
+                .0;
+            Some(result(id, Reply::UserAction { token }))
         }
         Call::SessionsUnsubscribe { subscription } => {
             Some(match conn.close_owned(subscription, token.as_ref()) {

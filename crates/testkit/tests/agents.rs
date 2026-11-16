@@ -55,6 +55,7 @@ async fn until(stream: &mut SessionStream, last: &str) -> Vec<SessionEvent> {
                 }
             }
             SessionUpdate::Delta(_) => {}
+            SessionUpdate::Gap { after, next } => panic!("gap from {after} to {next}"),
         }
     }
 }
@@ -472,4 +473,53 @@ async fn the_picked_model_runs_the_session_and_shows_on_its_summary() {
         code(agents.create_with(on(&long)).await),
         ErrorCode::BadRequest
     );
+}
+
+#[tokio::test]
+async fn a_purged_sessions_stream_ends() {
+    let engine = TestEngine::new();
+    let agents = app(&engine, "com.isonomic.chat").agents();
+    let session = agents.create("test").await.unwrap();
+    let mut stream = agents.subscribe(&session, 0).await.unwrap();
+    until(&mut stream, "session.start").await;
+    agents.purge(None).await.unwrap();
+    let ended = tokio::time::timeout(Duration::from_secs(5), async {
+        while stream.next().await.is_some() {}
+    })
+    .await;
+    assert!(ended.is_ok(), "the stream did not end after purge");
+}
+
+#[tokio::test]
+async fn the_window_mints_the_persons_token_and_apps_cannot() {
+    let engine = TestEngine::new();
+    let id = "com.isonomic.chat";
+    let agents = app(&engine, id).agents();
+    let session = agents.create("test").await.unwrap();
+    let specs = vec![tool("post", vec![Effect::ActsOutward])];
+    agents.register_client_tools(&session, specs).await.unwrap();
+    engine
+        .agents()
+        .with(|host| host.model.calls(&[("post", "{}")]));
+    agents.send_text(&session, "Post.").await.unwrap();
+    let approval = agents.approvals(None).await.unwrap()[0]
+        .request
+        .approval
+        .clone();
+    let refused = agents.user_action(&session, &approval, Some(id)).await;
+    assert_eq!(code(refused), ErrorCode::CapabilityDenied);
+    let window = engine.client().agents();
+    let token = window
+        .user_action(&session, &approval, Some(id))
+        .await
+        .unwrap();
+    agents
+        .decide(
+            &session,
+            &approval,
+            DecisionInput::Allow,
+            Some(token.as_str()),
+        )
+        .await
+        .unwrap();
 }

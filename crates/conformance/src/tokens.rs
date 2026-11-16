@@ -108,7 +108,7 @@ pub async fn shell_only(target: Target) -> Outcome {
         .app(manifest("shell-only", everything(), &[]))
         .await?;
     for call in fixture_calls()? {
-        let shell_only = call.interface().shell_only() || call.installs_models();
+        let shell_only = call.interface().shell_only() || call.window_only();
         if !shell_only || matches!(call, Call::SystemShutdown) {
             continue;
         }

@@ -51,5 +51,8 @@ async fn an_app_asks_the_window_and_the_window_decides() {
     let (chat, _) = AppContext::new("com.isonomic.chat", client, store);
     let chat = chat.with_window(window.clone());
     assert!(chat.request(install.clone()));
-    assert_eq!(window.all(), vec![("com.isonomic.chat".to_string(), install)]);
+    assert_eq!(
+        window.all(),
+        vec![("com.isonomic.chat".to_string(), install)]
+    );
 }

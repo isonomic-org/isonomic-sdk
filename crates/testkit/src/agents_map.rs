@@ -3,6 +3,7 @@
 
 use harness_host as host;
 use isonomic_proto::agents as sdk;
+use isonomic_proto::blobs::CHUNK_BYTES;
 use isonomic_proto::{Bytes, ErrorCode, WireError};
 
 pub(crate) fn error(e: host::HostError) -> WireError {
@@ -182,10 +183,20 @@ pub(crate) fn preset(p: host::StoredPreset) -> sdk::PresetDetail {
     }
 }
 
-pub(crate) fn artifact(a: host::ArtifactVersion) -> sdk::ArtifactVersion {
+/// One chunk of an artifact's body: at most `CHUNK_BYTES` from `offset`,
+/// fewer if `length` asks for fewer.
+pub(crate) fn artifact(
+    a: host::ArtifactVersion,
+    offset: u64,
+    length: Option<u64>,
+) -> sdk::ArtifactVersion {
+    let chunk = length.map_or(CHUNK_BYTES, |l| l.min(CHUNK_BYTES)) as usize;
+    let start = (offset as usize).min(a.bytes.len());
+    let end = start.saturating_add(chunk).min(a.bytes.len());
     sdk::ArtifactVersion {
         meta: a.meta,
-        bytes: Bytes(a.bytes),
+        bytes: Bytes(a.bytes[start..end].to_vec()),
+        offset,
     }
 }
 
@@ -194,5 +205,35 @@ pub(crate) fn purged(r: host::PurgeReport) -> sdk::PurgeReport {
         sessions: r.sessions,
         events: r.events,
         blobs: r.blobs,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn version(len: usize) -> host::ArtifactVersion {
+        let meta: sdk::ArtifactEvent = serde_json::from_value(serde_json::json!({
+            "artifact": "r-1", "version": 1, "op": "create", "title": "Notes",
+            "media_type": "text/plain", "blob": "b-1", "bytes": len, "call": "c-1"
+        }))
+        .unwrap();
+        host::ArtifactVersion {
+            meta,
+            bytes: (0..len).map(|i| (i % 251) as u8).collect(),
+        }
+    }
+
+    #[test]
+    fn an_artifact_body_comes_in_chunks() {
+        let len = CHUNK_BYTES as usize + 10;
+        let first = artifact(version(len), 0, None);
+        assert_eq!(first.bytes.0.len() as u64, CHUNK_BYTES);
+        let rest = artifact(version(len), CHUNK_BYTES, None);
+        assert_eq!((rest.offset, rest.bytes.0.len()), (CHUNK_BYTES, 10));
+        let small = artifact(version(len), 4, Some(3));
+        assert_eq!(small.bytes.0, vec![4, 5, 6]);
+        let past = artifact(version(len), len as u64 + 5, None);
+        assert!(past.bytes.0.is_empty());
     }
 }

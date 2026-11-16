@@ -57,6 +57,7 @@ impl Call {
         "presets.put",
         "artifacts.get",
         "artifacts.list",
+        "approvals.user_action",
     ];
 
     /// The method name on the wire, for logs and the Activity tab.
@@ -114,6 +115,7 @@ impl Call {
             Call::PresetsPut(_) => "presets.put",
             Call::ArtifactsGet(_) => "artifacts.get",
             Call::ArtifactsList(_) => "artifacts.list",
+            Call::ApprovalsUserAction(_) => "approvals.user_action",
         }
     }
 
@@ -171,8 +173,15 @@ impl Call {
             | Call::PresetsGet(_)
             | Call::PresetsPut(_)
             | Call::ArtifactsGet(_)
-            | Call::ArtifactsList(_) => Interface::Agents,
+            | Call::ArtifactsList(_)
+            | Call::ApprovalsUserAction(_) => Interface::Agents,
         }
+    }
+
+    /// Calls only the window makes, whatever an app's capabilities: the
+    /// model install calls, and minting a person's user-action token.
+    pub fn window_only(&self) -> bool {
+        self.installs_models() || matches!(self, Call::ApprovalsUserAction(_))
     }
 
     /// `models.download`, `download_cancel` and `recommended`: the shell's

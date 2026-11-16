@@ -5,16 +5,20 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
-## 2026-11-15 · Wire follow-ups (needs-master, in progress)
+## 2026-11-16 · Wire follow-ups and the model picker (#30, needs-master)
 
-**Built so far:**
-- `lib.rs` split: `reply.rs` holds `Reply` and `Event`, `error.rs` holds `WireError` and `ErrorCode`. Paths are unchanged.
-- `ModelInfo.recommended`.
-- `sessions.create { model? }`, with fixtures for each refusal.
+**Built:**
+- **`lib.rs` split:** `reply.rs` holds `Reply` and `Event`, `error.rs` holds `WireError` and `ErrorCode`. Paths are unchanged.
+- **Model picker:** `ModelInfo.recommended`; `sessions.create { model? }`, passed to the host's create-time override; `SessionSummary.model`. `agents::model_name` trims and bounds a name to 128 bytes, used by `proto::auth` and the testkit.
+- **Harness at 61438c9:** the create-time model, and chat preset version 2. No SDK test depended on preset version 1.
+- **From the #16 review:**
+  - `session_ended` closes a session stream.
+  - `approvals.user_action` (shell only) mints the person's token for (session, approval, app).
+  - `artifacts.get` takes `offset` and `length`, at most `CHUNK_BYTES` a reply, and the client reassembles.
+  - `SessionStream` reports a `Gap` instead of skipping silently.
+- **App requests (issue #31):** `AppContext::request(WindowRequest::InstallModel { model })`, the window's `WindowRequests`, and `TestHost::requests()`.
 
-**Follow-up:** the testkit passes the session model on to the host once harness-host has the create-time override (marked FOLLOW-UP in `testkit/src/agents.rs`).
-
-**Next in this pull request:** an end-of-stream event for session streams, a call that gets the user-action token (with `session`), chunked `artifacts.get`, and sequence continuity in `SessionStream`.
+**Not covered by a test end to end:** the client's reassembly of a chunked artifact (harness milestone 0 has no artifact-writing tool), and `SessionUpdate::Gap`, which needs an engine that skips a sequence number. The testkit's chunk slicing has a unit test.
 
 ## 2026-11-15 · Requests from other sessions
 

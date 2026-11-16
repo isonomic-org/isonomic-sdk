@@ -257,18 +257,57 @@ impl Agents {
         }
     }
 
-    /// An artifact version, latest when `version` is `None`.
+    /// An artifact version, latest when `version` is `None`, with its whole
+    /// body: read in chunks of at most `CHUNK_BYTES`, as blobs are.
     pub async fn artifact(
         &self,
         artifact: &ArtifactId,
         version: Option<u32>,
     ) -> Result<ArtifactVersion, ClientError> {
-        let call = Call::ArtifactsGet(GetArtifact {
-            artifact: artifact.clone(),
-            version,
+        let mut whole: Option<ArtifactVersion> = None;
+        loop {
+            let offset = whole.as_ref().map_or(0, |w| w.bytes.0.len() as u64);
+            let call = Call::ArtifactsGet(GetArtifact {
+                artifact: artifact.clone(),
+                // Pin the version the first chunk found, so a new one
+                // written meanwhile cannot mix in.
+                version: whole.as_ref().map_or(version, |w| Some(w.meta.version)),
+                offset,
+                length: None,
+            });
+            let Reply::Artifact(chunk) = self.call(call).await? else {
+                return Err(ClientError::UnexpectedReply);
+            };
+            let chunk = *chunk;
+            let total = chunk.meta.bytes;
+            let empty = chunk.bytes.0.is_empty();
+            match &mut whole {
+                None => whole = Some(ArtifactVersion { offset: 0, ..chunk }),
+                Some(w) => w.bytes.0.extend_from_slice(&chunk.bytes.0),
+            }
+            let w = whole.as_ref().unwrap_or_else(|| unreachable!());
+            if w.bytes.0.len() as u64 >= total || empty {
+                return whole.ok_or(ClientError::UnexpectedReply);
+            }
+        }
+    }
+
+    /// Shell only: the user-action token for a person's decision on
+    /// `approval` in `session`, for `app` to pass to `decide` (the shell's
+    /// own when `None`). The window calls this when the person acts.
+    pub async fn user_action(
+        &self,
+        session: &SessionId,
+        approval: &ApprovalId,
+        app: Option<&str>,
+    ) -> Result<String, ClientError> {
+        let call = Call::ApprovalsUserAction(MintUserAction {
+            session: session.clone(),
+            approval: approval.clone(),
+            app: app.map(AppId::from),
         });
         match self.call(call).await? {
-            Reply::Artifact(found) => Ok(*found),
+            Reply::UserAction { token } => Ok(token),
             _ => Err(ClientError::UnexpectedReply),
         }
     }
@@ -294,6 +333,10 @@ pub enum SessionUpdate {
     /// Reply text as it streams. Drop deltas once the `assistant` event for
     /// their step arrives.
     Delta(LiveDelta),
+    /// Events between `after` and `next` never arrived (one was malformed,
+    /// say). Subscribe again from `last_seq()`, which is still `after`, to
+    /// read them; this stream skips the event that showed the gap.
+    Gap { after: Seq, next: Seq },
 }
 
 /// A session's events. Dropping it unsubscribes.
@@ -320,11 +363,21 @@ impl SessionStream {
     pub async fn next(&mut self) -> Option<SessionUpdate> {
         loop {
             match self.events.next().await? {
+                Event::SessionEvent(event) if event.seq <= self.last_seq => continue,
+                Event::SessionEvent(event) if event.seq != self.last_seq + 1 => {
+                    let after = self.last_seq;
+                    return Some(SessionUpdate::Gap {
+                        after,
+                        next: event.seq,
+                    });
+                }
                 Event::SessionEvent(event) => {
                     self.last_seq = event.seq;
                     return Some(SessionUpdate::Event(event));
                 }
                 Event::LiveDelta(delta) => return Some(SessionUpdate::Delta(delta)),
+                // The session is gone (purged): the stream ends.
+                Event::SessionEnded(_) => return None,
                 _ => continue,
             }
         }

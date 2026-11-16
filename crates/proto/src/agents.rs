@@ -247,6 +247,13 @@ pub struct GetArtifact {
     pub artifact: ArtifactId,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub version: Option<u32>,
+    /// Where to start reading the body. One reply carries at most
+    /// `blobs::CHUNK_BYTES`, as for `blobs.get`.
+    #[serde(default, skip_serializing_if = "zero")]
+    pub offset: u64,
+    /// Read fewer bytes than a full chunk.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub length: Option<u64>,
 }
 
 /// A fork's parent and the sequence number it forked at.
@@ -340,7 +347,39 @@ pub struct PresetDetail {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ArtifactVersion {
     pub meta: ArtifactEvent,
+    /// The body from `offset`, at most `blobs::CHUNK_BYTES`; `meta.bytes`
+    /// is its whole size.
     pub bytes: Bytes,
+    #[serde(default, skip_serializing_if = "zero")]
+    pub offset: u64,
+}
+
+/// `approvals.user_action`, shell only: the window mints the token when the
+/// person acts on an approval, and hands it to the app that will decide.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MintUserAction {
+    pub session: SessionId,
+    pub approval: ApprovalId,
+    /// The app that will call `approvals.decide`; absent for the shell.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub app: Option<AppId>,
+}
+
+/// Why a session stream ended.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EndReason {
+    /// The session was purged.
+    Purged,
+    #[serde(other)]
+    Unrecognized,
+}
+
+/// The last event of a session stream.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SessionEnded {
+    pub session: SessionId,
+    pub reason: EndReason,
 }
 
 /// What `sessions.purge` deleted.

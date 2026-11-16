@@ -32,6 +32,9 @@ async fn event(stream: &mut SessionStream) -> Result<SessionEvent, String> {
         match tokio::time::timeout(Duration::from_secs(5), stream.next()).await {
             Ok(Some(SessionUpdate::Event(event))) => return Ok(*event),
             Ok(Some(SessionUpdate::Delta(_))) => continue,
+            Ok(Some(SessionUpdate::Gap { after, next })) => {
+                return Err(format!("the stream skipped from seq {after} to {next}"))
+            }
             Ok(None) => return Err("the session stream closed".into()),
             Err(_) => return Err("no session event within 5 s".into()),
         }

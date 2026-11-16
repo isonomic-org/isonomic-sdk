@@ -28,13 +28,14 @@ Arguments and results (`CreateSession`, `SessionSummary`, `PendingApproval`, …
 | `sessions.unsubscribe` | `{ subscription }` | `unsubscribed {}` |
 | `approvals.list` | `{ app? }` | `approvals [{ session, app, request }]`; the shell may narrow to one `app` |
 | `approvals.decide` | `{ session, approval, decision: allow\|deny\|{text}, user_action? }` | `done {}` |
+| `approvals.user_action` | `{ session, approval, app? }` | `user_action { token }`. Shell only: the window mints the token when the person acts and hands it to `app` (the shell's own when absent) |
 | `questions.answer` | `{ session, question, selected?, text?, skipped? }` | `done {}` |
 | `tools.register_client` | `{ session, specs: [ToolSpec] }` | `done {}`; replaces the app's client tools for that session |
 | `tools.result` | `{ session, call, content?, error? }` | `done {}` |
 | `presets.list` | `{}` | `presets [{ reference, owner?, name, diagnostics }]` |
 | `presets.get` | `{ preset }` | `preset { reference, owner?, text, diagnostics }` |
 | `presets.put` | `{ text }` (TOML) | `preset_saved { reference }` |
-| `artifacts.get` | `{ artifact, version? }` | `artifact { meta, bytes }` (bytes in base64) |
+| `artifacts.get` | `{ artifact, version?, offset?, length? }` | `artifact { meta, bytes, offset? }`: at most `CHUNK_BYTES` (512 KiB) of the body from `offset`, base64; `meta.bytes` is the whole size. `Agents::artifact` reads every chunk |
 | `artifacts.list` | `{ session }` | `artifacts [ArtifactEvent]` |
 
 ```json
@@ -46,6 +47,9 @@ Arguments and results (`CreateSession`, `SessionSummary`, `PendingApproval`, …
 Approval, question and call ids are minted per session, so two sessions can each hold an `a-1`. The calls that answer one name the session as well: the target is (session, id). Calls without parameters still take `params: {}`, so a filter can be added later without a new method.
 
 ## Events
+
+A stream's last event is `session_ended { session, reason }` (`reason: purged`), after which `SessionStream::next` returns `None`. If a sequence number is ever skipped (a malformed event the client could not read, say), `next` returns `SessionUpdate::Gap { after, next }` instead of the event; subscribe again from `last_seq()` to read the missing ones.
+
 
 A subscription first replays the durable events after `from_seq`, then sends new ones as they are written, with no gap or duplicate at the seam. Each `session_event` is one `SessionEvent` (`session`, `seq`, `at`, `turn?`, `step?`, then `type` and its fields). To resume after a reconnect, subscribe from the last `seq` seen (`SessionStream::last_seq`).
 

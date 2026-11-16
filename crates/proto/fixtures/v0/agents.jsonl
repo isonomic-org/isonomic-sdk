@@ -86,3 +86,10 @@
 {"type":"response","id":119,"result":{"session_snapshot":{"summary":{"id":"s-6","app":"com.isonomic.chat","class":"interactive","preset":{"id":"chat","version":2},"title":"Trip to Lisbon","status":"active","model":"chat-small","created_at":1700000000000,"updated_at":1700000000500,"last_seq":4}}}}
 {"type":"request","id":120,"token":"tok-chat-1","method":"sessions.create","params":{"preset":"chat","model":"  "}}
 {"type":"response","id":120,"error":{"code":"bad_request","message":"the model name is blank"}}
+{"type":"request","id":121,"method":"approvals.user_action","params":{"session":"s-1","approval":"a-4","app":"com.isonomic.chat"}}
+{"type":"response","id":121,"result":{"user_action":{"token":"ua-80"}}}
+{"type":"request","id":122,"token":"tok-chat-1","method":"approvals.user_action","params":{"session":"s-1","approval":"a-4"}}
+{"type":"response","id":122,"error":{"code":"capability_denied","message":"app com.isonomic.chat may not call approvals.user_action"}}
+{"type":"event","subscription":21,"event":"session_ended","data":{"session":"s-1","reason":"purged"}}
+{"type":"request","id":123,"token":"tok-chat-1","method":"artifacts.get","params":{"artifact":"r-1","version":2,"offset":524288,"length":4096}}
+{"type":"response","id":123,"result":{"artifact":{"meta":{"artifact":"r-1","version":2,"op":"update","title":"Itinerary","media_type":"text/markdown","blob":"b-12","bytes":528384,"call":"c-8"},"bytes":"IyBEYXk=","offset":524288}}}

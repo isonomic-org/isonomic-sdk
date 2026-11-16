@@ -253,6 +253,9 @@ pub enum Call {
     ArtifactsGet(agents::GetArtifact),
     #[serde(rename = "artifacts.list")]
     ArtifactsList(agents::SessionRef),
+    /// Shell only: the user-action token for a person's decision.
+    #[serde(rename = "approvals.user_action")]
+    ApprovalsUserAction(agents::MintUserAction),
 }
 
 /// What the engine sends.

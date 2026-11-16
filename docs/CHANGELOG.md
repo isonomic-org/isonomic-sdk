@@ -3,18 +3,38 @@
 Newest first. Each entry names what the engine (isonomic-capsule) and the window (isonomic-desktop) must do when they move `SDK_REF` to it.
 
 
-## Unreleased: the model picker (for Chat)
+## Unreleased: the model picker, and the agents follow-ups (#30)
+
+**Build:** harness moves to `61438c9dfd36e515cfe2d1f4e06fda9d3be5320e` (the create-time model override, and chat preset version 2). Every consumer declares it exactly so:
+
+```toml
+harness-core = { git = "ssh://git@github.com/isonomic-org/isonomic-harness.git", rev = "61438c9dfd36e515cfe2d1f4e06fda9d3be5320e" }
+```
 
 **Wire (additive, still version 0)**
 
-- `ModelInfo.recommended` (omitted when false) marks the model the engine recommends for the machine's profile, in `models.list` and `models.info`. No auth change: an app sees it on the models it may already list.
-- `sessions.create` takes an optional `model`: the session runs on that model in place of the preset's. An app may name only a model its `models` capability allows, checked in `proto::auth` as for `models.stream`.
+- `ModelInfo.recommended` (omitted when false), in `models.list` and `models.info`.
+- `sessions.create { model? }`: the session runs on that model. `proto::auth` lets an app name only a model its `models` capability allows (`capability_denied`), and `agents::model_name` trims it and refuses a blank or over-128-byte one (`bad_request`). `SessionSummary.model` reports it (absent for the preset's model).
+- `session_ended { session, reason }`, the last event of a session stream (`reason: purged`).
+- `approvals.user_action { session, approval, app? }` → `user_action { token }`, shell only.
+- `artifacts.get { offset?, length? }` and `artifact { offset? }`: at most `CHUNK_BYTES` a reply.
 
 **For the engine:**
-- Set `recommended` on the model `models.recommended` would name for the machine's profile.
-- On `sessions.create { model }`: answer `unknown_model`, `unsupported` (not a chat model), `model_unavailable` (not installed), or `capability_denied` for a remote model without `remote`. Otherwise pass the model to the host's create-time override.
+- Set `recommended` on the model `models.recommended` would name.
+- On `sessions.create { model }`: answer `unknown_model`, `unsupported`, `model_unavailable`, or `capability_denied` for a remote model without `remote`; otherwise pass the model to the host. Report it in `SessionSummary.model`.
+- End a session stream with `session_ended` when the host's subscription ends.
+- Serve `approvals.user_action` from the UI broker (`proto::auth` refuses it to app tokens).
+- Chunk `artifacts.get` like `blobs.get`.
 
-**For apps:** `Agents::create_with(CreateSession { model: Some(..), .. })`. The testkit checks the model; until the harness's create-time override is pinned, the session still runs on the preset's model there.
+**For the window:**
+- Mint the token with `Agents::user_action(session, approval, app)` when the person acts on an approval, and hand it to the app.
+- Supply `AppContext::with_window(impl WindowRequests)` and run the download step on `WindowRequest::InstallModel`.
+
+**For apps:**
+- `CreateSession { model }`, `SessionSummary.model` and `ModelInfo.recommended` for the picker.
+- `cx.request(WindowRequest::InstallModel { model })` turns "not installed" into the window's download step.
+- `SessionStream::next` returns `None` after `session_ended`, and reports `SessionUpdate::Gap` on a skipped sequence number.
+- In tests: `TestHost::requests()`.
 
 ## Unreleased: Isonomic UI's features through the SDK (isonomic-sdk #27, isonomic-chat O8)
 

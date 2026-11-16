@@ -118,6 +118,10 @@ pub enum Reply {
     },
     Artifact(Box<agents::ArtifactVersion>),
     Artifacts(Vec<agents::ArtifactEvent>),
+    /// Answer to `approvals.user_action`.
+    UserAction {
+        token: String,
+    },
 }
 
 impl Reply {
@@ -154,6 +158,8 @@ pub enum Event {
     SessionEvent(Box<agents::SessionEvent>),
     /// Reply text as it streams; lossy, replaced by the `assistant` event.
     LiveDelta(agents::LiveDelta),
+    /// A session stream's last event: the session is gone.
+    SessionEnded(agents::SessionEnded),
 }
 
 impl Event {
@@ -162,6 +168,7 @@ impl Event {
         match self {
             Event::ModelChunk(chunk) => chunk.stop.is_some(),
             Event::DownloadProgress(progress) => progress.outcome.is_some(),
+            Event::SessionEnded(_) => true,
             _ => false,
         }
     }
