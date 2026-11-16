@@ -269,6 +269,16 @@ impl Client {
         }
     }
 
+    /// The person's Isonomic ID, made by the engine on first need. Shell
+    /// only. `identity_unavailable` carries a plain message to show as is.
+    pub async fn identity(&self) -> Result<isonomic_proto::identity::Identity, ClientError> {
+        let call = Call::IdentityGet(Default::default());
+        match self.call(call).await? {
+            Reply::Identity(identity) => Ok(identity),
+            _ => Err(ClientError::UnexpectedReply),
+        }
+    }
+
     pub async fn profile(&self) -> Result<HardwareProfile, ClientError> {
         match self.call(Call::SystemProfile).await? {
             Reply::Profile(profile) => Ok(profile),

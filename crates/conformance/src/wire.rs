@@ -11,7 +11,7 @@ use isonomic_proto::{
 };
 use tokio::io::AsyncWriteExt;
 
-use crate::{ensure, Outcome, Target};
+use crate::{ensure, ok, Outcome, Target};
 
 async fn open(target: &Target) -> Result<BoxedStream, String> {
     (target.connector)()
@@ -163,4 +163,18 @@ pub async fn bad_frame(target: Target) -> Outcome {
     send_raw(&mut stream, b"this is not json").await?;
     expect_error(&mut stream, 0, ErrorCode::BadRequest).await?;
     still_answers(&mut stream, 11).await
+}
+
+/// The person's ID is made once and is the same on every later call, and
+/// on every connection.
+pub async fn identity_stable(target: Target) -> Outcome {
+    let first = ok(target.shell.identity().await, "identity.get")?;
+    let again = ok(target.shell.identity().await, "identity.get again")?;
+    ensure(!again.created, || {
+        "a second identity.get said created".into()
+    })?;
+    ensure(again.id == first.id, || {
+        format!("the ID changed from {} to {}", first.id, again.id)
+    })?;
+    ensure(!again.id.trim().is_empty(), || "the ID is blank".into())
 }

@@ -19,6 +19,7 @@ const FIXTURES: &[&str] = &[
     include_str!("../../proto/fixtures/v0/events.jsonl"),
     include_str!("../../proto/fixtures/v0/sql.jsonl"),
     include_str!("../../proto/fixtures/v0/agents.jsonl"),
+    include_str!("../../proto/fixtures/v0/identity.jsonl"),
 ];
 
 /// Every call in the fixtures, in order.
@@ -131,6 +132,7 @@ pub async fn every_interface(target: Target) -> Outcome {
             call.interface(),
             Interface::System
                 | Interface::Apps
+                | Interface::Identity
                 | Interface::Models
                 | Interface::Blobs
                 | Interface::Sql

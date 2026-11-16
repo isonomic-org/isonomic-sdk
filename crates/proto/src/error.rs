@@ -100,6 +100,9 @@ pub enum ErrorCode {
     InvalidTools,
     /// `models.download_cancel` for a model with no download running.
     NotDownloading,
+    /// The engine could not make or read the person's ID (the key store
+    /// refused, say). The message is plain words for the window to show.
+    IdentityUnavailable,
     /// A code from a newer engine.
     #[serde(other)]
     Unrecognized,

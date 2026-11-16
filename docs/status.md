@@ -4,6 +4,17 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
+
+## 2026-11-16 · The person's Isonomic ID (needs-master)
+
+**Built:** the shell-only interface `identity` (`identity.get` → `identity { id, created }`, error `identity_unavailable`), `Client::identity()`, the testkit's `FakeIdentity`, 8 fixture lines, 3 testkit tests and the conformance check `identity.stable`. Omar moved the Isonomic ID into version 1 on 16 Nov.
+
+**Decisions**
+
+- **Its own interface, shell only**, like `system` and `apps`: `Interface::Identity` is in `shell_only()`, so no app capability can reach it.
+- **The ID is opaque text.** The engine owns its form, and the window shows it as given.
+- **Only this in version 1.** The identity request in `docs/requests.md` (`permission_denied`, `approval_required`) stays scheduled for after version 1.
+
 ## 2026-11-16 · Isonomic UI at 2e3116b
 
 `UI_REF` moves to 2e3116b, the QA worker's "V1 components pass QA" commit. Its public API changes since 4c912f6 are additive only. hello-app and every SDK test pass on it, with `component`, `assets` and `extra` all built.

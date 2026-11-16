@@ -17,6 +17,7 @@ mod conn;
 mod downloads;
 mod events;
 mod faults;
+mod identity;
 mod models;
 mod sql;
 mod system;
@@ -26,6 +27,7 @@ pub use blobs::{FakeBlobs, DEFAULT_LIMIT as DEFAULT_BLOB_LIMIT};
 pub use downloads::{DownloadStep, MEMORY_FLOOR};
 /// harness-host, whose `MemoryHost` serves the agents interface here.
 pub use harness_host;
+pub use identity::{FakeIdentity, DEFAULT_ID as DEFAULT_IDENTITY};
 pub use isonomic_proto::auth::Interface;
 pub use models::{FakeModels, Gate, Step};
 pub use sql::{FakeSql, SqlCall};
@@ -73,6 +75,7 @@ pub(crate) struct State {
     pub(crate) events: Mutex<events::EventsState>,
     pub(crate) sql: Mutex<sql::SqlState>,
     pub(crate) downloads: Mutex<downloads::DownloadsState>,
+    pub(crate) identity: Mutex<identity::IdentityState>,
     pub(crate) faults: Mutex<HashMap<Interface, faults::Fault>>,
     pub(crate) agents: Mutex<agents::AgentsState>,
     next_token: AtomicU64,
@@ -165,6 +168,7 @@ impl TestEngine {
                 events: Mutex::new(events::EventsState::default()),
                 sql: Mutex::new(sql::SqlState::default()),
                 downloads: Mutex::new(downloads::DownloadsState::default()),
+                identity: Mutex::new(identity::IdentityState::default()),
                 faults: Mutex::new(HashMap::new()),
                 agents: Mutex::new(agents::AgentsState::default()),
                 next_token: AtomicU64::new(1),
@@ -246,6 +250,14 @@ impl TestEngine {
     /// The fake database: scripted results and the statements apps ran.
     pub fn sql(&self) -> FakeSql {
         FakeSql {
+            state: Arc::clone(&self.state),
+        }
+    }
+
+    /// The person's Isonomic ID: set it, refuse it, start again as on a
+    /// first run.
+    pub fn identity(&self) -> FakeIdentity {
+        FakeIdentity {
             state: Arc::clone(&self.state),
         }
     }
