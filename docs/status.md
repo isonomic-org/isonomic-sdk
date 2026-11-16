@@ -9,6 +9,10 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
+## 2026-11-16 · Isonomic UI at 2b8a583
+
+`UI_REF` moves to 2b8a583. New: `PromptComposer::set_quiet_focus`. The comfortable composer is 96 high when empty, the escape hint reads "Esc", and `Ban` and the photos item use the set's own drawings. Additive only. Nothing in the SDK uses them, and every test passes on it.
+
 ## 2026-11-16 · Isonomic UI at 527d955
 
 `UI_REF` moves to 527d955: stable ids for sidebar rows, menu items, palette rows (`command-<command id>`) and model picker rows (from the picker's id). The changed ids and `PopupMenuItem::Item`'s new `id` touch nothing in the SDK, its tests or hello-app. Every test passes on it.
