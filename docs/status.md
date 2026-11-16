@@ -9,6 +9,12 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
+## 2026-11-16 · Isonomic UI at 0a8f39d
+
+`UI_REF` moves to 0a8f39d: a bundled serif (`Theme::serif_font_family`, `assets::SERIF`) and an `icon_size` on the clipboard and the message action bar. Additive only.
+
+The serif reaches apps through `isonomic_app::ui`. Isonomic UI's `init` registers the bundled files. hello-app's new `tests/fonts.rs` checks that the files carry all three families and that the theme names the serif. GPUI's headless test platform lists no fonts, so the test checks the files handed to `add_fonts`, not the platform's list. Under that platform the sans also resolves to a system font, so the test doesn't assert it.
+
 ## 2026-11-16 · Isonomic UI at ecd21d1
 
 `UI_REF` moves to ecd21d1: palette rows take any catalog icon, `list_indent` reaches its value, icon buttons get `icon_size`. The one non-additive point, `PaletteCommand::icon` as the icon's path, touches nothing in the SDK. hello-app and every test pass on it.
