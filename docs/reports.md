@@ -9,6 +9,7 @@ One JSON document per report, written by `Report::to_json(&build, &system, home,
 | Field | What |
 | --- | --- |
 | `format` | `1` |
+| `id` | The report's own id, 32 lowercase hex characters, made when the report is created (`Report::new`). Optional: files written before ids have none and stay valid. Never scrubbed |
 | `kind` | `panic`, `hang`, `app_failed`, `app_error` (the window); `panic`, `service_failed`, `model_server_failed` (the engine) |
 | `component` | `{ id, version? }`: `window`, an app's id, `engine`, `engine/<service>` or `engine/<runtime>` |
 | `product` | `{ version, build, arch, pins: { sdk, chat, engine } }` |
@@ -20,6 +21,15 @@ One JSON document per report, written by `Report::to_json(&build, &system, home,
 | `tab` | The tab on screen (the window), else `null` |
 | `service` | The engine's `service_failed`: `{ name, version, restarts, last_exit }` |
 | `model` | The engine's `model_server_failed`: `{ id, runtime, restarts, last_exit }` |
+
+## Ids (`id`)
+
+A receiver drops duplicates by id.
+
+- `id::new_id()` makes a fresh one: 128 bits from the standard library's per-process random hasher keys, mixed with the time and a counter. Unique enough to tell reports apart; not a secret.
+- `id::report_id(doc, file_name, capsule_id)` returns the document's `id` when it has a valid one. Otherwise it returns `id::derived_id(file_name, capsule_id)`.
+- `id::derived_id` hashes the Capsule's id and the file name the stores already use (`<millis>-<kind>[-n]`, with or without `.json`) with a fixed hash. The result is the same on every machine and build, so sending an older file twice gives the same id.
+- `id` is a top-level field, outside every scrubbed field. The scrubber never sees it.
 
 ## Scrubbing (`scrub`)
 

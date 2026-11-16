@@ -11,6 +11,16 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+## Unreleased: report ids
+
+**Wire:** no change. Report format 1 gains an optional top-level `id`; older files stay valid.
+
+**What changes:** `Report` has `id: Option<String>`, set by `Report::new` and written as the top-level `id`. It is never scrubbed. The new `isonomic_reports::id` module has `new_id`, `is_id`, `report_id(doc, file_name, capsule_id)` and `derived_id`. A struct literal of `Report` needs `id`.
+
+**For the window:** its sender sends `id::report_id(&doc, file_name, capsule_id)`, so the receiver can drop duplicates.
+
+**For the engine:** its fifth identity step uses the same `report_id` for its stored reports.
+
 ## Unreleased: Isonomic UI at 4f1207b (the options Chat needs)
 
 **Wire:** no change.
