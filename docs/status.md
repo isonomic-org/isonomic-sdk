@@ -3,6 +3,11 @@
 Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architecture/sdk/status.md`; this repo's own session owns the SDK from here.
 
 
+
+## 2026-11-16 · Isonomic UI at 2e3116b
+
+`UI_REF` moves to 2e3116b, the QA worker's "V1 components pass QA" commit. Its public API changes since 4c912f6 are additive only. hello-app and every SDK test pass on it, with `component`, `assets` and `extra` all built.
+
 ## 2026-11-16 · Every model a stored preset names
 
 **Built:** the testkit holds both models a stored preset names, `[model] id` and `title_model`, to the app's manifest. It checks every name against the manifest before it asks whether any of them runs. `agents.model_rules` gains the title-model case. From the final check of #30. Harness moves to ae4f1a7 (chat preset version 3, window-fit compaction); no SDK test depended on the preset's version or text.

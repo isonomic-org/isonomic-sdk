@@ -4,6 +4,16 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+
+## Unreleased: Isonomic UI at 2e3116b (V1 components pass QA)
+
+**Wire:** no change.
+
+**For the engine and the window:** move `../isonomic-ui` to `2e3116bfb3c39388db58c81cf898e63f3e8092cb`, the commit in `UI_REF`. Every app takes the UI through the SDK at this pin. All 86 version 1 stories pass QA.
+
+- **API:** additive only, `Combobox::accessibility_label` and `Toggle::accessibility_label`.
+- **Behaviour:** `Accordion::on_toggle_click` fires when a trigger toggles. Tab skips disabled text fields. An icon-only `Button` with a tooltip is named by it. A focused `Toggle` draws a focus ring. The prompt composer wraps its controls below about 430 px wide.
+
 ## Unreleased: harness at ae4f1a7, and every model a stored preset names
 
 **Wire:** no change; the session event schema is the same.
