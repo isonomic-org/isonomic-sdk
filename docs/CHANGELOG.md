@@ -8,6 +8,16 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+
+## Unreleased: stricter scrubbing (quoted text at any length, the person's ID)
+
+**Wire:** no change. The report format is unchanged; `system.macos` stays format 1's key.
+
+**For the window and the engine**, adopting `isonomic-reports` at this commit:
+- Quoted text of any length becomes `[text removed]` in every scrubbed field, not only past 40 characters. So a short typed value never survives, and nor does a short quoted key name.
+- The person's ID becomes `[id removed]` in either form (`did:iso:…`, `isonomic:…`) at any length.
+- Add the ID to a report only when the person ticks the box, outside the scrubbed fields.
+
 ## Unreleased: problem reports, shared (`isonomic-reports`), and `AppContext::report`
 
 **Wire:** no change.

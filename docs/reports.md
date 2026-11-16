@@ -26,15 +26,12 @@ One JSON document per report, written by `Report::to_json(&build, &system, home,
 Every text field goes through `scrub::line` (the message through `scrub::message`):
 
 - Paths under the home folder become `~/…`.
-- Quoted text (`"…"` or `'…'`) longer than 40 characters becomes `[text removed]`.
-- A run of 24 or more key characters (letters, digits, `_ - + / =`) holding at least 6 digits becomes `[key removed]`. That covers tokens, keys, digests and the long form of a person's ID. Model and file names have too few digits to match.
+- Quoted text (`"…"` or `'…'`) of any length becomes `[text removed]`, so a short typed value goes too. An apostrophe in prose pairs with the next one, so prose can lose a little more than it must.
+- The person's ID becomes `[id removed]` whatever its length: `did:iso:` or the readable `isonomic:` form, with the characters that follow. The window adds the ID back only when the person asks, outside the scrubbed fields.
+- A run of 24 or more key characters (letters, digits, `_ - + / =`) holding at least 6 digits becomes `[key removed]`. That covers tokens, keys and digests. Model and file names have too few digits to match.
 - A message is cut at 300 characters.
 
-**Two limits of these rules**, pinned by tests so that a change is a decision:
-- Quoted text of 40 characters or fewer stays in a message, so a short value a person typed would too.
-- A short ID shorter than 24 characters is not a "key" and stays.
-
-Log lines are stricter, as below.
+Service logs are filtered further, as below.
 
 ## Service logs (`filter`)
 
@@ -50,4 +47,4 @@ Log lines are stricter, as below.
 
 ## Tests
 
-`crates/reports/tests/planted.rs` plants a prompt, a statement's value, a home path, a token and a person's ID in a message, in a database log, in a model server's log and in another service's log. None comes out.
+`crates/reports/tests/planted.rs` plants a prompt, a statement's value, a home path, a token and a person's ID (both forms) in a message, in a database log, in a model server's log and in another service's log. None comes out, short ones included.

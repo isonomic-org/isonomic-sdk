@@ -2,9 +2,8 @@
 //! a home path, a token and a person's ID, planted in a message and in log
 //! lines, come out removed whichever filter the lines went through.
 //!
-//! One limit of today's rules is pinned below: in a message, quoted text of
-//! 40 characters or fewer stays, so a short typed value would too. Log lines
-//! lose quoted text of any length.
+//! Quoted text goes at any length, so a short typed value goes too; the
+//! person's ID goes in either form, at any length.
 
 use isonomic_reports::filter::{allow_listed, any_log, database_log};
 use isonomic_reports::{Build, Component, Kind, Report, System};
@@ -16,6 +15,7 @@ const VALUE: &str = "Lisbon with my sister";
 const TOKEN: &str = "iso_tok_7f3a9c21b04e5d6f8a1b2c3d4e5f6a7b";
 const ID: &str = "did:iso:3f9c0a7e1b2d4c5f8e6a7b9c0d1e2f3a3f9c0a7e1b2d4c5f8e6a7b9c0d1e2f3a";
 const ID_KEY: &str = "3f9c0a7e1b2d4c5f8e6a7b9c0d1e2f3a3f9c0a7e1b2d4c5f8e6a7b9c0d1e2f3a";
+const SHORT_ID: &str = "isonomic:7Q4K-M2XD-9PLV";
 
 fn write(report: &Report) -> Value {
     report.to_json(
@@ -28,15 +28,17 @@ fn write(report: &Report) -> Value {
 
 fn assert_clean(doc: &Value) {
     let text = doc.to_string();
-    for planted in ["Lisbon", "sister", TOKEN, ID_KEY, HOME] {
+    for planted in ["Lisbon", "sister", TOKEN, ID_KEY, "did:iso", "7Q4K", HOME] {
         assert!(!text.contains(planted), "{planted:?} in {text}");
     }
 }
 
-/// A message carrying a prompt, a home path, an ID and a token, as a panic
-/// or an app's error might. (A statement's value goes in the log lines.)
+/// A message carrying all five, and the ID's short form, as a panic or an
+/// app's error might.
 fn message() -> String {
-    format!("failed on \"{PROMPT}\" at {HOME}/Library/x for {ID} using {TOKEN}")
+    format!(
+        "failed on \"{PROMPT}\" with '{VALUE}' at {HOME}/Library/x for {ID} ({SHORT_ID}) using {TOKEN}"
+    )
 }
 
 fn lines(text: &str) -> Vec<String> {
@@ -53,6 +55,7 @@ fn a_planted_message_is_scrubbed() {
         "{written}"
     );
     assert!(written.contains("~/Library/x"), "{written}");
+    assert_eq!(written.matches("[id removed]").count(), 2, "{written}");
 }
 
 #[test]
@@ -139,14 +142,22 @@ fn worker() -> Component {
     }
 }
 
-/// Today's rule, as both sides wrote it: quoted text of 40 characters or
-/// fewer stays in a message. Pinned so a change to it is a decision.
+/// A short typed value goes too: quoted text of any length is removed.
 #[test]
-fn a_short_quoted_value_in_a_message_stays_by_todays_rule() {
-    let doc = write(&Report::new(
-        Kind::AppError,
-        Component::Window,
-        format!("bad value '{VALUE}'"),
-    ));
-    assert_eq!(doc["message"], format!("bad value '{VALUE}'"));
+fn a_short_quoted_value_in_a_message_is_removed() {
+    let message = format!("bad value '{VALUE}'");
+    let doc = write(&Report::new(Kind::AppError, Component::Window, message));
+    assert_eq!(doc["message"], "bad value '[text removed]'");
+}
+
+/// The readable ID is removed in a message and in a log line, short as it is.
+#[test]
+fn the_short_id_is_removed_wherever_it_is() {
+    let message = format!("signed in as {SHORT_ID}");
+    let mut report = Report::new(Kind::AppError, Component::Window, message);
+    report.log_tail = vec![format!("identity ready: {SHORT_ID}")];
+    let doc = write(&report);
+    assert_clean(&doc);
+    assert_eq!(doc["message"], "signed in as [id removed]");
+    assert_eq!(doc["log_tail"][0], "identity ready: [id removed]");
 }
