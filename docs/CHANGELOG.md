@@ -9,6 +9,19 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+
+## Unreleased: Isonomic UI at 66e93d3
+
+**Wire:** no change.
+
+**For the window and Chat:** move `../isonomic-ui` to `66e93d359e02166da1237370571f8966f0ce6403`, the commit in `UI_REF`. The run status bar now matches the design:
+- `RunStatus::Running` and `Done` are new, so `RunStatus::ALL` has seven entries;
+- buttons are a list, through `RunStatusButton`, and `.elapsed(..)` is new;
+- the default words for Stopped changed;
+- the ban icon is fixed.
+
+**Not purely additive:** code that matches `RunStatus` exhaustively needs arms for `Running` and `Done`, and tests that compare the Stopped words need updating. Nothing in the SDK matches on it.
+
 ## Unreleased: stricter scrubbing (quoted text at any length, the person's ID)
 
 **Wire:** no change. The report format is unchanged; `system.macos` stays format 1's key.

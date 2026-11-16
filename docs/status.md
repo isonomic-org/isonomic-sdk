@@ -7,6 +7,11 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
+
+## 2026-11-16 · Isonomic UI at 66e93d3
+
+`UI_REF` moves to 66e93d3: the run status bar matches the design (`Running`, `Done`, `RunStatusButton`, `.elapsed`), and the ban icon is fixed. No SDK code matches `RunStatus`. hello-app and every test pass on it, and a crate outside the workspace still names `RunStatusBar` through `isonomic_app::extra`.
+
 ## 2026-11-16 · Problem reports, shared (issue #35)
 
 **Built:**
