@@ -10,6 +10,28 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+
+## Unreleased: Isonomic UI at 4f1207b (the options Chat needs)
+
+**Wire:** no change.
+
+**For Chat and the window:** move `../isonomic-ui` to `4f1207b811a3d0a2eb16a6ad48e9d1d8db496871`, the commit in `UI_REF`. New options to match the design:
+- sidebar padding and focusable rows;
+- `PopupMenuItem::destructive()`;
+- command palette setters;
+- `PromptComposer::set_comfortable`;
+- model picker options, with list-box roles on rows;
+- text view list styling;
+- the message action bar's size;
+- the pager's position and labels.
+
+**Not purely additive**, three points:
+- `PaletteCommand` gained the public fields `icon` and `meta`, so struct literals need both.
+- `PopupMenuItem::Item` gained `destructive`, so patterns and literals that name every field need it.
+- The component `IconName` now derives `Debug`, `PartialEq` and `Eq`; a local impl of those for it now conflicts.
+
+Nothing in the SDK uses these.
+
 ## Unreleased: Isonomic UI at 66e93d3
 
 **Wire:** no change.
