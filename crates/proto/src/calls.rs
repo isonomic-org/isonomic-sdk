@@ -58,6 +58,7 @@ impl Call {
         "artifacts.get",
         "artifacts.list",
         "approvals.user_action",
+        "identity.get",
     ];
 
     /// The method name on the wire, for logs and the Activity tab.
@@ -116,6 +117,7 @@ impl Call {
             Call::ArtifactsGet(_) => "artifacts.get",
             Call::ArtifactsList(_) => "artifacts.list",
             Call::ApprovalsUserAction(_) => "approvals.user_action",
+            Call::IdentityGet(_) => "identity.get",
         }
     }
 
@@ -175,6 +177,7 @@ impl Call {
             | Call::ArtifactsGet(_)
             | Call::ArtifactsList(_)
             | Call::ApprovalsUserAction(_) => Interface::Agents,
+            Call::IdentityGet(_) => Interface::Identity,
         }
     }
 

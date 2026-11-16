@@ -140,6 +140,12 @@ async fn dispatch(
     let app = grant.as_ref().map(|g| g.manifest.id.as_str());
     match call.interface() {
         Interface::Models => return models::dispatch(state, conn, id, caller, token, call).await,
+        Interface::Identity => {
+            return Some(match crate::identity::answer(state) {
+                Ok(reply) => result(id, reply),
+                Err(error) => failure(id, error),
+            })
+        }
         Interface::Blobs => {
             return Some(match blobs::answer(state, app, call) {
                 Ok(reply) => result(id, reply),

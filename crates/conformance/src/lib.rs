@@ -68,6 +68,7 @@ pub const CHECKS: &[Check] = &[
     check!("wire.unknown_method", wire::unknown_method),
     check!("wire.unknown_fields", wire::unknown_fields),
     check!("wire.bad_frame", wire::bad_frame),
+    check!("identity.stable", wire::identity_stable),
     check!("tokens.grant", tokens::grant),
     check!("tokens.unknown_token", tokens::unknown_token),
     check!("tokens.shell_only", tokens::shell_only),

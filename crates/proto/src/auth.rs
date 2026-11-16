@@ -22,6 +22,8 @@ pub enum Interface {
     /// Agent sessions: `sessions`, `approvals`, `questions`, `tools`,
     /// `presets` and `artifacts`.
     Agents,
+    /// The person's Isonomic ID.
+    Identity,
 }
 
 impl Interface {
@@ -34,12 +36,16 @@ impl Interface {
             Interface::Events => "events",
             Interface::Sql => "sql",
             Interface::Agents => "agents",
+            Interface::Identity => "identity",
         }
     }
 
     /// Only the shell may call it; no app token is ever enough.
     pub fn shell_only(self) -> bool {
-        matches!(self, Interface::System | Interface::Apps)
+        matches!(
+            self,
+            Interface::System | Interface::Apps | Interface::Identity
+        )
     }
 }
 

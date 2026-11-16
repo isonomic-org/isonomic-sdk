@@ -5,6 +5,23 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+
+## Unreleased: the person's Isonomic ID (`identity`, needs-master)
+
+**Wire (additive, still version 0):** the shell-only interface `identity`. `identity.get {}` answers `identity { id, created }`, and the new error code is `identity_unavailable`. `proto::auth` refuses the interface to every app token. Nothing else about identity is on the wire in version 1 (`docs/interfaces/identity.md`).
+
+**For the engine:**
+- Serve `identity.get` from the shell's connection.
+- Create the ID the first time it is needed, and answer `created: true` on that call only. Every later call, from any connection, answers the same `id` with `created: false`.
+- When the key store or anything else stops you making or reading the ID, answer `identity_unavailable` with a message in plain words, and make nothing.
+- Pass the new conformance check `identity.stable`; `tokens.shell_only` and `tokens.every_interface` now cover `identity.get` too.
+
+**For the window:**
+- Call `Client::identity()`, at first run and whenever it shows the ID.
+- Show `id` exactly as given, and offer to copy it.
+- On `identity_unavailable`, show the message as written and let the person retry.
+- In tests: `TestEngine::identity()` with `set_id`, `refuse`, `recover` and `forget`.
+
 ## Unreleased: Isonomic UI at 2e3116b (V1 components pass QA)
 
 **Wire:** no change.

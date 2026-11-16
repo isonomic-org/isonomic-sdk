@@ -16,6 +16,7 @@ mod calls;
 mod error;
 pub mod events;
 pub mod frame;
+pub mod identity;
 #[cfg(feature = "tokio")]
 pub mod io;
 mod json;
@@ -253,6 +254,9 @@ pub enum Call {
     ArtifactsGet(agents::GetArtifact),
     #[serde(rename = "artifacts.list")]
     ArtifactsList(agents::SessionRef),
+    /// Shell only: the person's Isonomic ID, made on first need.
+    #[serde(rename = "identity.get")]
+    IdentityGet(identity::GetIdentity),
     /// Shell only: the user-action token for a person's decision.
     #[serde(rename = "approvals.user_action")]
     ApprovalsUserAction(agents::MintUserAction),

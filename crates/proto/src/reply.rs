@@ -118,6 +118,8 @@ pub enum Reply {
     },
     Artifact(Box<agents::ArtifactVersion>),
     Artifacts(Vec<agents::ArtifactEvent>),
+    /// Answer to `identity.get`.
+    Identity(identity::Identity),
     /// Answer to `approvals.user_action`.
     UserAction {
         token: String,
