@@ -11,6 +11,14 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+## Unreleased: Isonomic UI at ecd21d1
+
+**Wire:** no change.
+
+**For Chat and the window:** move `../isonomic-ui` to `ecd21d1cfa22eb206d41882e8837e5ffff7d0c47`, the commit in `UI_REF`. Palette rows take any catalog icon, `list_indent` reaches its value, and icon buttons get `icon_size`.
+
+**Not purely additive**, one point: the public field `PaletteCommand::icon` is now the icon's path (`Option<SharedString>`). Calls to `.icon(..)` are unaffected; struct literals and reads of the field need the new type.
+
 ## Unreleased: report ids
 
 **Wire:** no change. Report format 1 gains an optional top-level `id`; older files stay valid.
