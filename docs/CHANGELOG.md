@@ -11,6 +11,16 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+## Unreleased: Isonomic UI at a1b30e1 (the wordmark)
+
+**Wire:** no change. Additive only.
+
+**For Chat and the window:** move `../isonomic-ui` to `a1b30e15f315cb197acb6fd7237a457fbf7bc8d2`, the commit in `UI_REF`.
+- The bundled sans gains its Light file.
+- `Wordmark`, in `isonomic_ui_extra::wordmark`. The brand rule: "Isonomic" in the sans at Regular, a product's name after it in Light, same size and colour, never in the serif.
+- Apps reach it as `isonomic_app::extra::wordmark::Wordmark`, with feature `extra`.
+- The window's `ui` crate re-exports `isonomic_app::ui::*` only. To reach `Wordmark`, it turns on `isonomic-app`'s `extra` feature and re-exports `isonomic_app::extra`.
+
 ## Unreleased: Isonomic UI at 0a8f39d (the serif)
 
 **Wire:** no change. Additive only.
@@ -192,87 +202,4 @@ harness-core = { git = "ssh://git@github.com/isonomic-org/isonomic-harness.git",
 - `SessionStream::next` returns `None` after `session_ended`, and reports `SessionUpdate::Gap` on a skipped sequence number.
 - In tests: `TestHost::requests()`.
 
-## Unreleased: Isonomic UI's features through the SDK (isonomic-sdk #27, isonomic-chat O8)
-
-**Wire:** no change.
-
-**For apps and the window:** `isonomic-app` forwards Isonomic UI's features. `component` (`ui::component`) and `assets` (`ui::assets`) are on by default, so a consumer that drops its own isonomic-ui dependency keeps both with no feature line. The new `extra` feature re-exports `isonomic-ui-extra` as `isonomic_app::extra` and turns on `component`.
-
-- The window: `isonomic-app = { path = "../isonomic-sdk/crates/app" }`; the defaults cover it.
-- Chat: `isonomic-app = { path = "../isonomic-sdk/crates/app", features = ["extra"] }`, and `isonomic_ui_extra::…` becomes `isonomic_app::extra::…`.
-- A consumer that wants neither sets `default-features = false`.
-## Unreleased: harness at f061211
-
-**Wire:** no change; the session event schema is the same.
-
-**Build:** `harness-core` and `harness-host` move to isonomic-harness `f0612113f6dcc8e11528642137e6dd9b24f48165`. It brings continue after a title step, live deltas that wake subscribers, `Subscription::next_update()`, and a host keyed by (session, id) for approvals, questions and client tool calls. Every consumer declares harness with exactly this URL and rev, or cargo builds two copies of harness-core:
-
-```toml
-harness-core = { git = "ssh://git@github.com/isonomic-org/isonomic-harness.git", rev = "f0612113f6dcc8e11528642137e6dd9b24f48165" }
-```
-
-**For the engine:** the host calls take the session before the id: `decide_approval(caller, session, id, decision, token)`, `answer_question(caller, session, id, answer)` and `client_tool_result(caller, session, call, outcome)`. `purge(caller, app)` takes the wire's `app`, which is the caller's own when absent. Stream with `next_update()` to send `live_delta`s as they come.
-
-**For apps' tests:** `FakeAgents::user_action(app, session, approval)` takes the session. The testkit streams deltas as they arrive, no longer held until the next durable event.
-
-## Unreleased: installing local models (isonomic-sdk #21)
-
-**Wire (additive, still version 0):** methods `models.download { model }` → `downloading { subscription, model, total_bytes? }` with `download_progress { model, received_bytes, total_bytes?, outcome?, error? }` events, `models.download_cancel { model }` → `cancelled {}` (or `not_downloading`, a new error code), and `models.recommended { profile? }` → `recommended { model, profile, size_bytes? }`. Sizes are absent when unknown, never 0. `ModelState` gains `not_installed` and `downloading`. All three methods are shell only.
-
-**For the engine:**
-- Serve `models.download`, `models.download_cancel` and `models.recommended` (`docs/interfaces/models.md`, "Installing a model"). `proto::auth` already refuses them to app tokens.
-- Own the download, so it outlives the window. Attach a second `models.download` to the running one, starting with its current progress. End every subscriber with `installed`, `failed` (with the error) or `cancelled`.
-- Report `not_installed` and `downloading` in `models.info`, and refuse streams and embeddings on a model that is not installed with `model_unavailable`.
-- Answer `models.recommended` from the hardware profile. Below V1's 16 GiB floor, answer `insufficient_memory` with `required_bytes` the floor and `available_bytes` the machine's total physical memory.
-- Leave `total_bytes` and `size_bytes` out when the size is unknown; answer `models.download_cancel` with nothing running with `not_downloading`.
-
-**For the window:** `Models::recommended(profile)`, `download(model)` → `DownloadStream` (`total_bytes`, `next`), and `cancel_download(model)`, on the shell's client. After a reconnect, call `download` again to pick the download back up. In tests, `TestEngine::set_profile` and `models().uninstall`, `script_download` and `recommend`.
-
-## Unreleased: Isonomic UI through the SDK
-
-**Wire:** no change.
-
-**For apps and the window:** Isonomic UI now comes through the SDK, as `isonomic_app::ui`, at the commit in the SDK's `UI_REF` (4c912f6), compiled into the window once.
-
-- Drop `isonomic-ui` from your dependencies and delete your own `UI_REF`.
-- Write `use isonomic_app::ui as gpui;` where you had `extern crate isonomic_ui as gpui;`, and `gpui::` where you wrote `isonomic_ui::`. The `use` goes in every module that derives a component or runs `#[gpui::test]`.
-- Keep the `../isonomic-ui` checkout, but at the SDK's `UI_REF`, and keep the `[patch.crates-io] gpui-pre-macros` line in your workspace root.
-- `isonomic-app` features `editor` and `node-graph` reserve `isonomic_app::editor` and `isonomic_app::node_graph` for the shared toolkits; both are empty for now.
-
-## Unreleased: `test-support` builds outside this workspace
-
-**Wire:** no change.
-
-**For apps:** `isonomic-app`'s `test-support` feature now turns on Tokio's multi-thread runtime, which `TestHost` uses. An app crate outside this workspace no longer needs to add it (requested by isonomic-chat, O6).
-## Unreleased: the testkit's agent host, and the `agents.` conformance group
-
-**Wire:** no change.
-
-**Build:** the testkit now depends on `harness-host` (isonomic-harness, the same pinned commit as `harness-core`).
-
-**For the engine:** run the conformance suite's new `agents.` checks against the engine host (`docs/conformance.md`). They need no model: none sends input, and each purges what it created.
-
-**For the window and apps:** agents calls in tests now work against `TestEngine` instead of answering `unknown_method`. `TestEngine::agents()` scripts the model, the clock and the person (`docs/interfaces/agents.md`, Testing).
-
-## Unreleased: the `agents` interface (wire and client)
-
-**Build:** the proto now depends on `harness-core` (isonomic-harness, pinned by commit in the workspace `Cargo.toml`) for the agent session event types it re-exports. Cargo fetches it over SSH. Every repository that builds the proto needs read access to isonomic-harness: in CI, add `harness: true` to the shared workflow call (needs the `HARNESS_DEPLOY_KEY` org secret).
-
-**Wire (additive, still version 0)**
-
-- 22 methods in `sessions.*`, `approvals.*`, `questions.answer`, `tools.*`, `presets.*` and `artifacts.*` (`docs/interfaces/agents.md`); replies `session_created`, `sessions`, `session_snapshot`, `done`, `accepted`, `purged`, `session_stream`, `approvals`, `presets`, `preset`, `preset_saved`, `artifact`, `artifacts`; events `session_event` and `live_delta`; error codes `not_found`, `invalid_preset`, `class_not_supported`, `not_at_turn_boundary`, `continue_refused`, `not_allowed_to_decide`, `missing_user_action`, `already_decided`, `session_failed`, `invalid_tools`.
-- `approvals.decide`, `questions.answer` and `tools.result` name the session as well as the id: ids are minted per session. `sessions.purge`, `approvals.list` and `presets.list` take `params` (`{}` is fine); purge and approvals.list take an optional `app`, which only the shell may set to another app (`capability_denied`, checked in `proto::auth`); the shell must name the app it purges (`bad_request` otherwise). `Agents::purge(app)` and `Agents::approvals(app)` pass it.
-- `welcome` gains `schema { version, revision }`, the session event schema the engine writes. Optional: an older engine or client simply leaves it out.
-- The `agents` capability is open: a manifest may set it (`AgentsAccess {}`), and `ManifestError::AgentsReserved` is gone.
-
-**For the engine** (Part A of the agents brief): serve each method by calling harness-host after checking the token, mapping the SDK's argument and result types to the host's and `HostError` to the error codes above (`Unauthorized` → `capability_denied`, `Store` → `internal`, `Model` → `model_unavailable`). Put `SchemaVersion::CURRENT` in `welcome`.
-
-**For the window:** `Client::agents()` and `AppClient::agents()`: every call, and `subscribe` → `SessionStream` (`next`, `last_seq`), which unsubscribes when dropped. `Live::schema`. `Reply::SessionSnapshot`, `Reply::Preset` and `Reply::Artifact` are boxed.
-
-## Unreleased: Isonomic UI at 4c912f6
-
-**Wire:** no change.
-
-**For the engine and the window:** move `../isonomic-ui` to `4c912f61a1ea80cdf10d369fe7cf013ddbc2228a`, the commit in `UI_REF`. Every V1 repo pins this commit.
-
-Earlier entries (S0: `system.retry`, conformance, sql, events, blobs, the app crate, models, tokens) are in `docs/CHANGELOG-archive.md`.
+Earlier entries (from the agents interface back to S0: `system.retry`, conformance, sql, events, blobs, the app crate, models, tokens) are in `docs/CHANGELOG-archive.md`.

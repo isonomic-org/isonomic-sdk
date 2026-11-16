@@ -1,6 +1,6 @@
 //! The bundled serif reaches an app through `isonomic_app::ui` alone: the
 //! theme names it, and the font files Isonomic UI's `init` registers carry
-//! it beside the sans and the mono.
+//! it beside the sans (Light included) and the mono.
 //!
 //! The headless test platform's text system lists no fonts, so this checks
 //! the files `init` hands to `add_fonts` rather than the platform's list.
@@ -25,6 +25,14 @@ fn the_bundled_files_carry_every_family() {
         let count = files.iter().filter(|f| names(f, family)).count();
         assert!(count >= 2, "{family}: {count} files");
     }
+}
+
+/// The wordmark's product word is the sans in Light: one of the files is it.
+#[test]
+fn the_bundled_files_carry_the_sans_in_light() {
+    let light = format!("{} Light", ui::assets::SANS);
+    let files = ui::assets::fonts();
+    assert!(files.iter().any(|f| names(f, &light)), "no {light} file");
 }
 
 #[ui::test]

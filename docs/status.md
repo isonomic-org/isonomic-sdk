@@ -9,6 +9,14 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
+## 2026-11-16 · Isonomic UI at a1b30e1
+
+`UI_REF` moves to a1b30e1: the sans in Light, and `Wordmark` in `isonomic_ui_extra::wordmark`. Additive only.
+
+- `Wordmark` reaches apps as `isonomic_app::extra::wordmark::Wordmark`. The new `crates/app/tests/extra.rs` draws one in a test window through that path.
+- hello-app's fonts test now also checks that the bundled files carry the sans in Light.
+- The older changelog entries, from the agents interface down, moved to `docs/CHANGELOG-archive.md` to keep the changelog under the size limit.
+
 ## 2026-11-16 · Isonomic UI at 0a8f39d
 
 `UI_REF` moves to 0a8f39d: a bundled serif (`Theme::serif_font_family`, `assets::SERIF`) and an `icon_size` on the clipboard and the message action bar. Additive only.
