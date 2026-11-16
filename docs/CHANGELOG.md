@@ -11,6 +11,16 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+## Unreleased: Isonomic UI at fa70c9b
+
+**Wire:** no change. Additive only.
+
+**For Chat and the window:** move `../isonomic-ui` to `fa70c9b016514a73495f946cfd34e2bc5d153007`, the commit in `UI_REF`.
+- A list indent per kind on `TextView`.
+- `MessageActionBar::pager_quiet`.
+
+Move once to this commit, and adopt the shell header (below) in the same change.
+
 ## Unreleased: the shell header (the rail folded into an app's sidebar)
 
 **Wire:** no change. Additive to `isonomic-app`, plus one change to `test-support`, below.
