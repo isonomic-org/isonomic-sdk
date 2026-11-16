@@ -24,6 +24,7 @@
 
 mod agents;
 mod interfaces;
+mod recovery;
 mod tokens;
 mod wire;
 
@@ -69,6 +70,11 @@ pub const CHECKS: &[Check] = &[
     check!("wire.unknown_fields", wire::unknown_fields),
     check!("wire.bad_frame", wire::bad_frame),
     check!("identity.stable", wire::identity_stable),
+    check!("identity.kit_apps_refused", recovery::apps_refused),
+    check!(
+        "identity.kit_export_needs_person",
+        recovery::export_needs_person
+    ),
     check!("tokens.grant", tokens::grant),
     check!("tokens.unknown_token", tokens::unknown_token),
     check!("tokens.shell_only", tokens::shell_only),

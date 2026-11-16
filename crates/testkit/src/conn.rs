@@ -141,7 +141,7 @@ async fn dispatch(
     match call.interface() {
         Interface::Models => return models::dispatch(state, conn, id, caller, token, call).await,
         Interface::Identity => {
-            return Some(match crate::identity::answer(state) {
+            return Some(match crate::identity::answer(state, call) {
                 Ok(reply) => result(id, reply),
                 Err(error) => failure(id, error),
             })

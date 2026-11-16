@@ -39,7 +39,7 @@ fn fixture_calls() -> Result<Vec<Call>, String> {
 }
 
 /// Every capability there is, with nothing in reach beyond the app itself.
-fn everything() -> Capabilities {
+pub(crate) fn everything() -> Capabilities {
     Capabilities {
         models: Some(ModelAccess {
             any: true,

@@ -9,6 +9,9 @@ publish.workspace = true
 harness-host.workspace = true
 isonomic-client.workspace = true
 isonomic-proto.workspace = true
+isonomic-words.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 tokio.workspace = true
 
 [dev-dependencies]

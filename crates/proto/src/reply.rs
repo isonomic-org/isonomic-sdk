@@ -120,6 +120,13 @@ pub enum Reply {
     Artifacts(Vec<agents::ArtifactEvent>),
     /// Answer to `identity.get`.
     Identity(identity::Identity),
+    /// Answer to `identity.kit_export`.
+    RecoveryKit(identity::RecoveryKit),
+    /// Answer to `identity.kit_restore`.
+    KitRestored(identity::KitRestored),
+    /// Answer to `identity.kit_status`. (`identity.kit_saved` answers
+    /// `done`.)
+    KitStatus(identity::KitStatus),
     /// Answer to `approvals.user_action`.
     UserAction {
         token: String,

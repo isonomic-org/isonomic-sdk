@@ -6,6 +6,7 @@ members = [
     "crates/testkit",
     "crates/conformance",
     "crates/reports",
+    "crates/words",
     "crates/app",
     "examples/hello-app",
     "xtask",
@@ -22,6 +23,7 @@ isonomic-client = { path = "crates/client" }
 isonomic-testkit = { path = "crates/testkit" }
 isonomic-conformance = { path = "crates/conformance" }
 isonomic-reports = { path = "crates/reports" }
+isonomic-words = { path = "crates/words" }
 # Session event types, re-exported by the proto. Pinned: change only with a
 # changelog entry. CI fetches it with the shared workflow's `harness` input.
 harness-core = { git = "ssh://git@github.com/isonomic-org/isonomic-harness.git", rev = "ae4f1a7ebe6fdde701534ceadddab987a1b40bcc" }

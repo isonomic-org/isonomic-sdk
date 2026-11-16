@@ -257,6 +257,20 @@ pub enum Call {
     /// Shell only: the person's Isonomic ID, made on first need.
     #[serde(rename = "identity.get")]
     IdentityGet(identity::GetIdentity),
+    /// Shell only: the recovery kit's words and document, when the person
+    /// asked for them.
+    #[serde(rename = "identity.kit_export")]
+    IdentityKitExport(identity::KitExport),
+    /// Shell only: take the ID back from a kit; the kit is spent and a new
+    /// one replaces it.
+    #[serde(rename = "identity.kit_restore")]
+    IdentityKitRestore(identity::KitRestore),
+    /// Shell only: the person confirmed they saved the kit.
+    #[serde(rename = "identity.kit_saved")]
+    IdentityKitSaved(identity::KitSaved),
+    /// Shell only: whether the kit was saved and exported, and when.
+    #[serde(rename = "identity.kit_status")]
+    IdentityKitStatus(identity::GetKitStatus),
     /// Shell only: the user-action token for a person's decision.
     #[serde(rename = "approvals.user_action")]
     ApprovalsUserAction(agents::MintUserAction),

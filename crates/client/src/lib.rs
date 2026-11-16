@@ -279,6 +279,56 @@ impl Client {
         }
     }
 
+    /// The recovery kit: the 24 words and the kit document. Shell only.
+    /// `person_asked` must be true, set only when the person asked for the
+    /// kit in the window; otherwise `recovery_refused`. The words'
+    /// `Debug` is redacted; never log `words.reveal()`.
+    pub async fn kit_export(
+        &self,
+        person_asked: bool,
+    ) -> Result<isonomic_proto::identity::RecoveryKit, ClientError> {
+        let call = Call::IdentityKitExport(isonomic_proto::identity::KitExport { person_asked });
+        match self.call(call).await? {
+            Reply::RecoveryKit(kit) => Ok(kit),
+            _ => Err(ClientError::UnexpectedReply),
+        }
+    }
+
+    /// Take the person's ID back from a saved kit and its words. The kit is
+    /// spent: the reply's new words and document replace it. Shell only;
+    /// refusals are `recovery_refused` with a plain message.
+    pub async fn kit_restore(
+        &self,
+        restore: isonomic_proto::identity::KitRestore,
+    ) -> Result<isonomic_proto::identity::KitRestored, ClientError> {
+        match self.call(Call::IdentityKitRestore(restore)).await? {
+            Reply::KitRestored(restored) => Ok(restored),
+            _ => Err(ClientError::UnexpectedReply),
+        }
+    }
+
+    /// The person confirmed they saved the current kit. Shell only.
+    pub async fn kit_saved(&self) -> Result<(), ClientError> {
+        match self
+            .call(Call::IdentityKitSaved(Default::default()))
+            .await?
+        {
+            Reply::Done {} => Ok(()),
+            _ => Err(ClientError::UnexpectedReply),
+        }
+    }
+
+    /// Whether the current kit was saved and exported, and when. Shell only.
+    pub async fn kit_status(&self) -> Result<isonomic_proto::identity::KitStatus, ClientError> {
+        match self
+            .call(Call::IdentityKitStatus(Default::default()))
+            .await?
+        {
+            Reply::KitStatus(status) => Ok(status),
+            _ => Err(ClientError::UnexpectedReply),
+        }
+    }
+
     pub async fn profile(&self) -> Result<HardwareProfile, ClientError> {
         match self.call(Call::SystemProfile).await? {
             Reply::Profile(profile) => Ok(profile),

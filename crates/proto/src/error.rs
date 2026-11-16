@@ -103,6 +103,11 @@ pub enum ErrorCode {
     /// The engine could not make or read the person's ID (the key store
     /// refused, say). The message is plain words for the window to show.
     IdentityUnavailable,
+    /// A recovery kit call the engine refused: an export the person did
+    /// not ask for, words that are not the kit's, a damaged or spent kit,
+    /// or a Mac whose ID is already in use. The message is plain words for
+    /// the window to show; nothing was changed.
+    RecoveryRefused,
     /// A code from a newer engine.
     #[serde(other)]
     Unrecognized,

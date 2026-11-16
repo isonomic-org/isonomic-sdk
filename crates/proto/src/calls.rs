@@ -59,6 +59,10 @@ impl Call {
         "artifacts.list",
         "approvals.user_action",
         "identity.get",
+        "identity.kit_export",
+        "identity.kit_restore",
+        "identity.kit_saved",
+        "identity.kit_status",
     ];
 
     /// The method name on the wire, for logs and the Activity tab.
@@ -118,6 +122,10 @@ impl Call {
             Call::ArtifactsList(_) => "artifacts.list",
             Call::ApprovalsUserAction(_) => "approvals.user_action",
             Call::IdentityGet(_) => "identity.get",
+            Call::IdentityKitExport(_) => "identity.kit_export",
+            Call::IdentityKitRestore(_) => "identity.kit_restore",
+            Call::IdentityKitSaved(_) => "identity.kit_saved",
+            Call::IdentityKitStatus(_) => "identity.kit_status",
         }
     }
 
@@ -177,7 +185,11 @@ impl Call {
             | Call::ArtifactsGet(_)
             | Call::ArtifactsList(_)
             | Call::ApprovalsUserAction(_) => Interface::Agents,
-            Call::IdentityGet(_) => Interface::Identity,
+            Call::IdentityGet(_)
+            | Call::IdentityKitExport(_)
+            | Call::IdentityKitRestore(_)
+            | Call::IdentityKitSaved(_)
+            | Call::IdentityKitStatus(_) => Interface::Identity,
         }
     }
 
