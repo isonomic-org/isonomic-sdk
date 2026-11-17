@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The `models` interface of the in-memory engine: a scriptable fake.
 //!
 //! By default it has one local chat model, `chat-small`, which echoes the

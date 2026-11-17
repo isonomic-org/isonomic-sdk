@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The person's Isonomic ID: made once, the same ever after, refusable,
 //! and the shell's alone.
 

@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The `events` interface of the in-memory engine: one broadcast channel
 //! per scope (an app's id, or `shell`), shared by every connection, so
 //! publishing from one window reaches the app's tabs in every window.

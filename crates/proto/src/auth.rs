@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Capability checks, shared by the engine and the testkit so both refuse
 //! exactly the same calls.
 //!

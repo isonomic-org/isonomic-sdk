@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Framing: a 4-byte big-endian length, then that many bytes of JSON.
 
 use serde::de::DeserializeOwned;

@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The sql interface against the scripted database: typed results, writes,
 //! batches, live queries, schema rules, failures, and the capability check.
 

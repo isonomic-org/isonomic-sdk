@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The window's side: registering app crates, opening them as tabs, and
 //! routing hooks to them.
 

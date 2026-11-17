@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Data carried by the `models` interface.
 //!
 //! These mirror the model types of the inference layer, seen from an app:

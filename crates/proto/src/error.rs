@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Typed errors: a stable code and a readable message.
 
 use serde::{Deserialize, Serialize};

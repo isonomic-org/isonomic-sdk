@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The testkit passes every check, and an engine that breaks the contract
 //! does not: the checks are not vacuous.
 

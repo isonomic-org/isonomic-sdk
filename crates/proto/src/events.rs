@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Data carried by the `events` interface: messages an app publishes to its
 //! own scope, so its tabs and windows stay in step.
 //!

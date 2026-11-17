@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Planted content never reaches a report: a prompt, a statement's value,
 //! a home path, a token and a person's ID, planted in a message and in log
 //! lines, come out removed whichever filter the lines went through.

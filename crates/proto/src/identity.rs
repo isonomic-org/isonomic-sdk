@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The `identity` interface: the person's Isonomic ID, shell only.
 //!
 //! The engine creates the ID the first time it is needed and keeps it; the

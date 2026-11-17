@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Async client for the Isonomic engine.
 //!
 //! One connection per process, multiplexed. A background task owns it: it

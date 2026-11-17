@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Data carried by the `blobs` interface: byte objects an app stores by
 //! handle, such as Chat's attachments.
 //!

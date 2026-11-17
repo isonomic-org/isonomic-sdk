@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Backtraces as function names and crate-relative places: never a path
 //! on disk.
 

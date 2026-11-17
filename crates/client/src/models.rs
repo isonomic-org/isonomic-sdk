@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The `models` interface: list, inspect, stream and embed.
 
 use isonomic_proto::models::{

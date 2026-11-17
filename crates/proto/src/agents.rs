@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Data carried by the agents interface: agent sessions run by the engine's
 //! host, one to one with its calls (isonomic-harness `docs/host-api.md`).
 //!

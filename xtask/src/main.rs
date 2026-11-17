@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Repository tasks, run as `cargo xtask <task>`.
 //!
 //! - `frozen-fixtures [base]`: fail if this change edits or removes an

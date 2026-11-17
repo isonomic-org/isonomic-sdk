@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The client against the in-memory engine: requests, the live view, and
 //! reconnecting after the engine goes away.
 

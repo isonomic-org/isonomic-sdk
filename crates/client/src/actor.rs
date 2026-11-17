@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The background task behind a `Client`: connect, greet, subscribe, route
 //! replies and events, fold status into the live view, and reconnect with
 //! backoff.
