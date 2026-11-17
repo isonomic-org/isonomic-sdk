@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Each interface doing its job for an app that holds the capability, and
 //! keeping apps apart: blobs, events, subscriptions and sql schemas.
 

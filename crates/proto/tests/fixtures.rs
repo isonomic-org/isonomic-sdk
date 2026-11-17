@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The frozen wire shapes. Every line under `fixtures/v<PROTOCOL_VERSION>/`
 //! is one message exactly as it travels; each must decode and re-encode to
 //! the same bytes. A shape change makes this fail, and CI refuses edits to

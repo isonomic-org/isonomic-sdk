@@ -3,4 +3,5 @@ name = "xtask"
 description = "Repository tasks: cargo xtask <task>"
 version.workspace = true
 edition.workspace = true
+license = "Apache-2.0"
 publish.workspace = true

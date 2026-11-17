@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The app platform: the trait every first-party Isonomic app implements,
 //! and what the window gives each app.
 //!

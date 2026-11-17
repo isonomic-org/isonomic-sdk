@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Async frame reading and writing over any byte stream. One implementation
 //! for the engine and the client.
 

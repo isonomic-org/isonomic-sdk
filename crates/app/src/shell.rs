@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The window's part of an app's sidebar.
 //!
 //! The window draws no rail of its own beside an app that hosts the shell

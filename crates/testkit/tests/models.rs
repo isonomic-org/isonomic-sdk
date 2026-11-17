@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The models interface against the fake: streams with every chunk kind,
 //! cancel, refusals, failures, disconnects, and token checks.
 

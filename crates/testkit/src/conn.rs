@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! One in-memory connection: the handshake, then each request checked
 //! against its token and answered by the interface it names.
 

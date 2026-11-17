@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Slow and failing calls, per interface, for any interface.
 
 use std::time::Duration;

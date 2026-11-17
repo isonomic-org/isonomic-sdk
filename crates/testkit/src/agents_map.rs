@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Between the SDK's agents types and harness-host's, both ways, and the
 //! host's errors as wire errors. The event schema is shared and needs none.
 

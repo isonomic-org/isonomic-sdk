@@ -3,6 +3,7 @@ name = "isonomic-app"
 description = "The trait every first-party Isonomic app implements, and what the window gives it"
 version.workspace = true
 edition.workspace = true
+license = "Apache-2.0"
 publish.workspace = true
 
 [features]

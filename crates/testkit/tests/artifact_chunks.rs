@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The client's reassembly of a chunked artifact, against a minimal engine
 //! of its own: an honest one, and one that ignores `offset`.
 

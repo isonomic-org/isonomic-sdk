@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The stricter rules for a service's log, before it goes in a report.
 //!
 //! A service's log can carry what a person made: a statement's values, a

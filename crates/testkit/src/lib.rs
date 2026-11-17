@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! An in-memory Isonomic engine for tests.
 //!
 //! It speaks the real protocol over in-memory streams and runs no services,

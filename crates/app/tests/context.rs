@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The context an app is given, without a window; the shell header's
 //! slot; and the extra components drawn through `isonomic_app::extra`.
 //!

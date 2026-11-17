@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! What the window gives an app: a scoped client, settings, attention.
 
 use std::collections::HashMap;

@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Model downloads, the recommended first model and the hardware profile:
 //! progress to installed, attaching from a second window, cancel, failure,
 //! the shell-only rule, and the memory floor.

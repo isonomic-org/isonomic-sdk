@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Frozen examples of the v0 wire format. If one of these strings has to
 //! change, the protocol version has to change with it.
 
