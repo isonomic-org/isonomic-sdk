@@ -131,7 +131,7 @@ mod kit {
     }
 
     #[tokio::test]
-    async fn a_kit_restores_on_another_mac_as_a_new_kit() {
+    async fn a_kit_restores_on_another_computer_as_a_new_kit() {
         let old = TestEngine::new();
         old.identity().set_id("isonomic:7Q4K-M2XD-9PLV");
         let kit = old.client().kit_export(true).await.unwrap();

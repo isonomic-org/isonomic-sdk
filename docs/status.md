@@ -19,7 +19,7 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
   - Its `Debug` prints only a count, so every call, reply and assertion that holds words prints redacted.
   - `Serialize` stays transparent, so a JSON log would print the words (documented).
   - Its hand-written `Deserialize` refuses in fixed text.
-  - `decode_client` never repeats a malformed `identity.kit_*` request.
+  - `decode_client` never quotes an undecodable frame, whatever it holds: only fixed text, serde's category, and the line and column. A method name is repeated only in a method's form (`[a-z0-9_.]{1,64}`). The strict decoder's `FrameError` says the same and no more, in `Display` and in `Debug`.
 - **First review (DO NOT MERGE), fixed in the second push:**
   - A string-valued `words` was echoed in the `bad_request` message. Params sent as one string were echoed too, which the review did not list.
   - New lines named the computer by its maker's product name; they now say "this computer".
@@ -27,6 +27,11 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
   - The generation now uses `checked_add`.
   - `sha2` is a workspace dependency.
   - Tests cover every leak path found.
+- **Second review (DO NOT MERGE), fixed in the third push:**
+  - The kit-only guard guessed the method from the frame. A duplicate `method`, the frame as a string or an array, words in a non-kit request, in `hello` or in the method name all still came back.
+  - Every undecodable frame is now content-free, and the strict path too.
+  - `words_never_echo.rs` sends all of these; against the second push's decoder it fails.
+  - Fixture 149's new kit carries its own check, and the last test name says "computer".
   - Constant-time comparison and zeroing on drop are a follow-up for the engine: isonomic-capsule #81.
 - **Fixtures** use only the word-list standard's public 256-bit test vectors.
 - **The test engine's kit:** deterministic (public vectors by generation, its own JSON document, an injected kit clock). It restores across test engines and refuses wrong words, damaged or spent kits, a used computer, and an unused one without `replace_unused`.

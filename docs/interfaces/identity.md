@@ -51,7 +51,10 @@ A kit is two parts the person keeps apart: 24 words they write down, and a kit d
   - **`Serialize` is not:** it is transparent, as the wire needs. Logging a call or reply as JSON prints the words, so never do that, and never log `reveal()`.
   - **`Deserialize` errors are fixed text.** They never quote the input.
   - **Any length is accepted:** `RecoveryWords::new` takes any number of words, because the wire carries what was typed. The engine, or `isonomic_words::check`, decides whether they are 24 valid ones.
-- **Malformed requests:** `lenient::decode_client` answers a malformed `identity.kit_*` request with fixed text that never repeats what was sent, whichever field is wrong. The strict `frame::decode` keeps serde's message, which can quote the input, so never answer or log a client's frame with it.
+- **Malformed frames:** `lenient::decode_client` never quotes a frame it can't decode, kit or not, whatever is wrong with it.
+  - It says only fixed text, serde's category (`syntax`, `data`, `eof`) and the line and column.
+  - It repeats a method name only in a method's form (`[a-z0-9_.]{1,64}`), and otherwise says "this engine has no such method".
+  - The strict `frame::decode` and `io::read_message` say the same and no more (`FrameError::Json(DecodeFailure)`), in `Display` and in `Debug`.
 
 ```json
 {"type":"request","id":144,"method":"identity.kit_export","params":{"person_asked":true}}
