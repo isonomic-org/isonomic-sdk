@@ -31,6 +31,8 @@ The checks speak the wire alone. They grant their own apps through `apps.grant` 
 | `wire.unknown_fields` | Ignore fields it does not know, at the top and in `params` |
 | `wire.bad_frame` | Answer a frame that is not a message with `bad_request`, id 0; the connection goes on |
 | `identity.stable` | Answer `identity.get` with the same non-blank ID every time, on a second connection too, and `created: false` after the first |
+| `identity.kit_apps_refused` | Refuse `identity.kit_export`, `kit_restore`, `kit_saved` and `kit_status` to an app holding every capability, with `capability_denied` |
+| `identity.kit_export_needs_person` | Refuse the shell's `identity.kit_export` without `person_asked` with `recovery_refused`. No check ever exports a kit |
 | `tokens.grant` | Grant a valid manifest, including one with the `agents` capability; refuse a bad version or a bad id with `invalid_manifest` |
 | `tokens.unknown_token` | Refuse a token it never issued with `unknown_token`, on any interface |
 | `tokens.shell_only` | Refuse every `system`, `apps` and `identity` method, and `models.download`, `models.download_cancel` and `models.recommended`, to an app holding every capability |
