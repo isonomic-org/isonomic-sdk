@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The recovery kit's words: the standard 2048-word English list, pinned
 //! by its published SHA-256 ([`LIST_SHA256`]), and the checks a window runs
 //! while the person types them in. Builds without Isonomic UI.

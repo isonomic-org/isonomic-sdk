@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The recovery kit of the in-memory engine: deterministic words and a kit
 //! document of its own, so a kit exported from one test engine restores on
 //! another.

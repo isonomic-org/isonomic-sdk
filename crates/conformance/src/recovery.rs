@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The recovery kit, checked without ever exporting one: every
 //! `identity.kit_*` call is refused to an app, however much it may do, and
 //! an export the person did not ask for is refused to the shell too.

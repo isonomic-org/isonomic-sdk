@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! A frame that does not decode is refused without its content: no error
 //! message quotes what was sent, however the frame is broken, so the
 //! person's recovery words can never come back in one.
@@ -125,12 +128,19 @@ fn no_undecodable_frame_echoes_what_it_holds() {
     }
 }
 
-/// A method name is repeated only when it has a method's form.
+/// An unknown method is never named back, not even in a method's form:
+/// words joined by dots have that form.
 #[test]
-fn an_unknown_method_is_named_only_in_a_methods_form() {
-    let named = message(r#"{"type":"request","id":7,"method":"system.reboot","params":{}}"#);
-    assert_eq!(named, "this engine has no method system.reboot");
-    for method in ["System.Reboot", "a b", "x\"y", &"a".repeat(65)] {
+fn an_unknown_method_is_never_named() {
+    let dotted = "abandon.abandon.abandon.abandon.abandon.abandon.art";
+    for method in [
+        "system.reboot",
+        dotted,
+        "System.Reboot",
+        "a b",
+        "x\"y",
+        &"a".repeat(65),
+    ] {
         let frame = format!(
             r#"{{"type":"request","id":7,"method":{},"params":{{}}}}"#,
             serde_json::to_string(method).unwrap()

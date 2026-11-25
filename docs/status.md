@@ -19,7 +19,7 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
   - Its `Debug` prints only a count, so every call, reply and assertion that holds words prints redacted.
   - `Serialize` stays transparent, so a JSON log would print the words (documented).
   - Its hand-written `Deserialize` refuses in fixed text.
-  - `decode_client` never quotes an undecodable frame, whatever it holds: only fixed text, serde's category, and the line and column. A method name is repeated only in a method's form (`[a-z0-9_.]{1,64}`). The strict decoder's `FrameError` says the same and no more, in `Display` and in `Debug`.
+  - `decode_client` never quotes an undecodable frame, whatever it holds: only fixed text, serde's category, and the line and column. An unknown method is never named back, since words joined by dots look like one. The strict decoder's `FrameError` says the same and no more, in `Display` and in `Debug`.
 - **First review (DO NOT MERGE), fixed in the second push:**
   - A string-valued `words` was echoed in the `bad_request` message. Params sent as one string were echoed too, which the review did not list.
   - New lines named the computer by its maker's product name; they now say "this computer".
