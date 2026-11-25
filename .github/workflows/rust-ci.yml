@@ -353,7 +353,8 @@ jobs:
           # The allow-list. Anything not listed is refused, which covers SSPL,
           # BUSL and crates that declare no licence. Do not add to this list to
           # make a run pass: report the dependency instead. CDLA-Permissive-2.0,
-          # CC0-1.0 and Apache-2.0 WITH LLVM-exception were approved on 25 Nov 2026.
+          # CC0-1.0, 0BSD, BSL-1.0 and Apache-2.0 WITH LLVM-exception were
+          # approved on 25 Nov 2026.
           mkdir -p "$RUNNER_TEMP/deny-config"
           cat > "$RUNNER_TEMP/deny-config/deny.toml" <<'TOML'
           [licenses]
@@ -363,6 +364,8 @@ jobs:
               "MIT",
               "BSD-2-Clause",
               "BSD-3-Clause",
+              "0BSD",
+              "BSL-1.0",
               "CC0-1.0",
               "CDLA-Permissive-2.0",
               "ISC",
