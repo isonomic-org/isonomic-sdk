@@ -11,6 +11,29 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+## Unreleased: the recovery kit (`identity.kit_*`, needs-master)
+
+**Wire (additive, still version 0):**
+- New methods, all shell only: `identity.kit_export { person_asked }`, `identity.kit_restore { kit, words, replace_unused }`, `identity.kit_saved {}` and `identity.kit_status {}`.
+- New replies: `recovery_kit { id, words, kit }`, `kit_restored { id, words, kit, kit_made, note }` and `kit_status { saved_at, exported_at }`. `kit_saved` answers `done {}`.
+- New error code: `recovery_refused`.
+- The kit document never holds the words.
+- `note` is the engine's plain message about the spent kit and anything set aside.
+- Fixtures: `identity.jsonl` lines 144–152.
+- New crate `isonomic-words` (no UI): the standard 2048-word list, pinned by its published SHA-256, with `is_word`, `completions`, `complete` and the 24-word checksum `check`.
+- Spec: `docs/interfaces/identity.md`.
+
+**For the engine:** move `SDK_REF` here and answer the four methods (its plan, isonomic-capsule "Worker reports" at 22:29 UTC, with the words kept out of the document). `proto::auth` already refuses them to app tokens. Refuse an export without `person_asked: true`, and every refusal, with `recovery_refused` and plain words. Write `note` in plain words. Take the word list from `isonomic-words` (or hold your own copy to `LIST_SHA256`). Never log the words: `RecoveryWords`' `Debug` is redacted, and so is the `kit` in `KitRestore`'s `Debug` (a person can pick the wrong file). Log a call or reply only through `Debug`, never as JSON, and never log `reveal()`. Answer a client's frame through `lenient::decode_client` and never quote client input in the engine's own errors. `FrameError::Json` now holds a `DecodeFailure` (category, line and column) instead of serde's error. Run the conformance suite; `identity.kit_apps_refused` and `identity.kit_export_needs_person` are new.
+
+**For the window:**
+- `client.kit_export(true)` only after the person asks. Show the words, save `kit` as a file, then call `kit_saved()` when the person confirms.
+- Check each word as it's typed with `isonomic_words::{is_word, completions, complete}`, and all 24 with `isonomic_words::check` before restoring.
+- `client.kit_restore(KitRestore { kit, words, replace_unused })` from the "I have a recovery kit" path. Show its `note` as written. Its new words and kit replace the spent one, and the person saves them again.
+- `kit_status()` drives the "not saved yet" reminder.
+- Show every `recovery_refused` message as written. Treat an `unknown_method` answer as an engine that needs updating.
+
+**Testing:** `TestEngine::identity()` adds `set_now`, `set_in_use` and `kit_generation`, and `isonomic_testkit::kit_words(n)` gives a generation's words (public test vectors).
+
 ## Unreleased: Isonomic UI at fa70c9b
 
 **Wire:** no change. Additive only.

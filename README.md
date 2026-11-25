@@ -9,6 +9,7 @@ The one contract between the Isonomic window and the Isonomic engine, over a Uni
 | `isonomic-testkit` | An in-memory engine that speaks the real protocol and enforces tokens, with a scriptable fake per interface, for tests. |
 | `isonomic-conformance` | The contract as checks against any engine connection. The testkit passes them here; the engine runs them against its own socket. |
 | `isonomic-reports` | Problem reports: format 1, the scrubber and the service-log filters the window and the engine share. Builds without Isonomic UI. |
+| `isonomic-words` | The recovery kit's standard 2048-word list (pinned by its published SHA-256) and the entry checks: `is_word`, `completions`, `complete` and the 24-word checksum `check`. Shared by the window and the engine. Builds without Isonomic UI. |
 | `isonomic-app` | The `App` trait every first-party app implements, the `AppContext` it is given, registration for the window, and a headless test host. The only crate that depends on Isonomic UI. |
 | `examples/hello-app` | The smallest app: lists its models and streams one reply, tested in a headless window. |
 

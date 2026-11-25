@@ -22,6 +22,7 @@ mod events;
 mod faults;
 mod identity;
 mod models;
+mod recovery;
 mod sql;
 mod system;
 
@@ -33,6 +34,7 @@ pub use harness_host;
 pub use identity::{FakeIdentity, DEFAULT_ID as DEFAULT_IDENTITY};
 pub use isonomic_proto::auth::Interface;
 pub use models::{FakeModels, Gate, Step};
+pub use recovery::{kit_words, DEFAULT_NOW as DEFAULT_KIT_NOW, NOTE as KIT_RESTORE_NOTE};
 pub use sql::{FakeSql, SqlCall};
 
 use std::collections::HashMap;
