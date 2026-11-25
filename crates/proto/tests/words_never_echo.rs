@@ -165,3 +165,19 @@ fn the_strict_decoder_says_only_where() {
         assert!(text.contains("data error"), "{text}");
     }
 }
+
+/// A restore that decodes prints neither its words nor its kit in `Debug`:
+/// a person can pick the wrong file, and the kit is then the words.
+#[test]
+fn a_restore_with_the_words_as_its_kit_debugs_without_them() {
+    let frame = format!(
+        r#"{{"type":"request","id":7,"method":"identity.kit_restore","params":{{"kit":"{WORDS}","words":{},"replace_unused":false}}}}"#,
+        quoted()
+    );
+    let FromClient::Message(decoded) = decode_client(frame.as_bytes()) else {
+        panic!("a well-formed restore should decode");
+    };
+    let text = format!("{decoded:?}");
+    assert!(!text.contains("abandon") && !text.contains("art"), "{text}");
+    assert!(text.contains("bytes redacted"), "{text}");
+}

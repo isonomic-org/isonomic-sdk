@@ -53,7 +53,7 @@ A kit is two parts the person keeps apart: 24 words they write down, and a kit d
   - **`Deserialize` errors are fixed text.** They never quote the input.
   - **Any length is accepted:** `RecoveryWords::new` takes any number of words, because the wire carries what was typed. The engine, or `isonomic_words::check`, decides whether they are 24 valid ones.
 - **Malformed frames:** `lenient::decode_client` never quotes a frame it can't decode, kit or not, whatever is wrong with it.
-  - It says only fixed text, serde's category (`syntax`, `data`, `eof`) and the line and column.
+  - It says only fixed text, serde's category (`syntax`, `data`, `eof`, `io`) and the line and column.
   - It never repeats a method name, since words joined by dots have a method's form: an unknown method is answered "this engine has no such method".
   - The strict `frame::decode` and `io::read_message` say the same and no more (`FrameError::Json(DecodeFailure)`), in `Display` and in `Debug`.
 

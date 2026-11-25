@@ -159,8 +159,10 @@ pub struct RecoveryKit {
     pub kit: String,
 }
 
-/// Params of `identity.kit_restore`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// Params of `identity.kit_restore`. Its `Debug` prints neither the words
+/// nor the kit: a person can pick the wrong file, and the kit may then be
+/// the words written out.
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KitRestore {
     /// The saved kit document, as `kit_export` gave it.
     pub kit: String,
@@ -168,6 +170,16 @@ pub struct KitRestore {
     pub words: RecoveryWords,
     /// Replace an ID this computer made but has not used (no app data yet).
     pub replace_unused: bool,
+}
+
+impl std::fmt::Debug for KitRestore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KitRestore")
+            .field("kit", &format_args!("<{} bytes redacted>", self.kit.len()))
+            .field("words", &self.words)
+            .field("replace_unused", &self.replace_unused)
+            .finish()
+    }
 }
 
 /// Answer to `identity.kit_restore`. A restore spends the old kit: these
