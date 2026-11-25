@@ -9,6 +9,10 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
+## 2026-11-25 · Isonomic UI at 6e0c4a5
+
+`UI_REF` moves to 6e0c4a5: the stopped run status draws a filled stop, and `ThinkingIndicator` gains `elapsed`, `finished`, `reasoning` (a keyboard disclosure), `default_expanded` and `on_toggle`. Additive only. Nothing in the SDK uses them, and every test passes on it.
+
 ## 2026-11-16 · The recovery kit on the wire (needs-master)
 
 `identity.kit_export`, `kit_restore`, `kit_saved` and `kit_status`, all shell only, with the new error code `recovery_refused`. These are the shapes from the engine's plan, with the orchestrator's decision applied: **the kit document holds the ID, the key log and a fingerprint of the recovery key, never the words.**
