@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The `identity` interface of the in-memory engine: a scripted ID, made on
 //! the first `identity.get`, a refusal a test can switch on, and the
 //! recovery kit (`crate::recovery`).

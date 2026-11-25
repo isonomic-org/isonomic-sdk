@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! A report's own id, so a receiver can drop duplicates: 128 bits as 32
 //! lowercase hex characters.
 //!

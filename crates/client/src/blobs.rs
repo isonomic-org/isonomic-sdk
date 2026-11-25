@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The `blobs` interface: store bytes, get a handle, read them back. Large
 //! blobs are split into chunks here, so callers pass and receive whole
 //! byte vectors.

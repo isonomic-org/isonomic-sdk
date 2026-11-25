@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The `blobs` interface of the in-memory engine. Blobs live in memory,
 //! owned by the app that stored them; the shell can read them all. Tests
 //! lower the engine's own size limit and read back what an app stored.

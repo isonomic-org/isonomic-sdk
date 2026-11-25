@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Data carried by the `sql` interface: an app's own schemas in the
 //! Capsule's database, queried and changed with typed rows, and live
 //! queries that push a fresh result whenever it changes.

@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! What never goes in a report. The window and the engine both scrub with
 //! these rules:
 //!

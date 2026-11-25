@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Wire types for the Isonomic engine API, protocol version 0.
 //!
 //! One Unix socket carries three kinds of message: requests, responses and

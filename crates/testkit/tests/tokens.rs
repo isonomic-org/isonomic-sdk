@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Capability tokens against the in-memory engine: an app reaches only what
 //! its manifest allows, on every interface.
 

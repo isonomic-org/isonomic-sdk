@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The smallest Isonomic app. It lists the models its manifest lets it use,
 //! then streams one reply from the first chat model, chunk by chunk.
 //!

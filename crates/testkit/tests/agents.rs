@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The agents interface against the testkit's host (harness-host's
 //! `MemoryHost`): a scripted turn streamed to the app, resuming a stream,
 //! isolation between apps, approvals that need the person, client tools,

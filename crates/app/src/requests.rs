@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! What an app asks the window to do for it: things only the window may
 //! do, such as installing a model, which is the shell's alone on the wire.
 

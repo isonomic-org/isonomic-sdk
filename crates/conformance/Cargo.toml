@@ -3,6 +3,7 @@ name = "isonomic-conformance"
 description = "The SDK contract as checks against any engine connection: the testkit and the engine both pass them"
 version.workspace = true
 edition.workspace = true
+license = "Apache-2.0"
 publish.workspace = true
 
 [dependencies]

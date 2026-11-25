@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Where a Capsule lives and where its engine listens.
 //!
 //! Pure functions, used by the engine to bind and by the window to connect,

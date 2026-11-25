@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Model downloads, the recommended first model and the hardware profile:
 //! the window's first-run flow against the in-memory engine.
 //!

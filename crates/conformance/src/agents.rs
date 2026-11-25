@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The agents interface for an app that holds the capability: presets, the
 //! session registry, replay from a sequence number, isolation between apps
 //! and purge.

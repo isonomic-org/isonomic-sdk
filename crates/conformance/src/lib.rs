@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The SDK's contract as checks that run against any engine connection.
 //!
 //! This repo's CI runs them against the testkit (`tests/testkit.rs`). The

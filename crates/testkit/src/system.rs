@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The `system` interface of the in-memory engine.
 
 use std::sync::atomic::Ordering;

@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Problem reports in format 1, shared by the window and the engine.
 //!
 //! A report is one small JSON document. Both sides write the same document

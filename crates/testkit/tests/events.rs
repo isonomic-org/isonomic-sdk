@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The events interface against the fake: delivery across windows, topic
 //! filters, scopes, the shell reaching an app, unsubscribing, and refusals.
 

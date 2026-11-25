@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! What the engine answers (`Reply`) and what it pushes on a subscription
 //! (`Event`).
 

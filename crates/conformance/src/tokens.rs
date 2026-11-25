@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Capability tokens: granted only for valid manifests, unknown tokens
 //! refused, and a token without a capability refused on every interface.
 //! The calls come from the frozen fixtures, so a new method is covered the

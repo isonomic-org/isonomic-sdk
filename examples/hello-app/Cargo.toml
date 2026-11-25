@@ -3,6 +3,7 @@ name = "hello-app"
 description = "The smallest Isonomic app: lists the models it may use and streams one reply"
 version.workspace = true
 edition.workspace = true
+license = "Apache-2.0"
 publish.workspace = true
 
 [dependencies]

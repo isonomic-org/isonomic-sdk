@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The `sql` interface: query and change the app's own schemas, and keep a
 //! live query whose result the engine pushes whenever it changes.
 

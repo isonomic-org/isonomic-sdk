@@ -1,3 +1,6 @@
+// Copyright 2026 Anud Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The client against an engine newer than itself: unknown events are
 //! skipped, an unknown reply fails only its own call, and the connection
 //! survives both.
