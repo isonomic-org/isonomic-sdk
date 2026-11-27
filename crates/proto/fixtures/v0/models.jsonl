@@ -56,3 +56,15 @@
 {"type":"request","id":132,"token":"tok-hello-1","method":"models.list"}
 {"type":"response","id":132,"result":{"models":[{"id":"chat-small","name":"Chat Small","context_length":8192,"capabilities":["chat"],"recommended":true},{"id":"embed-small","name":"Embed Small","context_length":8192,"capabilities":["embeddings"]}]}}
 {"type":"response","id":133,"result":{"model":{"id":"chat-small","name":"Chat Small","context_length":8192,"capabilities":["chat"],"recommended":true,"size_bytes":2684354560,"license":"Test License","state":"stopped"}}}
+{"type":"request","id":160,"method":"models.catalogue","params":{}}
+{"type":"response","id":160,"result":{"catalogue":[{"id":"chat-small","name":"Chat Small","context_length":8192,"capabilities":["chat"],"recommended":true,"size_bytes":2684354560,"license":"Test License","state":"ready","about":"A small, quick model for everyday chat.","publisher":"Test Lab","fits":true},{"id":"chat-medium","name":"Chat Medium","context_length":32768,"capabilities":["chat"],"size_bytes":5368709120,"license":"Test License","state":"downloading","fits":true},{"id":"chat-large","name":"Chat Large","context_length":131072,"capabilities":["chat"],"size_bytes":42949672960,"state":"not_installed","publisher":"Test Lab","fits":false}]}}
+{"type":"request","id":161,"method":"models.remove","params":{"id":"chat-small"}}
+{"type":"response","id":161,"result":{"done":{}}}
+{"type":"request","id":162,"method":"models.remove","params":{"id":"chat-medium"}}
+{"type":"response","id":162,"error":{"code":"download_running","message":"chat-medium is downloading; cancel the download first"}}
+{"type":"request","id":163,"method":"models.remove","params":{"id":"chat-large"}}
+{"type":"response","id":163,"error":{"code":"not_installed","message":"chat-large is not installed"}}
+{"type":"request","id":164,"token":"tok-hello-1","method":"models.catalogue","params":{}}
+{"type":"response","id":164,"error":{"code":"capability_denied","message":"app com.isonomic.hello may not call models.catalogue"}}
+{"type":"request","id":165,"token":"tok-hello-1","method":"models.remove","params":{"id":"chat-small"}}
+{"type":"response","id":165,"error":{"code":"capability_denied","message":"app com.isonomic.hello may not call models.remove"}}

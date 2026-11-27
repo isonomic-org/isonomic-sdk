@@ -323,3 +323,32 @@ pub struct Recommendation {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub size_bytes: Option<u64>,
 }
+
+/// Params of `models.catalogue`. Empty for now; a struct so fields can
+/// come.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GetCatalogue {}
+
+/// One local model this machine could install or has installed, as the
+/// window's model setup lists it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CatalogueEntry {
+    /// What `models.info` says of it, `state` included (`not_installed`,
+    /// `downloading`, `stopped`, `ready` ...).
+    #[serde(flatten)]
+    pub detail: ModelDetail,
+    /// One line about the model for a list row.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub about: Option<String>,
+    /// Who publishes it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub publisher: Option<String>,
+    /// This machine's memory admits it.
+    pub fits: bool,
+}
+
+/// Params of `models.remove`: delete an installed local model's file.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RemoveModel {
+    pub id: String,
+}

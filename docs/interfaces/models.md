@@ -16,6 +16,8 @@ Needs the `models` capability. An app sees and uses only the models its manifest
 | `models.download` | `{ model }` | `downloading { subscription, model, total_bytes? }`, then `download_progress` events. Shell only |
 | `models.download_cancel` | `{ model }` | `cancelled {}`; every subscriber's stream ends `cancelled`. Shell only |
 | `models.recommended` | `{ profile? }` | `recommended { model, profile, size_bytes? }`: the local model to start with. Shell only |
+| `models.catalogue` | `{}` | `catalogue [CatalogueEntry]`: every local model this machine could install or has installed. Shell only |
+| `models.remove` | `{ id }` | `done {}`: the model's file is deleted and it is `not_installed`. Shell only |
 
 `model` left out means the user's default chat (or embeddings) model; the reply names the one chosen.
 
@@ -55,7 +57,7 @@ Only the app that opened a stream can cancel it. Dropping a `ModelStream` in the
 
 ## Installing a model
 
-The window's first run, V1 local models only. All three calls are the shell's: `proto::auth` refuses them to every app token, whatever its capabilities.
+The window's first run, V1 local models only. All three calls (and the model setup's two, below) are the shell's: `proto::auth` refuses them to every app token, whatever its capabilities.
 
 - **State.** `models.info` says `not_installed` for a local model whose file is not on the machine yet, and `downloading` while it is fetched; `size_bytes` is the size to show before starting. A model that is not installed refuses streams and embeddings with `model_unavailable`.
 - **The first model.** `models.recommended {}` names the model for this machine's profile (`system.profile`), or for the `profile` asked about. Below every local model's needs (V1's floor is 16 GiB) it answers `insufficient_memory`, with `required_bytes` (the floor) and `available_bytes`. Here `available_bytes` is the machine's **total physical memory**, not what is free now: the floor is about the machine, not the moment.
@@ -71,6 +73,30 @@ The window's first run, V1 local models only. All three calls are the shell's: `
 {"type":"event","subscription":30,"event":"download_progress","data":{"model":"chat-medium","received_bytes":5368709120,"total_bytes":5368709120,"outcome":"installed"}}
 ```
 
+## The model setup
+
+Settings lists models and uninstalls them. Both calls are the shell's, like the install calls above.
+
+- **`models.catalogue {}`** lists every local model the engine knows for this machine, installed or not, never a remote one. Each `CatalogueEntry` is the model's `ModelDetail` (the fields of `models.info`, flattened, `state` included: `not_installed`, `downloading`, `stopped`, `ready` ...) plus:
+  - `about`: one line for a list row;
+  - `publisher`: who publishes it;
+  - `fits`: whether this machine's memory admits it.
+  - `about` and `publisher` are absent when unknown.
+- **`models.remove { id }`** deletes an installed local model's file, so the person can uninstall it. The model is then `not_installed`, and `models.download` fetches it again. It is refused with:
+  - `unknown_model` for no such model;
+  - `unsupported` for a remote model;
+  - `not_installed` when its file is not on the machine;
+  - `download_running` while its download runs: call `models.download_cancel` first.
+
+```json
+{"type":"request","id":161,"method":"models.remove","params":{"id":"chat-small"}}
+{"type":"response","id":161,"result":{"done":{}}}
+{"type":"request","id":162,"method":"models.remove","params":{"id":"chat-medium"}}
+{"type":"response","id":162,"error":{"code":"download_running","message":"chat-medium is downloading; cancel the download first"}}
+```
+
+The client: `client.models().catalogue()` and `client.models().remove(id)`.
+
 ## Errors
 
 | Code | When |
@@ -83,6 +109,8 @@ The window's first run, V1 local models only. All three calls are the shell's: `
 | `remote_disabled` | The model is remote and the user's switch is off |
 | `unknown_subscription` | `models.cancel` for a stream that ended or is not the caller's |
 | `not_downloading` | `models.download_cancel` for a model with no download running |
+| `not_installed` | `models.remove` for a model whose file is not on the machine |
+| `download_running` | `models.remove` while the model downloads; cancel first |
 
 ```json
 {"type":"response","id":27,"error":{"code":"insufficient_memory","message":"not enough free memory to load the model without thrashing; try a smaller model or a remote one","memory":{"required_bytes":21474836480,"available_bytes":6442450944,"reason":"not enough free memory to load the model without thrashing; try a smaller model or a remote one"}}}
@@ -93,3 +121,5 @@ The window's first run, V1 local models only. All three calls are the shell's: `
 `TestEngine::models()` scripts the fake: `add`, `script` (steps of chunks, `Hold(gate)` and `Fail`), `refuse` and `admit`, `fail` and `recover`, `set_remote_enabled`, and `requests` / `cancels` for assertions. Without a script, `chat-small` echoes the last user message word by word.
 
 Installing: `uninstall(model)` makes a model `not_installed`, and `installed(model)` reads it back. `script_download(model, steps)` plays `DownloadStep::Progress(bytes)`, `Hold(gate)` and `Fail(error)`; without a script a download arrives in four quarters. `recommend(profile, model)` sets the first model per profile (`chat-small` for `standard` and `high`, none for `low`). `TestEngine::set_profile(HardwareProfile)` sets what `system.profile` says and what `models.recommended` chooses for, so a test can run a machine below `MEMORY_FLOOR`.
+
+Model setup: the catalogue is every local fake model, with the state `models.info` gives it. `describe(model, about, publisher)` sets its line and publisher. A model fits unless the memory gate refuses it (`refuse`) or its size is over the profile's total memory. `models.remove` makes a model `not_installed`.

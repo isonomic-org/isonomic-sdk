@@ -7,7 +7,8 @@
 //! A call made without a token comes from the shell (the window itself) on
 //! its own connection. A call made with an app's token is checked against
 //! the capabilities in that app's approved manifest. Shell-only interfaces
-//! (`system`, `apps`) are refused to every app token.
+//! (`system`, `apps`, `identity`, `connections`) are refused to every app
+//! token.
 
 use crate::manifest::{Capabilities, Manifest};
 use crate::{agents, Call, ErrorCode, WireError};
@@ -27,6 +28,8 @@ pub enum Interface {
     Agents,
     /// The person's Isonomic ID.
     Identity,
+    /// Tool servers the person connects.
+    Connections,
 }
 
 impl Interface {
@@ -40,6 +43,7 @@ impl Interface {
             Interface::Sql => "sql",
             Interface::Agents => "agents",
             Interface::Identity => "identity",
+            Interface::Connections => "connections",
         }
     }
 
@@ -47,7 +51,7 @@ impl Interface {
     pub fn shell_only(self) -> bool {
         matches!(
             self,
-            Interface::System | Interface::Apps | Interface::Identity
+            Interface::System | Interface::Apps | Interface::Identity | Interface::Connections
         )
     }
 }

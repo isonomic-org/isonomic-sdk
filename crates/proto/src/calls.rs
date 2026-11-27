@@ -66,6 +66,13 @@ impl Call {
         "identity.kit_restore",
         "identity.kit_saved",
         "identity.kit_status",
+        "models.catalogue",
+        "models.remove",
+        "connections.list",
+        "connections.add",
+        "connections.sign_in",
+        "connections.remove",
+        "connections.tools",
     ];
 
     /// The method name on the wire, for logs and the Activity tab.
@@ -129,6 +136,13 @@ impl Call {
             Call::IdentityKitRestore(_) => "identity.kit_restore",
             Call::IdentityKitSaved(_) => "identity.kit_saved",
             Call::IdentityKitStatus(_) => "identity.kit_status",
+            Call::ModelsCatalogue(_) => "models.catalogue",
+            Call::ModelsRemove(_) => "models.remove",
+            Call::ConnectionsList(_) => "connections.list",
+            Call::ConnectionsAdd(_) => "connections.add",
+            Call::ConnectionsSignIn(_) => "connections.sign_in",
+            Call::ConnectionsRemove(_) => "connections.remove",
+            Call::ConnectionsTools(_) => "connections.tools",
         }
     }
 
@@ -150,7 +164,9 @@ impl Call {
             | Call::ModelsEmbed { .. }
             | Call::ModelsDownload(_)
             | Call::ModelsDownloadCancel(_)
-            | Call::ModelsRecommended(_) => Interface::Models,
+            | Call::ModelsRecommended(_)
+            | Call::ModelsCatalogue(_)
+            | Call::ModelsRemove(_) => Interface::Models,
             Call::BlobsPut { .. }
             | Call::BlobsCreate { .. }
             | Call::BlobsWrite { .. }
@@ -193,6 +209,11 @@ impl Call {
             | Call::IdentityKitRestore(_)
             | Call::IdentityKitSaved(_)
             | Call::IdentityKitStatus(_) => Interface::Identity,
+            Call::ConnectionsList(_)
+            | Call::ConnectionsAdd(_)
+            | Call::ConnectionsSignIn(_)
+            | Call::ConnectionsRemove(_)
+            | Call::ConnectionsTools(_) => Interface::Connections,
         }
     }
 
@@ -202,12 +223,17 @@ impl Call {
         self.installs_models() || matches!(self, Call::ApprovalsUserAction(_))
     }
 
-    /// `models.download`, `download_cancel` and `recommended`: the shell's
-    /// alone, like `system.*`, whatever the app's capabilities.
+    /// `models.download`, `download_cancel`, `recommended`, `catalogue`
+    /// and `remove`: the shell's alone, like `system.*`, whatever the app's
+    /// capabilities.
     pub fn installs_models(&self) -> bool {
         matches!(
             self,
-            Call::ModelsDownload(_) | Call::ModelsDownloadCancel(_) | Call::ModelsRecommended(_)
+            Call::ModelsDownload(_)
+                | Call::ModelsDownloadCancel(_)
+                | Call::ModelsRecommended(_)
+                | Call::ModelsCatalogue(_)
+                | Call::ModelsRemove(_)
         )
     }
 }

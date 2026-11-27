@@ -5,7 +5,7 @@ Shell only: the window's view of the engine. Every example is a frozen fixture i
 | Method | Params | Reply |
 | --- | --- | --- |
 | `system.status` | — | `status` (a `SystemStatus`) |
-| `system.subscribe` | — | `subscribed { subscription, snapshot }`, then `service_status` events |
+| `system.subscribe` | — | `subscribed { subscription, snapshot }`, then `service_status` events, and `connection` events when a tool server connection changes state (`docs/interfaces/connections.md`) |
 | `system.unsubscribe` | `{ subscription }` | `unsubscribed {}` |
 | `system.logs` | `{ service, limit? }` | `logs { service, lines }` (default 50 lines) |
 | `system.profile` | — | `profile` (a `HardwareProfile`) |

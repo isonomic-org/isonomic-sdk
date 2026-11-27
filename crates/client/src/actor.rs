@@ -14,7 +14,14 @@ use isonomic_proto::{Call, ClientMessage, Event, Outcome, Reply, ServerMessage, 
 use tokio::io::ReadHalf;
 use tokio::sync::{mpsc, oneshot, watch};
 
-use crate::{BoxedStream, ClientError, Connector, Live, Options, Request};
+use crate::{BoxedStream, ClientError, ConnectionStates, Connector, Live, Options, Request};
+
+/// What the actor keeps current for views.
+pub(crate) struct Watches {
+    pub(crate) live: watch::Sender<Live>,
+    /// The newest state of each connection, from `connection` events.
+    pub(crate) connections: watch::Sender<ConnectionStates>,
+}
 
 /// The status subscription always uses this id; caller requests start at 1.
 const SUBSCRIBE_ID: u64 = 0;
@@ -71,7 +78,8 @@ fn spawn_reader(mut reader: ReadHalf<BoxedStream>) -> mpsc::Receiver<FromServer>
     incoming
 }
 
-fn route(incoming: FromServer, routes: &mut Routes, live: &watch::Sender<Live>) {
+fn route(incoming: FromServer, routes: &mut Routes, watches: &Watches) {
+    let live = &watches.live;
     let message = match incoming {
         FromServer::Message(message) => message,
         FromServer::UnreadableResponse { id } => {
@@ -118,12 +126,19 @@ fn route(incoming: FromServer, routes: &mut Routes, live: &watch::Sender<Live>) 
                 if events.send(event).is_err() || last {
                     routes.subscriptions.remove(&subscription);
                 }
-            } else if let Event::ServiceStatus(change) = event {
-                live.send_modify(|view| {
-                    if let Some(system) = &mut view.system {
-                        system.apply(change);
-                    }
-                });
+            } else {
+                // The status subscription: service and connection changes.
+                match event {
+                    Event::ServiceStatus(change) => live.send_modify(|view| {
+                        if let Some(system) = &mut view.system {
+                            system.apply(change);
+                        }
+                    }),
+                    Event::Connection(change) => watches.connections.send_modify(|states| {
+                        states.insert(change.id.clone(), change);
+                    }),
+                    _ => {}
+                }
             }
         }
         ServerMessage::Welcome { .. } => {}
@@ -142,8 +157,9 @@ async fn serve(
     stream: BoxedStream,
     welcome: Welcome,
     inbox: &mut mpsc::Receiver<Request>,
-    live: &watch::Sender<Live>,
+    watches: &Watches,
 ) -> bool {
+    let live = &watches.live;
     let (reader, mut writer) = tokio::io::split(stream);
     let subscribe = ClientMessage::Request {
         id: SUBSCRIBE_ID,
@@ -165,7 +181,7 @@ async fn serve(
     let finished = loop {
         tokio::select! {
             message = incoming.recv() => match message {
-                Some(message) => route(message, &mut routes, live),
+                Some(message) => route(message, &mut routes, watches),
                 None => break false,
             },
             request = inbox.recv() => match request {
@@ -193,18 +209,23 @@ pub(crate) async fn run(
     connector: Connector,
     options: Options,
     mut inbox: mpsc::Receiver<Request>,
-    live: watch::Sender<Live>,
+    watches: Watches,
 ) {
     let mut delay = options.reconnect_min;
     loop {
         if let Some((stream, welcome)) = open(&connector, &options.name).await {
             delay = options.reconnect_min;
-            if serve(stream, welcome, &mut inbox, &live).await {
+            if serve(stream, welcome, &mut inbox, &watches).await {
                 return;
             }
-            live.send_modify(|view| {
+            watches.live.send_modify(|view| {
                 view.connected = false;
                 view.system = None;
+            });
+            watches.connections.send_if_modified(|states| {
+                let had = !states.is_empty();
+                states.clear();
+                had
             });
         }
         // Wait before the next attempt. Requests made meanwhile fail fast

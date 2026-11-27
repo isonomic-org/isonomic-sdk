@@ -64,8 +64,11 @@ pub(crate) struct FakeModel {
     /// Its file is on this machine. `false` until `models.download` ends.
     pub(crate) installed: bool,
     script: Option<Vec<Step>>,
-    refusal: Option<MemoryRefusal>,
+    pub(crate) refusal: Option<MemoryRefusal>,
     failure: Option<WireError>,
+    /// What `models.catalogue` shows beside it.
+    pub(crate) about: Option<String>,
+    pub(crate) publisher: Option<String>,
 }
 
 pub(crate) struct ModelsState {
@@ -89,7 +92,7 @@ fn info(id: &str, capability: &str) -> ModelInfo {
 
 /// The model as the caller sees it: `recommended` set on the one the
 /// engine recommends for this machine's profile.
-fn shown(model: &FakeModel, recommended: Option<&str>) -> ModelInfo {
+pub(crate) fn shown(model: &FakeModel, recommended: Option<&str>) -> ModelInfo {
     ModelInfo {
         recommended: recommended == Some(model.info.id.as_str()),
         ..model.info.clone()
@@ -105,6 +108,8 @@ impl Default for ModelsState {
             script: None,
             refusal: None,
             failure: None,
+            about: None,
+            publisher: None,
         };
         Self {
             models: vec![
@@ -148,6 +153,8 @@ impl FakeModels {
                 script: None,
                 refusal: None,
                 failure: None,
+                about: None,
+                publisher: None,
             });
         });
     }
@@ -473,6 +480,7 @@ pub(crate) async fn dispatch(
                 }
             }
         }
+        Call::ModelsCatalogue(_) | Call::ModelsRemove(_) => crate::catalogue::answer(state, call),
         Call::ModelsDownload(_) | Call::ModelsDownloadCancel(_) | Call::ModelsRecommended(_) => {
             return crate::downloads::dispatch(state, conn, id, token, call).await;
         }

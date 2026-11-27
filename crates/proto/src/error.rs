@@ -111,6 +111,17 @@ pub enum ErrorCode {
     /// or a computer whose ID is already in use. The message is plain words for
     /// the window to show; nothing was changed.
     RecoveryRefused,
+    /// `models.remove` for a local model whose file is not on this
+    /// machine.
+    NotInstalled,
+    /// `models.remove` while the model's download runs: cancel it first.
+    DownloadRunning,
+    /// No connection with that id.
+    ConnectionNotFound,
+    /// The engine could not start a server's sign-in (a server with no
+    /// browser sign-in, or one that did not answer). The message is plain
+    /// words for the window to show.
+    SignInFailed,
     /// A code from a newer engine.
     #[serde(other)]
     Unrecognized,

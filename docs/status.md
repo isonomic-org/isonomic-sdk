@@ -9,6 +9,21 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
+## 2026-11-27 · Tool server connections and the model setup (needs-master)
+
+The orchestrator's three asks, in one change: the `connections` interface, `models.catalogue` with `models.remove`, and harness at 077909e.
+
+- **`connections`**, shell only for every call: `list`, `add`, `sign_in`, `remove`, `tools`, the `connection` event, and the codes `connection_not_found` and `sign_in_failed`.
+- **The event's subscription.** The ask said to send `connection` "on the same subscription the shell uses for `download_progress`". A download's progress comes on the subscription its own `models.download` opens, and `sign_in`'s reply opens none. So the event goes on the shell's status subscription (`system.subscribe`), the one the client always holds. Changes then reach the window whatever caused them, not only a sign-in. The client folds them into `Connections::changes()`, a watch of the newest state per id, emptied on disconnect.
+- **The secret.** `ConnectionSecret` follows `RecoveryWords`: `Debug` prints `[secret]`, `Deserialize` refuses in fixed text, and `Serialize` stays transparent. `words_never_echo.rs` also sends broken `connections.add` frames holding a secret.
+- **Unknown kinds.** `Server` and `ConnectionState` are `#[non_exhaustive]`, with `Unrecognized` for a newer engine's kind, so `connections.list` never fails over one.
+- **`models.catalogue` and `models.remove`** are window-only calls, like the install calls. `remove` adds the codes `not_installed` and `download_running`. A remote model answers `unsupported`.
+- **Harness** moves to 077909e: the chat preset allows `app_read` and `app_act`. No SDK test depended on the preset's tool list.
+- **Conformance:** `connections.round_trip`, `connections.unknown_id`, `models.catalogue_local` and `models.remove_unknown`. `tokens.shell_only` and `tokens.every_interface` read the new fixtures.
+- **Changelog:** the entries from stricter scrubbing back to the model picker moved to `docs/CHANGELOG-archive-2.md`, to keep the changelog under the size limit.
+
+Not merged here: it waits for the independent reviewer.
+
 ## 2026-11-25 · Isonomic UI at 6e0c4a5
 
 `UI_REF` moves to 6e0c4a5: the stopped run status draws a filled stop, and `ThinkingIndicator` gains `elapsed`, `finished`, `reasoning` (a keyboard disclosure), `default_expanded` and `on_toggle`. Additive only. Nothing in the SDK uses them, and every test passes on it.
