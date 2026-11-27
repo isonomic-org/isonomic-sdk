@@ -16,6 +16,7 @@ pub mod agents;
 pub mod auth;
 pub mod blobs;
 mod calls;
+pub mod connections;
 mod error;
 pub mod events;
 pub mod frame;
@@ -277,6 +278,29 @@ pub enum Call {
     /// Shell only: the user-action token for a person's decision.
     #[serde(rename = "approvals.user_action")]
     ApprovalsUserAction(agents::MintUserAction),
+    /// Shell only: every local model this machine could install or has
+    /// installed, with its state and whether it fits.
+    #[serde(rename = "models.catalogue")]
+    ModelsCatalogue(models::GetCatalogue),
+    /// Shell only: delete an installed local model's file.
+    #[serde(rename = "models.remove")]
+    ModelsRemove(models::RemoveModel),
+    /// Shell only: the tool servers the person connected.
+    #[serde(rename = "connections.list")]
+    ConnectionsList(connections::ListConnections),
+    /// Shell only: connect a tool server.
+    #[serde(rename = "connections.add")]
+    ConnectionsAdd(connections::AddConnection),
+    /// Shell only: start a server's browser sign-in. The outcome arrives as
+    /// a `connection` event.
+    #[serde(rename = "connections.sign_in")]
+    ConnectionsSignIn(connections::SignIn),
+    /// Shell only: disconnect a tool server and forget its sign-in.
+    #[serde(rename = "connections.remove")]
+    ConnectionsRemove(connections::RemoveConnection),
+    /// Shell only: the tools a connection offers.
+    #[serde(rename = "connections.tools")]
+    ConnectionsTools(connections::ListConnectionTools),
 }
 
 /// What the engine sends.

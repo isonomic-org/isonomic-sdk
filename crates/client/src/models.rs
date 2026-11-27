@@ -4,8 +4,8 @@
 //! The `models` interface: list, inspect, stream and embed.
 
 use isonomic_proto::models::{
-    DownloadModel, DownloadProgress, ModelChunk, ModelDetail, ModelInfo, RecommendModel,
-    Recommendation, StopReason, StreamRequest,
+    CatalogueEntry, DownloadModel, DownloadProgress, GetCatalogue, ModelChunk, ModelDetail,
+    ModelInfo, RecommendModel, Recommendation, RemoveModel, StopReason, StreamRequest,
 };
 use isonomic_proto::{Call, Event, Reply, Token, WireError};
 
@@ -124,6 +124,32 @@ impl Models {
         });
         match self.call(call).await? {
             Reply::Recommended(recommendation) => Ok(recommendation),
+            _ => Err(ClientError::UnexpectedReply),
+        }
+    }
+}
+
+/// The model setup's list and uninstall: the shell's alone.
+impl Models {
+    /// Every local model this machine could install or has installed, with
+    /// its state and whether this machine's memory admits it.
+    pub async fn catalogue(&self) -> Result<Vec<CatalogueEntry>, ClientError> {
+        match self.call(Call::ModelsCatalogue(GetCatalogue {})).await? {
+            Reply::Catalogue(entries) => Ok(entries),
+            _ => Err(ClientError::UnexpectedReply),
+        }
+    }
+
+    /// Delete an installed local model's file; it is `not_installed`
+    /// after. Refused with `download_running` while it downloads (cancel
+    /// first), `not_installed` when there is no file, `unknown_model` for
+    /// no such model.
+    pub async fn remove(&self, model: &str) -> Result<(), ClientError> {
+        let call = Call::ModelsRemove(RemoveModel {
+            id: model.to_string(),
+        });
+        match self.call(call).await? {
+            Reply::Done {} => Ok(()),
             _ => Err(ClientError::UnexpectedReply),
         }
     }

@@ -181,3 +181,30 @@ fn a_restore_with_the_words_as_its_kit_debugs_without_them() {
     assert!(!text.contains("abandon") && !text.contains("art"), "{text}");
     assert!(text.contains("bytes redacted"), "{text}");
 }
+
+/// A tool server's pasted secret never comes back either, however the
+/// `connections.add` frame around it is broken.
+#[test]
+fn no_malformed_add_echoes_the_secret() {
+    const SECRET: &str = "test-secret-9c41";
+    let frames = [
+        // The secret in a list, where a string belongs.
+        format!(
+            r#"{{"type":"request","id":7,"method":"connections.add","params":{{"name":"x","server":{{"kind":"remote","url":"u"}},"secret":["{SECRET}"]}}}}"#
+        ),
+        // The secret where the server belongs.
+        format!(
+            r#"{{"type":"request","id":7,"method":"connections.add","params":{{"name":"x","server":"{SECRET}","secret":"{SECRET}"}}}}"#
+        ),
+        // The secret as the name, beside a server that is not one.
+        format!(
+            r#"{{"type":"request","id":7,"method":"connections.add","params":{{"name":"{SECRET}","server":5}}}}"#
+        ),
+        // `params` as the secret.
+        format!(r#"{{"type":"request","id":7,"method":"connections.add","params":"{SECRET}"}}"#),
+    ];
+    for frame in &frames {
+        let message = message(frame);
+        assert!(!message.contains("9c41"), "{message}");
+    }
+}

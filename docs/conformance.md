@@ -18,7 +18,7 @@ async fn the_engine_conforms() {
 
 `run_only(connector, |name| name.starts_with("blobs."))` runs a subset while an interface is being built. Each check has 10 s (`CHECK_LIMIT`); the report names every failure and why.
 
-The checks speak the wire alone. They grant their own apps through `apps.grant` (ids under `com.isonomic.conformance`), store and delete small blobs, publish events, and finish by asking the engine to shut down with an app's token, which it must refuse. They need no engine-side setup. Whatever needs scripted engine state, such as a model's output or a query's rows, is tested in the testkit's own tests instead.
+The checks speak the wire alone. They grant their own apps through `apps.grant` (ids under `com.isonomic.conformance`), store and delete small blobs, publish events, add and remove one tool server connection, and finish by asking the engine to shut down with an app's token, which it must refuse. They need no engine-side setup. Whatever needs scripted engine state, such as a model's output or a query's rows, is tested in the testkit's own tests instead.
 
 ## The checks
 
@@ -33,10 +33,14 @@ The checks speak the wire alone. They grant their own apps through `apps.grant` 
 | `identity.stable` | Answer `identity.get` with the same non-blank ID every time, on a second connection too, and `created: false` after the first |
 | `identity.kit_apps_refused` | Refuse `identity.kit_export`, `kit_restore`, `kit_saved` and `kit_status` to an app holding every capability, with `capability_denied` |
 | `identity.kit_export_needs_person` | Refuse the shell's `identity.kit_export` without `person_asked` with `recovery_refused`. No check ever exports a kit |
+| `connections.round_trip` | List a connection the shell adds (a remote server at an unused local port) with its name and key, drop it on `connections.remove`, and refuse a second remove with `connection_not_found`. No check signs in |
+| `connections.unknown_id` | Refuse `connections.sign_in`, `remove` and `tools` of an id it never minted with `connection_not_found` |
+| `models.catalogue_local` | List only local models in `models.catalogue`, each once |
+| `models.remove_unknown` | Refuse `models.remove` of a model it does not know with `unknown_model` |
 | `tokens.grant` | Grant a valid manifest, including one with the `agents` capability; refuse a bad version or a bad id with `invalid_manifest` |
 | `tokens.unknown_token` | Refuse a token it never issued with `unknown_token`, on any interface |
-| `tokens.shell_only` | Refuse every `system`, `apps` and `identity` method, and `models.download`, `models.download_cancel` and `models.recommended`, to an app holding every capability |
-| `tokens.every_interface` | Refuse every method of `system`, `apps`, `models`, `blobs`, `sql` and `agents` to an app with no capabilities. The calls come from the frozen fixtures, and the check fails if a method has none |
+| `tokens.shell_only` | Refuse every `system`, `apps`, `identity` and `connections` method, and `models.download`, `download_cancel`, `recommended`, `catalogue` and `remove`, to an app holding every capability |
+| `tokens.every_interface` | Refuse every method of `system`, `apps`, `identity`, `connections`, `models`, `blobs`, `sql` and `agents` to an app with no capabilities. The calls come from the frozen fixtures, and the check fails if a method has none |
 | `tokens.named_model` | Refuse a model outside the manifest's list with `capability_denied` |
 | `tokens.other_scope` | Refuse an app publishing to, or listening on, another app's events |
 | `blobs.round_trip` | Store, read back, describe and delete a blob; then `unknown_blob` |

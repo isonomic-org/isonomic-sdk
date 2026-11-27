@@ -16,7 +16,9 @@
 mod agents;
 mod agents_map;
 mod blobs;
+mod catalogue;
 mod conn;
+mod connections;
 mod downloads;
 mod events;
 mod faults;
@@ -28,6 +30,7 @@ mod system;
 
 pub use agents::FakeAgents;
 pub use blobs::{FakeBlobs, DEFAULT_LIMIT as DEFAULT_BLOB_LIMIT};
+pub use connections::{FakeConnections, SIGN_IN_PAGE};
 pub use downloads::{DownloadStep, MEMORY_FLOOR};
 /// harness-host, whose `MemoryHost` serves the agents interface here.
 pub use harness_host;
@@ -83,6 +86,9 @@ pub(crate) struct State {
     pub(crate) identity: Mutex<identity::IdentityState>,
     pub(crate) faults: Mutex<HashMap<Interface, faults::Fault>>,
     pub(crate) agents: Mutex<agents::AgentsState>,
+    pub(crate) connections: Mutex<connections::ConnectionsState>,
+    /// Connection changes, for every shell status subscription.
+    pub(crate) connection_changes: broadcast::Sender<isonomic_proto::connections::Connection>,
     next_token: AtomicU64,
 }
 
@@ -176,6 +182,8 @@ impl TestEngine {
                 identity: Mutex::new(identity::IdentityState::default()),
                 faults: Mutex::new(HashMap::new()),
                 agents: Mutex::new(agents::AgentsState::default()),
+                connections: Mutex::new(connections::ConnectionsState::default()),
+                connection_changes: broadcast::channel(64).0,
                 next_token: AtomicU64::new(1),
             }),
         }
@@ -263,6 +271,14 @@ impl TestEngine {
     /// first run.
     pub fn identity(&self) -> FakeIdentity {
         FakeIdentity {
+            state: Arc::clone(&self.state),
+        }
+    }
+
+    /// The tool servers the shell connected: their states, tools and
+    /// secrets, and how sign-ins end.
+    pub fn connections(&self) -> FakeConnections {
+        FakeConnections {
             state: Arc::clone(&self.state),
         }
     }

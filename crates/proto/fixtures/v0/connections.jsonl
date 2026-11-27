@@ -1,0 +1,24 @@
+{"type":"request","id":170,"method":"connections.list","params":{}}
+{"type":"response","id":170,"result":{"connections":[]}}
+{"type":"request","id":171,"method":"connections.add","params":{"name":"Design files","key":"design","server":{"kind":"remote","url":"https://tools.example.com/api"}}}
+{"type":"response","id":171,"result":{"connection":{"id":"conn-1","name":"Design files","key":"design","server":{"kind":"remote","url":"https://tools.example.com/api"},"state":"needs_sign_in","tools":0}}}
+{"type":"request","id":172,"method":"connections.add","params":{"name":"Issue tracker","server":{"kind":"remote","url":"https://tracker.example.com/api"},"secret":"test-token-0001"}}
+{"type":"response","id":172,"result":{"connection":{"id":"conn-2","name":"Issue tracker","server":{"kind":"remote","url":"https://tracker.example.com/api"},"state":"connecting","tools":0}}}
+{"type":"request","id":173,"method":"connections.add","params":{"name":"Notes folder","server":{"kind":"local","command":"notes-server","args":["--root","~/Notes"]}}}
+{"type":"response","id":173,"result":{"connection":{"id":"conn-3","name":"Notes folder","server":{"kind":"local","command":"notes-server","args":["--root","~/Notes"]},"state":"ready","tools":4}}}
+{"type":"request","id":174,"method":"connections.sign_in","params":{"id":"conn-1"}}
+{"type":"response","id":174,"result":{"sign_in":{"url":"https://tools.example.com/authorize?client_id=isonomic&state=4f2c"}}}
+{"type":"event","subscription":7,"event":"connection","data":{"id":"conn-1","name":"Design files","key":"design","server":{"kind":"remote","url":"https://tools.example.com/api"},"state":"ready","tools":12}}
+{"type":"event","subscription":7,"event":"connection","data":{"id":"conn-2","name":"Issue tracker","server":{"kind":"remote","url":"https://tracker.example.com/api"},"state":"failed","error":"The server refused the token. Check it and add the connection again.","tools":0}}
+{"type":"request","id":175,"method":"connections.tools","params":{"id":"conn-3"}}
+{"type":"response","id":175,"result":{"connection_tools":[{"name":"search_notes","description":"Find notes that mention a phrase"},{"name":"read_note","description":""}]}}
+{"type":"request","id":176,"method":"connections.remove","params":{"id":"conn-2"}}
+{"type":"response","id":176,"result":{"done":{}}}
+{"type":"request","id":177,"method":"connections.remove","params":{"id":"conn-9"}}
+{"type":"response","id":177,"error":{"code":"connection_not_found","message":"no connection conn-9"}}
+{"type":"request","id":178,"method":"connections.sign_in","params":{"id":"conn-3"}}
+{"type":"response","id":178,"error":{"code":"sign_in_failed","message":"This tool server has no sign-in."}}
+{"type":"request","id":179,"token":"tok-hello-1","method":"connections.list","params":{}}
+{"type":"response","id":179,"error":{"code":"capability_denied","message":"app com.isonomic.hello may not call connections.list"}}
+{"type":"request","id":180,"token":"tok-hello-1","method":"connections.add","params":{"name":"Design files","server":{"kind":"remote","url":"https://tools.example.com/api"}}}
+{"type":"response","id":180,"error":{"code":"capability_denied","message":"app com.isonomic.hello may not call connections.add"}}

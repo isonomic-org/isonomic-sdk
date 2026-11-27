@@ -134,6 +134,16 @@ pub enum Reply {
     UserAction {
         token: String,
     },
+    /// Answer to `models.catalogue`. (`models.remove` answers `done`.)
+    Catalogue(Vec<models::CatalogueEntry>),
+    /// Answer to `connections.list`.
+    Connections(Vec<connections::Connection>),
+    /// Answer to `connections.add`. (`connections.remove` answers `done`.)
+    Connection(connections::Connection),
+    /// Answer to `connections.sign_in`: the page to open.
+    SignIn(connections::SignInStarted),
+    /// Answer to `connections.tools`.
+    ConnectionTools(Vec<connections::ConnectionTool>),
 }
 
 impl Reply {
@@ -172,6 +182,9 @@ pub enum Event {
     LiveDelta(agents::LiveDelta),
     /// A session stream's last event: the session is gone.
     SessionEnded(agents::SessionEnded),
+    /// A tool server connection changed state. Sent to the shell on its
+    /// status subscription (`system.subscribe`).
+    Connection(connections::Connection),
 }
 
 impl Event {

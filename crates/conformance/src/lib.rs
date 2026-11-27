@@ -21,11 +21,12 @@
 //! output or a query's rows, stays in the testkit's own tests.
 //!
 //! Run them against a test engine, never a user's: the checks store and
-//! delete small blobs, publish events, create and purge agent sessions and
-//! grant test apps, and the last one asks the engine to shut down with an
+//! delete small blobs, publish events, create and purge agent sessions,
+//! add and remove a tool server connection and grant test apps, and the last one asks the engine to shut down with an
 //! app's token, which it must refuse.
 
 mod agents;
+mod connections;
 mod interfaces;
 mod recovery;
 mod tokens;
@@ -78,6 +79,10 @@ pub const CHECKS: &[Check] = &[
         "identity.kit_export_needs_person",
         recovery::export_needs_person
     ),
+    check!("connections.round_trip", connections::round_trip),
+    check!("connections.unknown_id", connections::unknown_id),
+    check!("models.catalogue_local", connections::catalogue_local),
+    check!("models.remove_unknown", connections::remove_unknown),
     check!("tokens.grant", tokens::grant),
     check!("tokens.unknown_token", tokens::unknown_token),
     check!("tokens.shell_only", tokens::shell_only),

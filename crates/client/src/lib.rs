@@ -26,6 +26,7 @@
 mod actor;
 mod agents;
 mod blobs;
+mod connections;
 mod events;
 mod models;
 mod scoped;
@@ -110,6 +111,7 @@ pub enum ClientError {
 
 pub use agents::{Agents, SessionStream, SessionUpdate};
 pub use blobs::Blobs;
+pub use connections::{ConnectionStates, Connections};
 pub use events::{EventStream, Events};
 pub use models::{DownloadStream, ModelStream, Models};
 pub use scoped::AppClient;
@@ -148,6 +150,7 @@ impl Subscription {
 pub struct Client {
     requests: mpsc::Sender<Request>,
     live: watch::Receiver<Live>,
+    connections_live: watch::Receiver<ConnectionStates>,
 }
 
 impl Client {
@@ -156,8 +159,17 @@ impl Client {
     pub fn start(runtime: &tokio::runtime::Handle, connector: Connector, options: Options) -> Self {
         let (requests, inbox) = mpsc::channel(64);
         let (live_tx, live) = watch::channel(Live::default());
-        runtime.spawn(actor::run(connector, options, inbox, live_tx));
-        Self { requests, live }
+        let (connections_tx, connections_live) = watch::channel(ConnectionStates::new());
+        let watches = actor::Watches {
+            live: live_tx,
+            connections: connections_tx,
+        };
+        runtime.spawn(actor::run(connector, options, inbox, watches));
+        Self {
+            requests,
+            live,
+            connections_live,
+        }
     }
 
     /// The live view. Await `changed()` on it; never poll. Copy what you
@@ -195,6 +207,12 @@ impl Client {
     /// The `sql` interface, as the shell (which must name each schema).
     pub fn sql(&self) -> Sql {
         Sql::new(self.clone(), None)
+    }
+
+    /// The `connections` interface: tool servers the person connects.
+    /// Shell only.
+    pub fn connections(&self) -> Connections {
+        Connections::new(self.clone())
     }
 
     /// The agents interface, as the shell: every app's sessions.

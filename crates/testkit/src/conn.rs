@@ -18,7 +18,9 @@ use tokio::io::DuplexStream;
 use tokio::sync::{mpsc, oneshot};
 use tokio::task::JoinHandle;
 
-use crate::{agents, blobs, events, faults, models, sql, system, CallRecord, Grant, State};
+use crate::{
+    agents, blobs, connections, events, faults, models, sql, system, CallRecord, Grant, State,
+};
 
 /// One open subscription: the task feeding it, how to stop it gracefully,
 /// and the token it was opened under.
@@ -164,12 +166,14 @@ async fn dispatch(
             return sql::dispatch(state, conn, id, manifest.as_ref(), token, call).await;
         }
         Interface::Agents => return agents::dispatch(state, conn, id, caller, token, call).await,
+        Interface::Connections => return connections::dispatch(state, conn, id, call).await,
         _ => {}
     }
     Some(match call {
         Call::SystemSubscribe => {
             let subscription = conn.open_subscription();
             let mut changes = state.changes.subscribe();
+            let mut connection_changes = state.connection_changes.subscribe();
             let snapshot = state.system.lock().unwrap().clone();
             let _ = conn
                 .out
@@ -182,11 +186,22 @@ async fn dispatch(
                 ))
                 .await;
             let events = conn.out.clone();
+            // Service changes, and connection changes for the shell.
             let task = tokio::spawn(async move {
-                while let Ok(change) = changes.recv().await {
+                loop {
+                    let event = tokio::select! {
+                        change = changes.recv() => match change {
+                            Ok(change) => Event::ServiceStatus(change),
+                            Err(_) => return,
+                        },
+                        change = connection_changes.recv() => match change {
+                            Ok(change) => Event::Connection(change),
+                            Err(_) => return,
+                        },
+                    };
                     let event = ServerMessage::Event {
                         subscription,
-                        event: Event::ServiceStatus(change),
+                        event,
                     };
                     if events.send(event).await.is_err() {
                         return;

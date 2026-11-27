@@ -329,6 +329,10 @@ fn installing_models_is_the_shells_alone() {
         Call::ModelsDownload(model()),
         Call::ModelsDownloadCancel(model()),
         Call::ModelsRecommended(RecommendModel::default()),
+        Call::ModelsCatalogue(Default::default()),
+        Call::ModelsRemove(crate::models::RemoveModel {
+            id: "chat-small".into(),
+        }),
     ] {
         assert!(call.installs_models());
         let error = authorize(app, &call).unwrap_err();
@@ -389,4 +393,40 @@ fn a_session_on_a_named_model_needs_that_model() {
     let none = authorize(bare, &create(Some("chat-small"))).unwrap_err();
     assert_eq!(none.code, ErrorCode::CapabilityDenied);
     assert!(authorize(Caller::Shell, &create(Some("chat-large"))).is_ok());
+}
+
+#[test]
+fn connections_are_the_shells_alone() {
+    use crate::connections::*;
+    let mut every = hello();
+    every.capabilities.models = Some(ModelAccess {
+        any: true,
+        remote: true,
+        ..Default::default()
+    });
+    let app = Caller::App {
+        id: &every.id,
+        capabilities: &every.capabilities,
+    };
+    let id = || "conn-1".to_string();
+    for call in [
+        Call::ConnectionsList(ListConnections {}),
+        Call::ConnectionsAdd(AddConnection {
+            name: "Files".into(),
+            key: None,
+            server: Server::Local {
+                command: "files-server".into(),
+                args: vec![],
+            },
+            secret: None,
+        }),
+        Call::ConnectionsSignIn(SignIn { id: id() }),
+        Call::ConnectionsRemove(RemoveConnection { id: id() }),
+        Call::ConnectionsTools(ListConnectionTools { id: id() }),
+    ] {
+        assert_eq!(call.interface(), crate::auth::Interface::Connections);
+        let error = authorize(app, &call).unwrap_err();
+        assert_eq!(error.code, ErrorCode::CapabilityDenied, "{call:?}");
+        assert!(authorize(Caller::Shell, &call).is_ok());
+    }
 }

@@ -23,6 +23,7 @@ const FIXTURES: &[&str] = &[
     include_str!("../../proto/fixtures/v0/sql.jsonl"),
     include_str!("../../proto/fixtures/v0/agents.jsonl"),
     include_str!("../../proto/fixtures/v0/identity.jsonl"),
+    include_str!("../../proto/fixtures/v0/connections.jsonl"),
 ];
 
 /// Every call in the fixtures, in order.
@@ -104,9 +105,10 @@ pub async fn unknown_token(target: Target) -> Outcome {
     Ok(())
 }
 
-/// Even an app with every capability never reaches `system`, `apps`, or
-/// the model install calls (`models.download`, `download_cancel`,
-/// `recommended`). (`system.shutdown` is checked last, on its own.)
+/// Even an app with every capability never reaches `system`, `apps`,
+/// `identity`, `connections`, or the model install calls
+/// (`models.download`, `download_cancel`, `recommended`, `catalogue`,
+/// `remove`). (`system.shutdown` is checked last, on its own.)
 pub async fn shell_only(target: Target) -> Outcome {
     let app = target
         .app(manifest("shell-only", everything(), &[]))
@@ -136,6 +138,7 @@ pub async fn every_interface(target: Target) -> Outcome {
             Interface::System
                 | Interface::Apps
                 | Interface::Identity
+                | Interface::Connections
                 | Interface::Models
                 | Interface::Blobs
                 | Interface::Sql
