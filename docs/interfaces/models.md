@@ -80,8 +80,9 @@ Settings lists models and uninstalls them. Both calls are the shell's, like the 
 - **`models.catalogue {}`** lists every local model the engine knows for this machine, installed or not, never a remote one. Each `CatalogueEntry` is the model's `ModelDetail` (the fields of `models.info`, flattened, `state` included: `not_installed`, `downloading`, `stopped`, `ready` ...) plus:
   - `about`: one line for a list row;
   - `publisher`: who publishes it;
-  - `fits`: whether this machine's memory admits it.
-  - `about` and `publisher` are absent when unknown.
+  - `fits`: whether this machine's memory admits it; the window labels it Recommended, or Not recommended when false;
+  - `fit_reason`: why, in a sentence or two about this machine, shown as given beside the label.
+  - `about`, `publisher` and `fit_reason` are absent when unknown.
 - **`models.remove { id }`** deletes an installed local model's file, so the person can uninstall it. The model is then `not_installed`, and `models.download` fetches it again. It is refused with:
   - `unknown_model` for no such model;
   - `unsupported` for a remote model;
@@ -122,4 +123,4 @@ The client: `client.models().catalogue()` and `client.models().remove(id)`.
 
 Installing: `uninstall(model)` makes a model `not_installed`, and `installed(model)` reads it back. `script_download(model, steps)` plays `DownloadStep::Progress(bytes)`, `Hold(gate)` and `Fail(error)`; without a script a download arrives in four quarters. `recommend(profile, model)` sets the first model per profile (`chat-small` for `standard` and `high`, none for `low`). `TestEngine::set_profile(HardwareProfile)` sets what `system.profile` says and what `models.recommended` chooses for, so a test can run a machine below `MEMORY_FLOOR`.
 
-Model setup: the catalogue is every local fake model, with the state `models.info` gives it. `describe(model, about, publisher)` sets its line and publisher. A model fits unless the memory gate refuses it (`refuse`) or its size is over the profile's total memory. `models.remove` makes a model `not_installed`.
+Model setup: the catalogue is every local fake model, with the state `models.info` gives it. `describe(model, about, publisher)` sets its line and publisher. A model fits unless the memory gate refuses it (`refuse`) or its size is over the profile's total memory; `fit_reason` says which, with the memory in GB. `models.remove` makes a model `not_installed`.

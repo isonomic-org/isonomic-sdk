@@ -219,6 +219,11 @@ async fn the_catalogue_lists_local_models_installed_or_not() {
     let large = &entries[2];
     assert_eq!(large.detail.state, ModelState::NotInstalled);
     assert!(!large.fits, "64 GiB on a 16 GiB machine");
+    let reason = large.fit_reason.as_deref().unwrap();
+    assert!(
+        reason.contains("64 GB") && reason.contains("16 GB"),
+        "{reason}"
+    );
     assert_eq!(large.about.as_deref(), Some("A large model."));
     assert_eq!(large.publisher.as_deref(), Some("Test Lab"));
     engine.set_profile(HardwareProfile {

@@ -343,8 +343,12 @@ pub struct CatalogueEntry {
     /// Who publishes it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub publisher: Option<String>,
-    /// This machine's memory admits it.
+    /// This machine's memory admits it: the window labels it recommended.
     pub fits: bool,
+    /// Why it is or isn't recommended for this machine, in a sentence or
+    /// two, to show as given beside the label.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fit_reason: Option<String>,
 }
 
 /// Params of `models.remove`: delete an installed local model's file.

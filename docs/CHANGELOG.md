@@ -22,7 +22,7 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
   - `connections.tools { id }` answers `connection_tools [{ name, description }]`.
 - `server` is `{ kind: remote, url }` or `{ kind: local, command, args }`. `state` is `needs_sign_in`, `connecting`, `ready` or `failed`.
 - New event `connection` (the whole `Connection`), sent to the shell on its `system.subscribe` subscription whenever one changes state.
-- New `models` methods, shell only: `models.catalogue {}` answers `catalogue [CatalogueEntry]` (a `ModelDetail` flattened, with `about?`, `publisher?` and `fits`); `models.remove { id }` answers `done {}`.
+- New `models` methods, shell only: `models.catalogue {}` answers `catalogue [CatalogueEntry]` (a `ModelDetail` flattened, with `about?`, `publisher?`, `fits` and `fit_reason?`, a sentence on why it is or isn't recommended for this machine); `models.remove { id }` answers `done {}`.
 - New error codes: `connection_not_found`, `sign_in_failed`, `not_installed`, `download_running`.
 - Fixtures: `connections.jsonl` lines 1–24, `models.jsonl` lines 59–70. Specs: `docs/interfaces/connections.md`, `docs/interfaces/models.md`.
 

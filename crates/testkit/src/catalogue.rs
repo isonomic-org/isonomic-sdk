@@ -43,10 +43,30 @@ fn catalogue(state: &State) -> Reply {
             },
             about: m.about.clone(),
             publisher: m.publisher.clone(),
-            fits: m.refusal.is_none() && m.size_bytes.is_none_or(|size| size <= memory),
+            fits: fits(m.refusal.is_none(), m.size_bytes, memory),
+            fit_reason: Some(fit_reason(m.refusal.is_none(), m.size_bytes, memory)),
         })
         .collect();
     Reply::Catalogue(entries)
+}
+
+fn fits(admitted: bool, size: Option<u64>, memory: u64) -> bool {
+    admitted && size.is_none_or(|size| size <= memory)
+}
+
+const GIB: u64 = 1 << 30;
+
+/// A sentence on whether this machine suits the model.
+fn fit_reason(admitted: bool, size: Option<u64>, memory: u64) -> String {
+    let have = memory.div_ceil(GIB);
+    match size {
+        _ if !admitted => format!("This computer's {have} GB of memory can't run it."),
+        Some(size) if size > memory => format!(
+            "It needs about {} GB of memory, and this computer has {have} GB.",
+            size.div_ceil(GIB)
+        ),
+        _ => format!("It fits in this computer's {have} GB of memory."),
+    }
 }
 
 fn remove(state: &State, id: &str) -> Result<Reply, WireError> {
