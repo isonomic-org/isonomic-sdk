@@ -60,11 +60,18 @@ impl Connections {
         }
     }
 
-    /// Disconnect a tool server; the engine forgets its sign-in.
+    /// Disconnect a tool server; the engine forgets its sign-in. Once the
+    /// engine answers, the id leaves [`changes`](Self::changes) too, since
+    /// no event says a connection is gone.
     pub async fn remove(&self, id: &str) -> Result<(), ClientError> {
         let call = Call::ConnectionsRemove(RemoveConnection { id: id.to_string() });
         match self.client.call(call).await? {
-            Reply::Done {} => Ok(()),
+            Reply::Done {} => {
+                self.client
+                    .connections_tx
+                    .send_if_modified(|states| states.remove(id).is_some());
+                Ok(())
+            }
             _ => Err(ClientError::UnexpectedReply),
         }
     }

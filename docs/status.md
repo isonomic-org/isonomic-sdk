@@ -9,6 +9,14 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
+
+## 2026-11-27 · Connections follow-ups from the independent review; harness at ef14f17
+
+- `connections().remove(id)` takes the id out of `changes()` on `done`.
+- The test engine's status stream survives a lagged receiver.
+- `docs/interfaces/connections.md`: credentials go only in `secret`.
+- Harness moves to ef14f17 (harness #55): the connected-app tools live in harness-toolkit, and the chat preset allows them instead of `app_read` and `app_act`, which the engine was to build itself against the plan. No SDK type changes.
+
 ## 2026-11-27 · Tool server connections and the model setup (needs-master)
 
 The orchestrator's three asks, in one change: the `connections` interface, `models.catalogue` with `models.remove`, and harness at 077909e.
