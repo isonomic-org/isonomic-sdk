@@ -11,6 +11,10 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+## Unreleased: harness at d7d8ab6
+
+- **Harness:** `harness-core` and `harness-host` move to d7d8ab6, harness main after its #56: the host leaves a tool out of a new session when `Tool::offered(app)` is false, and the connected-app tools forward to `Connections::offered(owner)`. No wire change. Engines and windows must pin this same rev.
+
 ## Unreleased: connections follow-ups, harness at ef14f17
 
 - **Client:** `connections().remove(id)` drops the id from `changes()` once the engine answers `done`; before, a removed connection stayed there until the next reconnect.
