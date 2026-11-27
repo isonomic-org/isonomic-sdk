@@ -10,6 +10,10 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
+## 2026-11-27 · Harness at d7d8ab6
+
+- Harness moves to d7d8ab6 (harness #56): a tool can decline a new session (`Tool::offered`), and the connected-app tools decline an app with nothing connected (`Connections::offered`, true by default). No harness-core change, no SDK type or wire change. Engines and windows must pin this same rev.
+
 ## 2026-11-27 · Connections follow-ups from the independent review; harness at ef14f17
 
 - `connections().remove(id)` takes the id out of `changes()` on `done`.
