@@ -30,6 +30,7 @@ Shell only: the tool servers the person connects in Settings. A connection is a 
   - `ready`: its tools are available.
   - `failed`: see `error`.
   - A newer state decodes as `unrecognized`.
+- **Credentials go only in `secret`.** A server's `url` is shown in replies, events and logs, so it must never hold a user name, password or key (no userinfo, no key in the query).
 - **`secret`**: a bearer token or API key the person pasted, for a server that takes one instead of a browser sign-in. `ConnectionSecret`'s `Debug` prints `[secret]`, and its `Deserialize` refuses a malformed value in fixed text, never quoting it. Its `Serialize` is transparent, as the wire needs: never log a call as JSON. No reply ever carries a secret back.
 
 ## Changes
@@ -42,7 +43,7 @@ The engine sends a `connection` event, carrying the whole `Connection`, whenever
 {"type":"event","subscription":7,"event":"connection","data":{"id":"conn-1","name":"Design files","key":"design","server":{"kind":"remote","url":"https://tools.example.com/api"},"state":"ready","tools":12}}
 ```
 
-The client folds these events into `client.connections().changes()`, a watch of the newest state per id. It is emptied when the connection to the engine drops; call `list()` again after a reconnect.
+The client folds these events into `client.connections().changes()`, a watch of the newest state per id. `remove(id)` takes the id out of it once the engine answers, since no event says a connection is gone. It is emptied when the connection to the engine drops; call `list()` again after a reconnect.
 
 ## Errors
 

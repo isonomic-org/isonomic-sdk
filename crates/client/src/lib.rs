@@ -151,6 +151,8 @@ pub struct Client {
     requests: mpsc::Sender<Request>,
     live: watch::Receiver<Live>,
     connections_live: watch::Receiver<ConnectionStates>,
+    /// The same watch's sender, so `connections().remove` can drop an id.
+    connections_tx: std::sync::Arc<watch::Sender<ConnectionStates>>,
 }
 
 impl Client {
@@ -160,15 +162,17 @@ impl Client {
         let (requests, inbox) = mpsc::channel(64);
         let (live_tx, live) = watch::channel(Live::default());
         let (connections_tx, connections_live) = watch::channel(ConnectionStates::new());
+        let connections_tx = std::sync::Arc::new(connections_tx);
         let watches = actor::Watches {
             live: live_tx,
-            connections: connections_tx,
+            connections: std::sync::Arc::clone(&connections_tx),
         };
         runtime.spawn(actor::run(connector, options, inbox, watches));
         Self {
             requests,
             live,
             connections_live,
+            connections_tx,
         }
     }
 

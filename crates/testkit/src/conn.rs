@@ -15,7 +15,7 @@ use isonomic_proto::{
     WireError, PROTOCOL_VERSION,
 };
 use tokio::io::DuplexStream;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::task::JoinHandle;
 
 use crate::{
@@ -190,12 +190,16 @@ async fn dispatch(
             let task = tokio::spawn(async move {
                 loop {
                     let event = tokio::select! {
+                        // A lagged receiver skips what it missed and
+                        // goes on; only a closed one ends the stream.
                         change = changes.recv() => match change {
                             Ok(change) => Event::ServiceStatus(change),
+                            Err(broadcast::error::RecvError::Lagged(_)) => continue,
                             Err(_) => return,
                         },
                         change = connection_changes.recv() => match change {
                             Ok(change) => Event::Connection(change),
+                            Err(broadcast::error::RecvError::Lagged(_)) => continue,
                             Err(_) => return,
                         },
                     };

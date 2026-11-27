@@ -11,6 +11,13 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+## Unreleased: connections follow-ups, harness at ef14f17
+
+- **Client:** `connections().remove(id)` drops the id from `changes()` once the engine answers `done`; before, a removed connection stayed there until the next reconnect.
+- **Test engine:** a lagged status subscriber skips what it missed instead of ending the stream.
+- **Docs:** credentials go only in a connection's `secret`, never in its `url`.
+- **Harness:** `harness-core` and `harness-host` move to ef14f17, harness main after its #55: the connected-app tools (`connections`, `connection_read`, `connection_act`) are in harness-toolkit over `services::Connections`, and the chat preset (version 5) allows them in place of `app_read` and `app_act`. No harness-core or host API change. Engines and windows must pin this same rev.
+
 ## Unreleased: tool server connections, the model setup, harness at 077909e (needs-master)
 
 **Wire (additive, still version 0):**

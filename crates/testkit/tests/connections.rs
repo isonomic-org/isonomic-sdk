@@ -74,6 +74,9 @@ async fn a_remote_server_signs_in_and_the_window_hears_it() {
     let ready = heard(&shell, &added.id, ConnectionState::Ready).await;
     assert_eq!(ready.error, None);
     assert_eq!(connections.list().await.unwrap(), vec![ready]);
+    // Removing it takes it out of what the window has heard, too.
+    connections.remove(&added.id).await.unwrap();
+    assert!(!connections.changes().borrow().contains_key(&added.id));
 }
 
 #[tokio::test]

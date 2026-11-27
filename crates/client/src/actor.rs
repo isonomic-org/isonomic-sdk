@@ -20,7 +20,7 @@ use crate::{BoxedStream, ClientError, ConnectionStates, Connector, Live, Options
 pub(crate) struct Watches {
     pub(crate) live: watch::Sender<Live>,
     /// The newest state of each connection, from `connection` events.
-    pub(crate) connections: watch::Sender<ConnectionStates>,
+    pub(crate) connections: std::sync::Arc<watch::Sender<ConnectionStates>>,
 }
 
 /// The status subscription always uses this id; caller requests start at 1.
