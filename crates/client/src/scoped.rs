@@ -7,7 +7,9 @@
 use isonomic_proto::{Call, Reply, Token};
 use tokio::sync::watch;
 
-use crate::{Agents, Blobs, Client, ClientError, Events, Live, Models, Sql, Subscription};
+use crate::{
+    Agents, Blobs, Client, ClientError, Events, Live, Models, Permissions, Sql, Subscription,
+};
 
 /// A [`Client`] scoped to one app's capability token. Cheap to clone.
 #[derive(Clone)]
@@ -49,6 +51,12 @@ impl AppClient {
     /// The agents interface: this app's own sessions, presets and artifacts.
     pub fn agents(&self) -> Agents {
         Agents::new(self.client.clone(), Some(self.token.clone()))
+    }
+
+    /// The `permissions` interface: this app's linked folders, kit switches
+    /// and remembered approvals, and asking the window for more.
+    pub fn permissions(&self) -> Permissions {
+        Permissions::new(self.client.clone(), Some(self.token.clone()))
     }
 
     /// The `sql` interface, in this app's schemas.

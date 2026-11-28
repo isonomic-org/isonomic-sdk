@@ -104,3 +104,9 @@
 {"type":"event","subscription":21,"event":"session_event","data":{"session":"s-1","seq":42,"at":1700000000042,"turn":"t-5","step":"p-4","type":"tool.result","call":"c-10","outcome":"ok","content":[{"type":"text","text":"shown as text"}],"display":"fallback"}}
 {"type":"request","id":127,"token":"tok-chat-1","method":"tools.result","params":{"session":"s-1","call":"c-9","content":[{"type":"text","text":"Shown"}]}}
 {"type":"response","id":127,"error":{"code":"not_found","message":"c-9 is a display call, which the host answers"}}
+{"type":"request","id":199,"token":"tok-chat-1","method":"approvals.list","params":{}}
+{"type":"response","id":199,"result":{"approvals":[{"session":"s-1","app":"com.isonomic.chat","request":{"approval":"a-5","call":"c-9","summary":"write_file Design/tokens.css","rule":"grant","effects":["modifies_data"],"scope":{"kind":"folder","id":"folder-1","label":"Design"},"preview":[{"label":"Path","value":"/Users/ana/Design/tokens.css"},{"label":"Change","value":"replaces 2.1 KB with 2.4 KB"}],"reversible":true,"remember":"always"}}]}}
+{"type":"request","id":200,"token":"tok-chat-1","method":"approvals.decide","params":{"session":"s-1","approval":"a-5","decision":"allow","user_action":"ua-83","remember":"session"}}
+{"type":"response","id":200,"result":{"done":{}}}
+{"type":"request","id":201,"token":"tok-chat-1","method":"approvals.list","params":{}}
+{"type":"response","id":201,"result":{"approvals":[{"session":"s-1","app":"com.isonomic.chat","request":{"approval":"a-6","call":"c-10","summary":"A call from a newer engine","rule":"grant","effects":["modifies_data"],"scope":{"kind":"galaxy","id":"m31","label":"Andromeda"},"reversible":false,"remember":"forever"}}]}}

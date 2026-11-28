@@ -31,6 +31,20 @@ pub mod display {
     pub use harness_core::DisplayOutcome;
 }
 
+/// Tool kits: what a kit call touches, what an approval may remember, and
+/// the table that decides what a session is offered. One source of truth:
+/// harness-core's types, as for [`display`]. The approval fields (`scope`,
+/// `preview`, `reversible`, `remember`) ride on [`ApprovalRequest`].
+pub mod kits {
+    pub use harness_core::access::{
+        grant_effect, Access, GrantAnswer, HeldGrant, PreviewItem, Scope,
+    };
+    pub use harness_core::offer::{
+        admit, offer, KitCandidate, KitMember, Offer, KITS, MAX_DISPLAY_TOOLS,
+    };
+    pub use harness_core::{ApprovalRule, Effect, Remember, ScopeKind};
+}
+
 /// The session event schema an engine writes. A client reading a newer
 /// revision of the same version renders unknown events generically.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -219,6 +233,12 @@ pub struct DecideApproval {
     pub decision: DecisionInput,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub user_action: Option<String>,
+    /// How long to remember an allow: `session` or `always`. The engine
+    /// holds it to what the request's `remember` offers, and keeps it only
+    /// for an allow that carried a verified user-action token. Absent means
+    /// once.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub remember: Option<kits::Remember>,
 }
 
 /// `questions.answer`.

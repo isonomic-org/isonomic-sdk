@@ -8,10 +8,10 @@
 //! its own connection. A call made with an app's token is checked against
 //! the capabilities in that app's approved manifest. Shell-only interfaces
 //! (`system`, `apps`, `identity`, `connections`) are refused to every app
-//! token.
+//! token, and so are `permissions.grant` and `permissions.revoke`.
 
 use crate::manifest::{Capabilities, Manifest};
-use crate::{agents, Call, ErrorCode, WireError};
+use crate::{agents, permissions, Call, ErrorCode, WireError};
 
 /// The namespace a method belongs to: the part of its name before the dot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -30,6 +30,8 @@ pub enum Interface {
     Identity,
     /// Tool servers the person connects.
     Connections,
+    /// Linked folders, kit switches and remembered approvals.
+    Permissions,
 }
 
 impl Interface {
@@ -44,6 +46,7 @@ impl Interface {
             Interface::Agents => "agents",
             Interface::Identity => "identity",
             Interface::Connections => "connections",
+            Interface::Permissions => "permissions",
         }
     }
 
@@ -88,11 +91,16 @@ fn session_model(call: &Call) -> Option<&str> {
 /// checked again by the engine once it has chosen.
 pub fn authorize(caller: Caller<'_>, call: &Call) -> Result<(), WireError> {
     let Caller::App { id, capabilities } = caller else {
+        let bad = |why: &str| Err(WireError::new(ErrorCode::BadRequest, why));
         return match call {
-            Call::SessionsPurge(purge) if purge.app.is_none() => Err(WireError::new(
-                ErrorCode::BadRequest,
-                "the shell must name the app whose sessions to purge",
-            )),
+            Call::SessionsPurge(purge) if purge.app.is_none() => {
+                bad("the shell must name the app whose sessions to purge")
+            }
+            Call::PermissionsList(list) if list.app.is_none() => {
+                bad("the shell must name the app whose permissions to list")
+            }
+            // The window is what an app asks; it has nobody to ask.
+            Call::PermissionsRequest(_) => bad("only an app asks the window for a permission"),
             _ => Ok(()),
         };
     };
@@ -172,7 +180,47 @@ pub fn authorize(caller: Caller<'_>, call: &Call) -> Result<(), WireError> {
             }
             _ => Ok(()),
         },
+        // Kits belong to the agents capability. An app lists only its own
+        // permissions, and asks only for a kit its manifest names. Grant
+        // and revoke were refused above: they are the window's alone.
+        Interface::Permissions => {
+            let Some(agents) = &capabilities.agents else {
+                return Err(denied(id, "use agents"));
+            };
+            match call {
+                Call::PermissionsList(permissions::ListPermissions { app: Some(app) })
+                    if app.as_str() != id =>
+                {
+                    Err(denied(id, format_args!("reach the permissions of {app}")))
+                }
+                Call::PermissionsRequest(request) => kit_named(id, agents, request.ask.kit()),
+                _ => Ok(()),
+            }
+        }
         _ => Ok(()),
+    }
+}
+
+fn kit_named(
+    app: &str,
+    agents: &crate::manifest::AgentsAccess,
+    kit: &str,
+) -> Result<(), WireError> {
+    match agents.names_kit(kit) {
+        true => Ok(()),
+        false => Err(denied(app, format_args!("offer the {kit} kit"))),
+    }
+}
+
+/// May this app ever be offered `kit`? Only when its manifest names it
+/// under `agents.kits`. The engine asks before it records any permission
+/// for the app (a linked folder is the `files` kit), so a kit the manifest
+/// does not name is never granted and never offered, whatever a preset
+/// says.
+pub fn authorize_kit(manifest: &Manifest, kit: &str) -> Result<(), WireError> {
+    match &manifest.capabilities.agents {
+        Some(agents) => kit_named(&manifest.id, agents, kit),
+        None => Err(denied(&manifest.id, "use agents")),
     }
 }
 

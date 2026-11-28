@@ -23,7 +23,7 @@ const PRESET: &str = "chat";
 
 async fn agents(target: &Target, name: &str) -> Result<Agents, String> {
     let capabilities = Capabilities {
-        agents: Some(AgentsAccess {}),
+        agents: Some(AgentsAccess::default()),
         ..Default::default()
     };
     let app = target.app(manifest(name, capabilities, &[])).await?;
@@ -208,7 +208,7 @@ pub async fn purge_own(target: Target) -> Outcome {
 /// Unsubscribing from a stream that is not open is refused.
 pub async fn unknown_subscription(target: Target) -> Outcome {
     let capabilities = Capabilities {
-        agents: Some(AgentsAccess {}),
+        agents: Some(AgentsAccess::default()),
         ..Default::default()
     };
     let app = target
@@ -236,7 +236,7 @@ fn preset_on(id: &str, model: &str) -> String {
 pub async fn model_rules(target: Target) -> Outcome {
     use isonomic_proto::manifest::ModelAccess;
     let capabilities = Capabilities {
-        agents: Some(AgentsAccess {}),
+        agents: Some(AgentsAccess::default()),
         models: Some(ModelAccess {
             ids: vec!["conformance-allowed".into()],
             ..Default::default()

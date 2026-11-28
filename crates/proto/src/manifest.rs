@@ -114,7 +114,21 @@ pub struct BlobAccess {
 /// Access to agent sessions. Which sessions an app reaches is the host's
 /// rule (its own only); fields that narrow it may come later.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct AgentsAccess {}
+pub struct AgentsAccess {
+    /// The tool kits the app may ever offer its sessions (`files`, `web`
+    /// and so on), so the shell sees them when it approves the app. A kit
+    /// that is not named here is never granted to the app and so never
+    /// offered, whatever a preset says (`docs/interfaces/permissions.md`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub kits: Vec<String>,
+}
+
+impl AgentsAccess {
+    /// Whether the manifest names this kit.
+    pub fn names_kit(&self, kit: &str) -> bool {
+        self.kits.iter().any(|k| k == kit)
+    }
+}
 
 /// A SQL schema an app creates. More fields (migrations) come later.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

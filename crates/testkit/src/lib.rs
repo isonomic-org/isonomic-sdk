@@ -24,6 +24,7 @@ mod events;
 mod faults;
 mod identity;
 mod models;
+mod permissions;
 mod recovery;
 mod sql;
 mod system;
@@ -37,6 +38,7 @@ pub use harness_host;
 pub use identity::{FakeIdentity, DEFAULT_ID as DEFAULT_IDENTITY};
 pub use isonomic_proto::auth::Interface;
 pub use models::{FakeModels, Gate, Step};
+pub use permissions::FakePermissions;
 pub use recovery::{kit_words, DEFAULT_NOW as DEFAULT_KIT_NOW, NOTE as KIT_RESTORE_NOTE};
 pub use sql::{FakeSql, SqlCall};
 
@@ -87,6 +89,8 @@ pub(crate) struct State {
     pub(crate) faults: Mutex<HashMap<Interface, faults::Fault>>,
     pub(crate) agents: Mutex<agents::AgentsState>,
     pub(crate) connections: Mutex<connections::ConnectionsState>,
+    /// Lock `agents` first when both are held.
+    pub(crate) permissions: Mutex<permissions::PermissionsState>,
     /// Connection changes, for every shell status subscription.
     pub(crate) connection_changes: broadcast::Sender<isonomic_proto::connections::Connection>,
     next_token: AtomicU64,
@@ -183,6 +187,7 @@ impl TestEngine {
                 faults: Mutex::new(HashMap::new()),
                 agents: Mutex::new(agents::AgentsState::default()),
                 connections: Mutex::new(connections::ConnectionsState::default()),
+                permissions: Mutex::new(permissions::PermissionsState::default()),
                 connection_changes: broadcast::channel(64).0,
                 next_token: AtomicU64::new(1),
             }),
@@ -279,6 +284,15 @@ impl TestEngine {
     /// secrets, and how sign-ins end.
     pub fn connections(&self) -> FakeConnections {
         FakeConnections {
+            state: Arc::clone(&self.state),
+        }
+    }
+
+    /// Linked folders, kit switches and the grants behind them: the scratch
+    /// root, the person's user-action tokens, and what the window was asked
+    /// to show.
+    pub fn permissions(&self) -> FakePermissions {
+        FakePermissions {
             state: Arc::clone(&self.state),
         }
     }

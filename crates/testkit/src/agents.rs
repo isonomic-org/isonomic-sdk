@@ -32,7 +32,7 @@ use crate::State;
 
 /// The host, and which apps it has been told about.
 pub(crate) struct AgentsState {
-    memory: MemoryHost,
+    pub(crate) memory: MemoryHost,
     known: HashSet<String>,
 }
 
@@ -129,7 +129,9 @@ fn answer(memory: &MemoryHost, caller: &HostCaller, call: Call) -> Result<Reply,
         Call::ApprovalsDecide(r) => {
             let token = r.user_action.map(UserActionToken);
             let decision = map::decision(r.decision);
-            let decide = host.decide_approval(caller, &r.session, &r.approval, decision, token);
+            let (session, approval) = (&r.session, &r.approval);
+            let decide =
+                host.decide_approval(caller, session, approval, decision, r.remember, token);
             done(run(memory, decide))
         }
         Call::QuestionsAnswer(r) => {
@@ -396,6 +398,9 @@ impl FakeAgents {
             memory: MemoryHost::with(cfg),
             known: HashSet::new(),
         };
+        // The fresh host holds no grants: give it back what was granted.
+        let permissions = self.state.permissions.lock().unwrap();
+        permissions.reissue(&agents.memory.grants);
     }
 
     /// A session's events as the host stored them.

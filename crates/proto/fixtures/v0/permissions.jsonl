@@ -1,0 +1,36 @@
+{"type":"request","id":181,"method":"permissions.grant","params":{"app":"com.isonomic.chat","grant":{"folder":{"path":"/Users/ana/Design","access":"read_write"}}}}
+{"type":"response","id":181,"result":{"permissions":{"app":"com.isonomic.chat","folders":[{"id":"folder-1","name":"Design","path":"~/Design","access":"read_write","reachable":true}],"kits":[{"kit":"web","state":"not_asked"}]}}}
+{"type":"request","id":182,"method":"permissions.grant","params":{"app":"com.isonomic.chat","grant":{"kit":"web"}}}
+{"type":"response","id":182,"result":{"permissions":{"app":"com.isonomic.chat","folders":[{"id":"folder-1","name":"Design","path":"~/Design","access":"read_write","reachable":true}],"kits":[{"kit":"web","state":"on"}]}}}
+{"type":"request","id":183,"method":"permissions.grant","params":{"app":"com.isonomic.chat","grant":{"folder":{"path":"/Users/ana/Notes","access":"read"}},"session":"s-1","until":1700003600000}}
+{"type":"response","id":183,"result":{"permissions":{"app":"com.isonomic.chat","folders":[{"id":"folder-1","name":"Design","path":"~/Design","access":"read_write","reachable":true},{"id":"folder-2","name":"Notes","path":"~/Notes","access":"read","reachable":false}],"kits":[{"kit":"web","state":"on"}]}}}
+{"type":"request","id":184,"method":"permissions.grant","params":{"app":"com.isonomic.chat","grant":{"folder":{"path":"/Users/ana","access":"read"}}}}
+{"type":"response","id":184,"error":{"code":"not_linkable","message":"The home folder as a whole cannot be linked."}}
+{"type":"request","id":185,"method":"permissions.grant","params":{"app":"com.isonomic.notes","grant":{"kit":"web"}}}
+{"type":"response","id":185,"error":{"code":"capability_denied","message":"app com.isonomic.notes may not offer the web kit"}}
+{"type":"request","id":186,"token":"tok-chat-1","method":"permissions.list","params":{}}
+{"type":"response","id":186,"result":{"permissions":{"app":"com.isonomic.chat","folders":[{"id":"folder-1","name":"Design","path":"~/Design","access":"read_write","reachable":true}],"kits":[{"kit":"web","state":"on"}],"approvals":[{"id":"approval-1","effect":"modifies_data","scope":{"kind":"folder","id":"folder-1","label":"Design"},"remember":"session","session":"s-1"},{"id":"approval-2","effect":"modifies_data","scope":{"kind":"folder","id":"folder-1","label":"Design"},"remember":"always"}]}}}
+{"type":"request","id":187,"method":"permissions.list","params":{"app":"com.isonomic.chat"}}
+{"type":"response","id":187,"result":{"permissions":{"app":"com.isonomic.chat","kits":[{"kit":"web","state":"off"}]}}}
+{"type":"request","id":188,"method":"permissions.list","params":{}}
+{"type":"response","id":188,"error":{"code":"bad_request","message":"the shell must name the app whose permissions to list"}}
+{"type":"request","id":189,"token":"tok-notes-1","method":"permissions.list","params":{"app":"com.isonomic.chat"}}
+{"type":"response","id":189,"error":{"code":"capability_denied","message":"app com.isonomic.notes may not reach the permissions of com.isonomic.chat"}}
+{"type":"request","id":190,"method":"permissions.revoke","params":{"app":"com.isonomic.chat","permission":{"folder":"folder-1"}}}
+{"type":"response","id":190,"result":{"done":{}}}
+{"type":"request","id":191,"method":"permissions.revoke","params":{"app":"com.isonomic.chat","permission":{"kit":"web"}}}
+{"type":"response","id":191,"result":{"done":{}}}
+{"type":"request","id":192,"method":"permissions.revoke","params":{"app":"com.isonomic.chat","permission":{"approval":"approval-2"}}}
+{"type":"response","id":192,"result":{"done":{}}}
+{"type":"request","id":193,"method":"permissions.revoke","params":{"app":"com.isonomic.notes","permission":{"folder":"folder-1"}}}
+{"type":"response","id":193,"error":{"code":"not_found","message":"no such permission for this app"}}
+{"type":"request","id":194,"token":"tok-chat-1","method":"permissions.grant","params":{"app":"com.isonomic.chat","grant":{"kit":"web"}}}
+{"type":"response","id":194,"error":{"code":"capability_denied","message":"app com.isonomic.chat may not call permissions.grant"}}
+{"type":"request","id":195,"token":"tok-chat-1","method":"permissions.revoke","params":{"app":"com.isonomic.chat","permission":{"folder":"folder-1"}}}
+{"type":"response","id":195,"error":{"code":"capability_denied","message":"app com.isonomic.chat may not call permissions.revoke"}}
+{"type":"request","id":196,"token":"tok-chat-1","method":"permissions.request","params":{"ask":{"kit":"web"},"user_action":"ua-81"}}
+{"type":"response","id":196,"result":{"done":{}}}
+{"type":"request","id":197,"token":"tok-chat-1","method":"permissions.request","params":{"ask":"folder"}}
+{"type":"response","id":197,"error":{"code":"missing_user_action","message":"Asking the person for a permission needs a user action."}}
+{"type":"request","id":198,"token":"tok-chat-1","method":"permissions.request","params":{"ask":{"kit":"shell"},"user_action":"ua-82"}}
+{"type":"response","id":198,"error":{"code":"capability_denied","message":"app com.isonomic.chat may not offer the shell kit"}}
