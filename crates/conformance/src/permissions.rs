@@ -1,5 +1,5 @@
 // Copyright 2026 Anud Inc.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The permissions interface: only the window grants and revokes, an app
 //! sees only its own permissions, and a request needs the person.

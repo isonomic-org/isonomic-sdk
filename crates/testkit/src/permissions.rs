@@ -1,5 +1,5 @@
 // Copyright 2026 Anud Inc.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The `permissions` interface of the in-memory engine. Grants live in
 //! memory, in the agent host's own `MemoryGrants`, so what the shell grants

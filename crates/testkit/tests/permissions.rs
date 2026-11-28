@@ -1,5 +1,5 @@
 // Copyright 2026 Anud Inc.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The permissions interface against the test engine: the window grants
 //! and revokes, the grants reach the agent host, apps are kept to their own

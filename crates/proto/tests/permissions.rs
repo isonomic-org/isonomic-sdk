@@ -1,5 +1,5 @@
 // Copyright 2026 Anud Inc.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The permissions interface and kits under `proto::auth`: grant and revoke
 //! are the window's alone, an app reaches only its own permissions and only

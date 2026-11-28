@@ -1,5 +1,5 @@
 // Copyright 2026 Anud Inc.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The `permissions` interface: linked folders, kit switches and remembered
 //! approvals. The window grants and revokes; an app reads its own and asks
