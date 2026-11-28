@@ -10,9 +10,9 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
-## 2026-11-28 · Display widgets re-exported; harness at 928f2e6 (#55)
+## 2026-11-28 · Display widgets re-exported; harness at 982d9fa (#55)
 
-- Harness moves to 928f2e6 (harness #58, display widgets, schema revision 1). `isonomic_proto::agents::display` is the one place apps read the specs. The test engine answers `tools.result` on a display call `not_found`, and `FakeAgents::set_profile` tests the profile gate.
+- Harness moves to 982d9fa (harness #58, display widgets, schema revision 1). `isonomic_proto::agents::display` is the one place apps read the specs. The test engine answers `tools.result` on a display call `not_found`, and `FakeAgents::set_profile` tests the profile gate.
 - Labelled needs-master: it moves the pinned session event schema.
 
 ## 2026-11-28 · An app asks the window for the person's token (#64)
