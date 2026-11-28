@@ -94,6 +94,7 @@ pub struct AppContext {
     reported: Arc<std::sync::Mutex<Option<std::time::Instant>>>,
     shell: Option<Arc<dyn Shell>>,
     sidebar: Arc<watch::Sender<Sidebar>>,
+    user_actions: crate::user_action::Source,
 }
 
 impl AppContext {
@@ -119,6 +120,7 @@ impl AppContext {
             reported: Arc::default(),
             shell: None,
             sidebar: Arc::new(watch::channel(Sidebar::Expanded).0),
+            user_actions: None,
         };
         (cx, watched)
     }
@@ -127,6 +129,14 @@ impl AppContext {
     /// request answers `false`.
     pub fn with_window(mut self, window: Arc<dyn crate::WindowRequests>) -> Self {
         self.window = Some(window);
+        self
+    }
+
+    /// The window's source of user-action tokens for
+    /// [`user_action`](Self::user_action). Without one, every ask answers
+    /// [`UserActionError::Unavailable`](crate::UserActionError::Unavailable).
+    pub fn with_user_actions(mut self, source: Arc<dyn crate::UserActionSource>) -> Self {
+        self.user_actions = Some(source);
         self
     }
 
@@ -205,6 +215,25 @@ impl AppContext {
         match &self.window {
             Some(window) => window.request(&self.id, request),
             None => false,
+        }
+    }
+
+    /// The person's token for deciding `approval` in `session`, to pass to
+    /// `agents().decide`. Call it from the handler of the person's click or
+    /// key press on Allow or Deny, not later: the window answers only while
+    /// this app's tab is focused and that input is being handled, and
+    /// otherwise refuses with
+    /// [`UserActionError::NoUserInput`](crate::UserActionError::NoUserInput).
+    /// The window decides when this is called; the returned future only
+    /// waits for the engine.
+    pub fn user_action(
+        &self,
+        session: &isonomic_proto::agents::SessionId,
+        approval: &isonomic_proto::agents::ApprovalId,
+    ) -> crate::UserActionFuture {
+        match &self.user_actions {
+            Some(source) => source.user_action(&self.id, session, approval),
+            None => Box::pin(async { Err(crate::UserActionError::Unavailable) }),
         }
     }
 

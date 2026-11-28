@@ -209,7 +209,7 @@ while let Some(update) = stream.next().await {
 
 - **Resume, don't restart.** After a reconnect, subscribe from `stream.last_seq()`: no event is missed or repeated.
 - **Deltas are a preview.** They may be dropped under load; the `assistant` event is the truth.
-- **Approvals belong to the person.** `decide` needs the user-action token the window gives you when the person clicks; without it the engine refuses.
+- **Approvals belong to the person.** `decide` needs the person's user-action token, and only the window can mint one. Ask for it with `cx.user_action(&session, &approval)` from the handler of the click or key press on Allow or Deny, then pass it to `decide`. The window answers only while your tab is focused and that input is being handled, so call it in the handler and await the future afterwards. A refusal has a stable `code()`: `no_user_input` (ask again from the person's next click, say "Allow again from this window"), `unavailable` (the window gives no tokens), `engine` (the engine refused; its `ErrorCode` is in the error) or `disconnected`. Call it only from your own Allow and Deny controls, for the approval the control answers. With no token, send nothing: the approval stays pending.
 - **Client tools** (`register_client_tools`) arrive as `tool.call` events with `kind: client`; answer each with `tool_result`.
 
 ## 6. Testing
@@ -235,6 +235,7 @@ fn it_streams_a_reply(cx: &mut TestAppContext) {
 - `agents()` is harness-host's `MemoryHost`: `reply(text)` scripts the model, `advance(ms)` moves the clock, `user_action(app, session, approval)` stands in for the person, and `log(session)` reads what was stored (`docs/interfaces/agents.md`).
 - `slow(interface, delay)`, `fail(interface, error)` and `recover(interface)` make any interface slow or failing, to test spinners and error states.
 - `wait_until` wakes on the view's notifications; it never sleeps on a timer.
+- `cx.user_action(..)` is answered by the test host as the window would: only inside `host.user_input(|| ..)`, which stands for the app's click handler. Asked anywhere else, including in a future started there that runs later, it refuses with `no_user_input`. `set_user_input(true)` counts the person as acting until changed, and `host.user_actions_asked()` lists the apps that asked.
 - `open.attention` is what the rail would show; `open.sidebar` and `host.shell_headers()` are the shell header's side (above).
 - `host.open` initialises Isonomic UI as the window does, so components that need the theme draw.
 - No socket, no engine binary, no network: these tests run anywhere, including CI on Linux.
