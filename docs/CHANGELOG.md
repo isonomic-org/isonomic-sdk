@@ -11,6 +11,13 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+## Unreleased: display widgets, harness at 982d9fa (#55, needs-master)
+
+- **Harness:** `harness-core` and `harness-host` move to 982d9fa (harness #58, merge of 928f2e6): display widgets and session event schema revision 1, additive (tool kind `display`, `tool.result.display`). `SchemaVersion::CURRENT.revision` is now 1. `ToolResult` gains `display`, so a struct literal of it needs `display: None`.
+- **Proto:** `isonomic_proto::agents::display` re-exports the specs (`DisplaySpec`, `DISPLAY_SPECS`, `display_spec`, `display_tool_spec`, `validate`, `display_capable`), and `agents` re-exports `ToolKind`. No new wire types or methods; fixture lines added for a display call, its `shown` and `fallback` results, and `tools.result` on it answering `not_found`.
+- **Test engine:** `tools.result` for a display call answers `not_found`; `FakeAgents::set_profile` runs the host under another hardware profile (`standard` by default).
+- **Engine:** pin harness 982d9fa with this SDK_REF; answer `tools.result` for a display call `not_found`. **Window:** nothing to do. Apps render display calls (`docs/interfaces/agents.md`, Display tools).
+
 ## Unreleased: an app asks the window for the person's token (#64)
 
 - **App crate:** `AppContext::user_action(session, approval)` asks the window for the user-action token `approvals.decide` needs, for an approval the person answered in the app's own view. The window supplies a `UserActionSource` (`AppContext::with_user_actions`) and owns the policy: it decides when the call is made, not when the future is polled. `ShellUserActions::new(shell_agents, acting)` is a ready-made source: `acting(app)` says whether the person is acting in that app's focused tab right now, and it mints with `approvals.user_action { app }`. Refusals are `UserActionError` with a stable `code()`: `no_user_input`, `unavailable`, `engine` (with the engine's `ErrorCode`), `disconnected`.

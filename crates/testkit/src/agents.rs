@@ -15,10 +15,13 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use harness_host::{
-    AppKind, Caller as HostCaller, CapabilityToken, HostError, MemoryHost, Update, UserActionToken,
+    memory_config, AppKind, Caller as HostCaller, CapabilityToken, HostConfig, HostError,
+    MemoryHost, Update, UserActionToken,
 };
+use isonomic_proto::agents::schema::{Event as Event_, Profile};
 use isonomic_proto::agents::{
-    ApprovalId, EndReason, ForkReason, PresetId, SessionEnded, SessionEvent, SessionId,
+    ApprovalId, CallId, EndReason, ForkReason, PresetId, SessionEnded, SessionEvent, SessionId,
+    ToolKind,
 };
 use isonomic_proto::auth::{authorize_model, Caller};
 use isonomic_proto::{Call, ErrorCode, Event, Reply, ServerMessage, Token, WireError};
@@ -138,6 +141,10 @@ fn answer(memory: &MemoryHost, caller: &HostCaller, call: Call) -> Result<Reply,
             memory,
             host.register_client_tools(caller, &r.session, r.specs),
         )),
+        Call::ToolsResult(r) if display_call(memory, &r.session, &r.call) => {
+            let message = format!("{} is a display call, which the host answers", r.call);
+            return Err(WireError::new(ErrorCode::NotFound, message));
+        }
         Call::ToolsResult(r) => {
             let (session, call) = (r.session.clone(), r.call.clone());
             let result = host.client_tool_result(caller, &session, &call, map::outcome(r));
@@ -163,6 +170,14 @@ fn answer(memory: &MemoryHost, caller: &HostCaller, call: Call) -> Result<Reply,
         }
     };
     reply.map_err(map::error)
+}
+
+/// Whether `call` of `session` is a display call: the host records its
+/// result itself, so an app's `tools.result` for it is `not_found`.
+fn display_call(memory: &MemoryHost, session: &SessionId, call: &CallId) -> bool {
+    memory.log(session).iter().any(|e| {
+        matches!(&e.event, Event_::ToolCall(c) if &c.call == call && c.kind == ToolKind::Display)
+    })
 }
 
 /// Every model an app's own preset names: its reply model and its title
@@ -366,6 +381,21 @@ impl FakeAgents {
         let mut agents = self.state.agents.lock().unwrap();
         agents.app(app);
         agents.memory.reconnect(app);
+    }
+
+    /// Run the host under this hardware profile (`standard` by default),
+    /// which decides, among other things, whether display tools are offered.
+    /// It starts a fresh host: call it before any session is created.
+    pub fn set_profile(&self, profile: Option<Profile>) {
+        let mut agents = self.state.agents.lock().unwrap();
+        let cfg = HostConfig {
+            profile,
+            ..memory_config()
+        };
+        *agents = AgentsState {
+            memory: MemoryHost::with(cfg),
+            known: HashSet::new(),
+        };
     }
 
     /// A session's events as the host stored them.

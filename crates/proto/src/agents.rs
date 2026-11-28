@@ -17,8 +17,19 @@ pub use harness_core as schema;
 pub use harness_core::{
     AppId, ApprovalId, ApprovalRequest, ArtifactEvent, ArtifactId, Block, CallId, ErrorInfo,
     ForkReason, LiveDelta, PresetId, PresetRef, QuestionId, Seq, SessionClass, SessionEvent,
-    SessionId, Status, ToolSpec, TurnId,
+    SessionId, Status, ToolKind, ToolSpec, TurnId,
 };
+
+/// Display widgets: tools the model calls to show a component inline. The
+/// host validates and records them; apps render them and never answer them
+/// with `tools.result`. One source of truth: harness-core's specs.
+pub mod display {
+    pub use harness_core::display::{
+        display_capable, display_spec, display_tool_spec, validate, DisplayError, DisplaySpec,
+        DISPLAY_SPECS, QUOTE_MAX, SMALLEST_MODEL,
+    };
+    pub use harness_core::DisplayOutcome;
+}
 
 /// The session event schema an engine writes. A client reading a newer
 /// revision of the same version renders unknown events generically.

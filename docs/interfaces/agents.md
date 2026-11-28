@@ -57,6 +57,10 @@ A subscription first replays the durable events after `from_seq`, then sends new
 
 A client tool call arrives as a `tool.call` event with `kind: client`; answer it with `tools.result`. While the app is gone, the session's status is `awaiting_client` (a `session.status` event, and `awaiting_client` in `sessions.open`).
 
+### Display tools
+
+A `tool.call` with `kind: display` is a display widget (`show_table`, `show_steps`, `show_metrics`, `show_chart`): the model shows a component inline. The host validates it against its spec, records its `tool.result` itself with `display` set to `shown`, `retry` or `fallback`, and the model goes on. An app renders it and never answers it: `tools.result` for a display call is `not_found`. The specs are harness-core's, re-exported as `isonomic_proto::agents::display` (`DISPLAY_SPECS`, `display_spec`, `display_tool_spec`, `validate`); presets offer them under `[display]`, and only on `high`, `standard` and `intel` profiles and not with `local:smallest` (`display_capable`). Render `shown` with the widget, `fallback` with the input's `fallback_text`, and a widget this build does not know (or a `kind` it does not know) as a generic block: such events always decode. Display tools arrived in schema revision 1.
+
 ## Rules
 
 - **Approvals need a person.** `approvals.decide` takes the user-action token the window minted when the person acted. The shell and the session's first-party app may decide; Views and third-party code only request (`not_allowed_to_decide`). Words that are not a clear yes are a denial.
