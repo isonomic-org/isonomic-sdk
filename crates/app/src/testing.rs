@@ -1,5 +1,5 @@
 // Copyright 2026 Anud Inc.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! A headless host for app tests: the in-memory engine, a token granted
 //! from the app's own manifest, and a GPUI test window.

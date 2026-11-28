@@ -1,5 +1,5 @@
 // Copyright 2026 Anud Inc.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The connection itself, on a raw stream: the handshake, and a peer newer
 //! or sloppier than the engine (unknown methods and fields, a bad frame)

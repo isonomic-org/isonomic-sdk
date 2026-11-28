@@ -1,5 +1,5 @@
 // Copyright 2026 Anud Inc.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Display widgets through the testkit's host: the built-in `chat` preset
 //! offers them on `standard` and not on `low`, a display call is the host's

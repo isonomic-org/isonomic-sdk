@@ -1,5 +1,5 @@
 // Copyright 2026 Anud Inc.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! A frame that does not decode is refused without its content: no error
 //! message quotes what was sent, however the frame is broken, so the

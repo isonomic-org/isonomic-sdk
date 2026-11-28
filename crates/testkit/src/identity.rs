@@ -1,5 +1,5 @@
 // Copyright 2026 Anud Inc.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The `identity` interface of the in-memory engine: a scripted ID, made on
 //! the first `identity.get`, a refusal a test can switch on, and the

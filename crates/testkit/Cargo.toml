@@ -3,7 +3,7 @@ name = "isonomic-testkit"
 description = "An in-memory Isonomic engine for tests: speaks the real protocol, runs no services"
 version.workspace = true
 edition.workspace = true
-license = "Apache-2.0"
+license = "GPL-3.0-or-later"
 publish.workspace = true
 
 [dependencies]
