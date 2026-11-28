@@ -1,5 +1,5 @@
 // Copyright 2026 Anud Inc.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Sessions on a model the app picks: the capability rule, refusals of
 //! unknown, non-chat, uninstalled and malformed names, and the model

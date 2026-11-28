@@ -1,5 +1,5 @@
 // Copyright 2026 Anud Inc.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The person's token for an approval: an app asks the window for one when
 //! the person presses Allow or Deny in the app's own view, and passes it to

@@ -1,5 +1,5 @@
 // Copyright 2026 Anud Inc.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The shell's model setup and tool server connections. Apps are kept out
 //! by `tokens.shell_only`, which sends every fixture call; these check what

@@ -3,7 +3,7 @@ name = "isonomic-proto"
 description = "Versioned wire types for the Isonomic engine API"
 version.workspace = true
 edition.workspace = true
-license = "Apache-2.0"
+license = "GPL-3.0-or-later"
 publish.workspace = true
 
 [features]

@@ -1,5 +1,5 @@
 // Copyright 2026 Anud Inc.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Display widgets on the wire: the schema revision they arrived in, and
 //! tolerance of kinds and widgets this build does not know.

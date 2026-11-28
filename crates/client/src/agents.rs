@@ -1,5 +1,5 @@
 // Copyright 2026 Anud Inc.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The agents interface: agent sessions the engine's host runs for the app.
 //! One method per host call; the session's events arrive on a
