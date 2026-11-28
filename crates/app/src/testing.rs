@@ -50,8 +50,8 @@ pub struct TestHost {
 }
 
 /// The test host's token source: the testkit mints as the window would,
-/// while the person is "acting"; otherwise it refuses with
-/// `no_user_input`.
+/// only while the person is "acting" (inside [`TestHost::user_input`]);
+/// otherwise it refuses with `no_user_input`, as the window does.
 struct TestUserActions {
     engine: TestEngine,
     acting: AtomicBool,
@@ -114,7 +114,7 @@ impl TestHost {
         let client = engine.client_on(runtime.handle());
         let user_actions = Arc::new(TestUserActions {
             engine: engine.clone(),
-            acting: AtomicBool::new(true),
+            acting: AtomicBool::new(false),
             asked: Mutex::default(),
         });
         Self {
@@ -152,10 +152,19 @@ impl TestHost {
         self.requests.reports()
     }
 
-    /// Whether the person counts as acting in the app when it asks for a
-    /// user-action token. `true` at first; `false` and every ask is
-    /// refused with `no_user_input`, as the window refuses one made with no
-    /// click or key press being handled.
+    /// Run `act` as the window runs an app's handler for the person's click
+    /// or key press: a user-action token asked for inside it is given;
+    /// one asked for anywhere else, including inside a future that `act`
+    /// starts but that runs later, is refused with `no_user_input`.
+    pub fn user_input<T>(&self, act: impl FnOnce() -> T) -> T {
+        let before = self.user_actions.acting.swap(true, Ordering::SeqCst);
+        let out = act();
+        self.user_actions.acting.store(before, Ordering::SeqCst);
+        out
+    }
+
+    /// Count the person as acting (`true`) or not (`false`, the default)
+    /// until changed, for tests that do not model the click.
     pub fn set_user_input(&self, acting: bool) {
         self.user_actions.acting.store(acting, Ordering::SeqCst);
     }

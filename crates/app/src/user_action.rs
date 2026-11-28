@@ -9,7 +9,10 @@
 //! only on the wire). The window owns the policy through
 //! [`UserActionSource`]: it answers only while the asking app's tab is on
 //! screen and focused and the person's click or key press is being
-//! handled, so model output can never obtain one.
+//! handled. That keeps model output from obtaining one on its own; the app
+//! keeps its side by calling it only from its own Allow and Deny controls,
+//! for the approval that control answers. The token is bound to one app,
+//! session and approval, and the engine still checks it.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -17,9 +20,10 @@ use std::sync::Arc;
 
 use isonomic_client::{Agents, ClientError};
 use isonomic_proto::agents::{ApprovalId, SessionId};
+use isonomic_proto::ErrorCode;
 
 /// The window's answer to [`AppContext::user_action`](crate::AppContext::user_action).
-pub type UserActionFuture = Pin<Box<dyn Future<Output = Result<String, UserActionError>>>>;
+pub type UserActionFuture = Pin<Box<dyn Future<Output = Result<String, UserActionError>> + Send>>;
 
 /// Why no token came. Deny-safe either way: without a token the app sends
 /// nothing and the approval stays pending.
@@ -36,10 +40,14 @@ pub enum UserActionError {
     #[error("unavailable: this window gives no user-action tokens")]
     Unavailable,
     /// The engine refused to mint it: the approval is unknown or already
-    /// decided, say. The engine's own code is in the message. Code
+    /// decided, say. `code` is the engine's (`not_found`, ...). Code
     /// `engine`.
-    #[error("engine: {0}")]
-    Engine(String),
+    #[error("engine: {code:?}: {message}")]
+    Engine { code: ErrorCode, message: String },
+    /// The window lost the engine, or the engine answered something else.
+    /// Code `disconnected`.
+    #[error("disconnected: {0}")]
+    Disconnected(String),
 }
 
 impl UserActionError {
@@ -49,14 +57,21 @@ impl UserActionError {
         match self {
             Self::NoUserInput => "no_user_input",
             Self::Unavailable => "unavailable",
-            Self::Engine(_) => "engine",
+            Self::Engine { .. } => "engine",
+            Self::Disconnected(_) => "disconnected",
         }
     }
 }
 
 impl From<ClientError> for UserActionError {
     fn from(error: ClientError) -> Self {
-        Self::Engine(error.to_string())
+        match error {
+            ClientError::Engine(wire) => Self::Engine {
+                code: wire.code,
+                message: wire.message,
+            },
+            other => Self::Disconnected(other.to_string()),
+        }
     }
 }
 
@@ -67,6 +82,8 @@ impl From<ClientError> for UserActionError {
 /// polled: it runs inside the app's input handler, and the future may run
 /// later.
 pub trait UserActionSource: Send + Sync + 'static {
+    /// The token for `app` to decide `approval` in `session`, or why not.
+    /// Decide here, synchronously; the future only waits for the mint.
     fn user_action(
         &self,
         app: &str,
@@ -78,6 +95,9 @@ pub trait UserActionSource: Send + Sync + 'static {
 /// A ready-made source for the window: `acting(app)` says whether the
 /// person is acting in `app`'s focused tab right now, and the shell's
 /// `agents` interface mints the token (`approvals.user_action` with `app`).
+///
+/// `acting` should be true for one ask per input event: the window clears
+/// its flag once it has answered, so one click mints one token.
 pub struct ShellUserActions {
     agents: Agents,
     acting: Box<dyn Fn(&str) -> bool + Send + Sync>,

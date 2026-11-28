@@ -325,6 +325,21 @@ mod user_action {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn a_refused_mint_keeps_the_engines_code() {
+        let engine = TestEngine::new();
+        let (client, session, approval) = waiting(&engine).await;
+        // An app's agents, not the shell's: the engine refuses the mint.
+        let source = ShellUserActions::new(client.agents(), |_| true);
+        let cx = context(client, Some(Arc::new(source)));
+        let refused = cx.user_action(&session, &approval).await.unwrap_err();
+        assert_eq!(refused.code(), "engine");
+        assert!(
+            matches!(refused, UserActionError::Engine { .. }),
+            "{refused:?}"
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn without_a_source_no_token_comes() {
         let engine = TestEngine::new();
         let (client, session, approval) = waiting(&engine).await;
@@ -379,17 +394,32 @@ mod user_action {
                 .approval
                 .clone();
 
-            host.set_user_input(false);
-            let refused = cx.user_action(&session, &approval).await;
-            assert_eq!(refused, Err(UserActionError::NoUserInput));
+            let outside = cx.user_action(&session, &approval).await;
+            assert_eq!(
+                outside,
+                Err(UserActionError::NoUserInput),
+                "no click, no token"
+            );
 
-            host.set_user_input(true);
-            let token = cx.user_action(&session, &approval).await.unwrap();
+            let late = host.user_input(|| {
+                let (cx, session, approval) = (cx.clone(), session.clone(), approval.clone());
+                async move { cx.user_action(&session, &approval).await }
+            });
+            assert_eq!(
+                late.await,
+                Err(UserActionError::NoUserInput),
+                "asked after the handler returned"
+            );
+
+            let token = host
+                .user_input(|| cx.user_action(&session, &approval))
+                .await
+                .unwrap();
             agents
                 .decide(&session, &approval, DecisionInput::Allow, Some(&token))
                 .await
                 .expect("the test host's token decides");
         });
-        assert_eq!(host.user_actions_asked(), [CHAT, CHAT]);
+        assert_eq!(host.user_actions_asked(), [CHAT, CHAT, CHAT]);
     }
 }

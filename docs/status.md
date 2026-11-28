@@ -12,7 +12,7 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 ## 2026-11-28 · An app asks the window for the person's token (#64)
 
-- `AppContext::user_action(session, approval)` over a window-supplied `UserActionSource`; `ShellUserActions` for the window; the test host answers it and can refuse. Stable refusal codes `no_user_input`, `unavailable`, `engine`. No wire change.
+- `AppContext::user_action(session, approval)` over a window-supplied `UserActionSource`; `ShellUserActions` for the window; the test host answers it and can refuse. Stable refusal codes `no_user_input`, `unavailable`, `engine` (with the engine's `ErrorCode`), `disconnected`. No wire change.
 - The window decides at the moment of the call, so an app must call it inside the input handler and await afterwards. A kit that calls it inside a future started later will be refused in the window.
 - Labelled needs-master: it is the approvals policy surface between app and window, though the wire is unchanged.
 
