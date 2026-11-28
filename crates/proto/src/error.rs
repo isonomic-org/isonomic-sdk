@@ -122,6 +122,10 @@ pub enum ErrorCode {
     /// browser sign-in, or one that did not answer). The message is plain
     /// words for the window to show.
     SignInFailed,
+    /// `permissions.grant` of a folder that can never be linked: the
+    /// engine's own directory, a key store, another app's data, a system
+    /// folder or the home folder as a whole. Nothing was recorded.
+    NotLinkable,
     /// A code from a newer engine.
     #[serde(other)]
     Unrecognized,

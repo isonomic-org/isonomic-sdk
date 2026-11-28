@@ -204,8 +204,17 @@ impl Agents {
             approval: approval.clone(),
             decision,
             user_action: user_action.map(str::to_string),
+            remember: None,
         });
         self.done(call).await
+    }
+
+    /// Decide an approval with every field: `remember` keeps an allow for
+    /// the session or for good, within what the request's `remember`
+    /// offers. A remembered answer needs the user-action token like any
+    /// other.
+    pub async fn decide_with(&self, decision: DecideApproval) -> Result<(), ClientError> {
+        self.done(Call::ApprovalsDecide(decision)).await
     }
 
     pub async fn answer(&self, answer: AnswerQuestion) -> Result<(), ClientError> {

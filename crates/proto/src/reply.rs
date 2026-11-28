@@ -144,6 +144,10 @@ pub enum Reply {
     SignIn(connections::SignInStarted),
     /// Answer to `connections.tools`.
     ConnectionTools(Vec<connections::ConnectionTool>),
+    /// Answer to `permissions.grant` and `permissions.list`: everything the
+    /// app holds. (`permissions.revoke` and `permissions.request` answer
+    /// `done`.)
+    Permissions(Box<permissions::Permissions>),
 }
 
 impl Reply {

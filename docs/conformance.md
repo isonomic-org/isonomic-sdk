@@ -18,7 +18,7 @@ async fn the_engine_conforms() {
 
 `run_only(connector, |name| name.starts_with("blobs."))` runs a subset while an interface is being built. Each check has 10 s (`CHECK_LIMIT`); the report names every failure and why.
 
-The checks speak the wire alone. They grant their own apps through `apps.grant` (ids under `com.isonomic.conformance`), store and delete small blobs, publish events, add and remove one tool server connection, and finish by asking the engine to shut down with an app's token, which it must refuse. They need no engine-side setup. Whatever needs scripted engine state, such as a model's output or a query's rows, is tested in the testkit's own tests instead.
+The checks speak the wire alone. They grant their own apps through `apps.grant` (ids under `com.isonomic.conformance`), store and delete small blobs, publish events, add and remove one tool server connection, link and unlink one empty folder, and finish by asking the engine to shut down with an app's token, which it must refuse. They need no engine-side setup. Whatever needs scripted engine state, such as a model's output or a query's rows, is tested in the testkit's own tests instead.
 
 ## The checks
 
@@ -60,11 +60,18 @@ The checks speak the wire alone. They grant their own apps through `apps.grant` 
 | `agents.model_rules` | Refuse with `capability_denied` a session on a model outside the app's manifest, whether named on `sessions.create` or reached through a preset the app stored (its reply model or its title model) |
 | `agents.session_ended` | End a session's stream with `session_ended` when the session is purged |
 | `agents.unknown_subscription` | Refuse unsubscribing from a stream that is not open with `unknown_subscription` |
+| `permissions.shell_only` | Refuse `permissions.grant` and `permissions.revoke` to an app whose manifest names the kit, with `capability_denied`, and record nothing |
+| `permissions.scoped` | List a folder and a kit the shell granted one app in that app's list only; refuse an app naming another with `capability_denied`; answer a folder id under another app's name with `not_found` |
+| `permissions.request_needs_person` | Refuse `permissions.request` without a user-action token, or with one never minted, with `missing_user_action`, and leave the kit `not_asked` |
 | `tokens.shutdown_refused` | Refuse `system.shutdown` to an app, and keep answering |
+
+`permissions.scoped` links one empty folder that it makes under the system's temporary directory and removes again; the engine under test must be able to link a folder there.
+
+Three checks the tool kits design names are not here yet: `permissions.revoked` (after a revoke, the next read is refused), `kits.remember` and `kits.offered`. Each needs a turn in a session: a kit tool called, or the tool list a step was offered. No check sends input today, so they wait for a decision on that rule. The test engine's own tests cover them with its scripted model.
 
 ## How we know the checks bite
 
-`crates/conformance/tests/testkit.rs` also runs every check through a proxy that strips the token from each request, an engine that ignores tokens. The token, privacy and scope checks must fail there, and the wire checks must still pass.
+`crates/conformance/tests/testkit.rs` also runs every check through a proxy that strips the token from each request, an engine that ignores tokens. The token, privacy, scope and permissions checks must fail there, and the wire checks must still pass.
 
 ## Adding a check
 

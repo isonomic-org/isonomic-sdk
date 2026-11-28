@@ -236,7 +236,7 @@ mod user_action {
             version: "0.1.0".into(),
             icon: "chat".into(),
             capabilities: Capabilities {
-                agents: Some(AgentsAccess {}),
+                agents: Some(AgentsAccess::default()),
                 ..Default::default()
             },
             schemas: vec![],
@@ -255,6 +255,7 @@ mod user_action {
             kind: ToolKind::Client,
             effects: vec![Effect::ActsOutward],
             concurrency: Concurrency::Serial,
+            scope: None,
         };
         agents
             .register_client_tools(&session, vec![post])
@@ -380,6 +381,7 @@ mod user_action {
                 kind: ToolKind::Client,
                 effects: vec![Effect::ActsOutward],
                 concurrency: Concurrency::Serial,
+                scope: None,
             };
             agents
                 .register_client_tools(&session, vec![post])

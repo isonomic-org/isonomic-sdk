@@ -67,7 +67,7 @@ fn manifest() -> Manifest {
 | `events` | none needed | Its own scope's events, always; never another app's |
 | `connections` | `vec![ConnectionAccess { provider: "calendar".into() }]` | Linked accounts of that kind |
 | `egress` | `vec!["example.com".into()]` | Outbound HTTP to those hosts, once the user approves |
-| `agents` | `AgentsAccess {}` | Its own agent sessions, presets and artifacts |
+| `agents` | `AgentsAccess { kits }` | Its own agent sessions, presets and artifacts, and the tool kits it may be offered (`docs/interfaces/permissions.md`) |
 
 ## 3. The trait
 

@@ -104,6 +104,9 @@ async fn an_engine_that_ignores_tokens_fails() {
         "events.scoped",
         "sql.schemas",
         "agents.isolated",
+        "permissions.shell_only",
+        "permissions.scoped",
+        "permissions.request_needs_person",
         "tokens.shutdown_refused",
     ] {
         assert!(failed.contains(name), "{name} passed:\n{report}");

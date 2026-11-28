@@ -19,7 +19,8 @@ use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::task::JoinHandle;
 
 use crate::{
-    agents, blobs, connections, events, faults, models, sql, system, CallRecord, Grant, State,
+    agents, blobs, connections, events, faults, models, permissions, sql, system, CallRecord,
+    Grant, State,
 };
 
 /// One open subscription: the task feeding it, how to stop it gracefully,
@@ -167,6 +168,12 @@ async fn dispatch(
         }
         Interface::Agents => return agents::dispatch(state, conn, id, caller, token, call).await,
         Interface::Connections => return connections::dispatch(state, conn, id, call).await,
+        Interface::Permissions => {
+            return Some(match permissions::answer(state, app, call) {
+                Ok(reply) => result(id, reply),
+                Err(error) => failure(id, error),
+            })
+        }
         _ => {}
     }
     Some(match call {

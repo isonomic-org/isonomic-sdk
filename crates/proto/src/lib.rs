@@ -28,6 +28,7 @@ pub mod lenient;
 pub mod locate;
 pub mod manifest;
 pub mod models;
+pub mod permissions;
 mod reply;
 pub mod sql;
 pub mod system;
@@ -301,6 +302,20 @@ pub enum Call {
     /// Shell only: the tools a connection offers.
     #[serde(rename = "connections.tools")]
     ConnectionsTools(connections::ListConnectionTools),
+    /// Shell only: link a folder to an app, or turn a kit on for it.
+    #[serde(rename = "permissions.grant")]
+    PermissionsGrant(permissions::GrantPermission),
+    /// An app's linked folders, kit switches and remembered approvals: its
+    /// own for an app, any app's for the shell.
+    #[serde(rename = "permissions.list")]
+    PermissionsList(permissions::ListPermissions),
+    /// Shell only: end one permission. The next check refuses.
+    #[serde(rename = "permissions.revoke")]
+    PermissionsRevoke(permissions::RevokePermission),
+    /// An app asks the window for the folder picker or a kit's first
+    /// question. Needs a user-action token.
+    #[serde(rename = "permissions.request")]
+    PermissionsRequest(permissions::RequestPermission),
 }
 
 /// What the engine sends.

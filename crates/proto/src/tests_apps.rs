@@ -81,7 +81,7 @@ fn validation_applies_the_engine_rules() {
     ));
     // The agents capability is open: a manifest may set it.
     let mut agents = hello();
-    agents.capabilities.agents = Some(AgentsAccess {});
+    agents.capabilities.agents = Some(AgentsAccess::default());
     assert_eq!(agents.validate(), Ok(()));
 }
 
@@ -274,7 +274,7 @@ fn a_session_event_from_a_newer_schema_decodes_as_unknown() {
 fn only_the_shell_names_another_apps_agent_sessions() {
     use crate::agents::{ListApprovals, PurgeSessions};
     let mut chat = hello();
-    chat.capabilities.agents = Some(AgentsAccess {});
+    chat.capabilities.agents = Some(AgentsAccess::default());
     let app = Caller::App {
         id: &chat.id,
         capabilities: &chat.capabilities,
@@ -371,7 +371,7 @@ fn a_session_on_a_named_model_needs_that_model() {
         })
     };
     let mut chat = hello();
-    chat.capabilities.agents = Some(AgentsAccess {});
+    chat.capabilities.agents = Some(AgentsAccess::default());
     chat.capabilities.models = Some(ModelAccess {
         ids: vec!["chat-small".into()],
         ..Default::default()

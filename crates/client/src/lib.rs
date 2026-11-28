@@ -29,6 +29,7 @@ mod blobs;
 mod connections;
 mod events;
 mod models;
+mod permissions;
 mod scoped;
 mod sql;
 
@@ -114,6 +115,7 @@ pub use blobs::Blobs;
 pub use connections::{ConnectionStates, Connections};
 pub use events::{EventStream, Events};
 pub use models::{DownloadStream, ModelStream, Models};
+pub use permissions::Permissions;
 pub use scoped::AppClient;
 pub use sql::{LiveQuery, Sql};
 
@@ -217,6 +219,12 @@ impl Client {
     /// Shell only.
     pub fn connections(&self) -> Connections {
         Connections::new(self.clone())
+    }
+
+    /// The `permissions` interface, as the shell: grant, list and revoke
+    /// any app's linked folders, kit switches and remembered approvals.
+    pub fn permissions(&self) -> Permissions {
+        Permissions::new(self.clone(), None)
     }
 
     /// The agents interface, as the shell: every app's sessions.

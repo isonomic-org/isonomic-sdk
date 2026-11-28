@@ -73,6 +73,10 @@ impl Call {
         "connections.sign_in",
         "connections.remove",
         "connections.tools",
+        "permissions.grant",
+        "permissions.list",
+        "permissions.revoke",
+        "permissions.request",
     ];
 
     /// The method name on the wire, for logs and the Activity tab.
@@ -143,6 +147,10 @@ impl Call {
             Call::ConnectionsSignIn(_) => "connections.sign_in",
             Call::ConnectionsRemove(_) => "connections.remove",
             Call::ConnectionsTools(_) => "connections.tools",
+            Call::PermissionsGrant(_) => "permissions.grant",
+            Call::PermissionsList(_) => "permissions.list",
+            Call::PermissionsRevoke(_) => "permissions.revoke",
+            Call::PermissionsRequest(_) => "permissions.request",
         }
     }
 
@@ -214,13 +222,24 @@ impl Call {
             | Call::ConnectionsSignIn(_)
             | Call::ConnectionsRemove(_)
             | Call::ConnectionsTools(_) => Interface::Connections,
+            Call::PermissionsGrant(_)
+            | Call::PermissionsList(_)
+            | Call::PermissionsRevoke(_)
+            | Call::PermissionsRequest(_) => Interface::Permissions,
         }
     }
 
     /// Calls only the window makes, whatever an app's capabilities: the
-    /// model install calls, and minting a person's user-action token.
+    /// model install calls, minting a person's user-action token, and
+    /// granting or revoking a permission.
     pub fn window_only(&self) -> bool {
-        self.installs_models() || matches!(self, Call::ApprovalsUserAction(_))
+        self.installs_models()
+            || matches!(
+                self,
+                Call::ApprovalsUserAction(_)
+                    | Call::PermissionsGrant(_)
+                    | Call::PermissionsRevoke(_)
+            )
     }
 
     /// `models.download`, `download_cancel`, `recommended`, `catalogue`

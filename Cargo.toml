@@ -28,10 +28,12 @@ isonomic-words = { path = "crates/words" }
 sha2 = "0.10"
 # Session event types, re-exported by the proto. Pinned: change only with a
 # changelog entry. CI fetches it with the shared workflow's `harness` input.
-harness-core = { git = "ssh://git@github.com/isonomic-org/isonomic-harness.git", rev = "ba26c809012068f25ff7405509522c100dc7be68" }
+harness-core = { git = "ssh://git@github.com/isonomic-org/isonomic-harness.git", rev = "67c2c149e1b6f4064d4180c433273ed9696aa86d" }
 # The host the testkit runs agent sessions on, at the same commit.
-harness-host = { git = "ssh://git@github.com/isonomic-org/isonomic-harness.git", rev = "ba26c809012068f25ff7405509522c100dc7be68" }
+harness-host = { git = "ssh://git@github.com/isonomic-org/isonomic-harness.git", rev = "67c2c149e1b6f4064d4180c433273ed9696aa86d" }
 isonomic-app = { path = "crates/app" }
+# The in-memory grants the testkit's host checks, at the same commit.
+harness-toolkit = { git = "ssh://git@github.com/isonomic-org/isonomic-harness.git", rev = "67c2c149e1b6f4064d4180c433273ed9696aa86d" }
 # Isonomic UI is a sibling checkout pinned to the commit in UI_REF, the same
 # way the engine and the window pin this repo. Only the app crate (and apps)
 # depend on it.

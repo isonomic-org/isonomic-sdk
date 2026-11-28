@@ -24,6 +24,7 @@ const FIXTURES: &[&str] = &[
     include_str!("../../proto/fixtures/v0/agents.jsonl"),
     include_str!("../../proto/fixtures/v0/identity.jsonl"),
     include_str!("../../proto/fixtures/v0/connections.jsonl"),
+    include_str!("../../proto/fixtures/v0/permissions.jsonl"),
 ];
 
 /// Every call in the fixtures, in order.
@@ -106,9 +107,9 @@ pub async fn unknown_token(target: Target) -> Outcome {
 }
 
 /// Even an app with every capability never reaches `system`, `apps`,
-/// `identity`, `connections`, or the model install calls
-/// (`models.download`, `download_cancel`, `recommended`, `catalogue`,
-/// `remove`). (`system.shutdown` is checked last, on its own.)
+/// `identity`, `connections`, the model install calls (`models.download`,
+/// `download_cancel`, `recommended`, `catalogue`, `remove`),
+/// `approvals.user_action`, `permissions.grant` or `permissions.revoke`. (`system.shutdown` is checked last, on its own.)
 pub async fn shell_only(target: Target) -> Outcome {
     let app = target
         .app(manifest("shell-only", everything(), &[]))
@@ -143,6 +144,7 @@ pub async fn every_interface(target: Target) -> Outcome {
                 | Interface::Blobs
                 | Interface::Sql
                 | Interface::Agents
+                | Interface::Permissions
         );
         if !needs_one || matches!(call, Call::SystemShutdown) {
             continue;

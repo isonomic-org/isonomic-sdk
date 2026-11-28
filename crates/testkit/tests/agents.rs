@@ -22,7 +22,7 @@ fn manifest(id: &str, agents: bool) -> Manifest {
         version: "0.1.0".into(),
         icon: "chat".into(),
         capabilities: Capabilities {
-            agents: agents.then_some(AgentsAccess {}),
+            agents: agents.then_some(AgentsAccess::default()),
             ..Default::default()
         },
         schemas: vec![],
@@ -76,6 +76,7 @@ fn tool(name: &str, effects: Vec<Effect>) -> ToolSpec {
         kind: ToolKind::Client,
         effects,
         concurrency: Concurrency::Serial,
+        scope: None,
     }
 }
 

@@ -22,7 +22,7 @@ fn chat(engine: &TestEngine) -> AppClient {
         version: "0.1.0".into(),
         icon: "chat".into(),
         capabilities: Capabilities {
-            agents: Some(AgentsAccess {}),
+            agents: Some(AgentsAccess::default()),
             ..Default::default()
         },
         schemas: vec![],

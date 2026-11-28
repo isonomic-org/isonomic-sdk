@@ -4,3 +4,5 @@
 {"type":"response","id":11,"error":{"code":"invalid_manifest","message":"version \"1.2\" is not major.minor.patch"}}
 {"type":"response","id":13,"error":{"code":"unknown_token","message":"no app holds this token"}}
 {"type":"response","id":14,"error":{"code":"unknown_method","message":"this engine has no method tables.query"}}
+{"type":"request","id":202,"method":"apps.grant","params":{"manifest":{"id":"com.isonomic.chat","name":"Chat","version":"0.1.0","icon":"chat","capabilities":{"models":{"any":true},"agents":{"kits":["files","web"]}}}}}
+{"type":"response","id":202,"result":{"granted":{"app":"com.isonomic.chat","token":"tok-chat-1"}}}
