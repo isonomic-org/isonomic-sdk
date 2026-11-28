@@ -99,3 +99,8 @@
 {"type":"response","id":125,"error":{"code":"capability_denied","message":"app com.isonomic.chat may not use remote models"}}
 {"type":"request","id":126,"token":"tok-chat-1","method":"artifacts.get","params":{"artifact":"r-1","version":2,"offset":528384}}
 {"type":"response","id":126,"error":{"code":"bad_request","message":"offset 528384 is past the end of the 528384-byte body"}}
+{"type":"event","subscription":21,"event":"session_event","data":{"session":"s-1","seq":40,"at":1700000000040,"turn":"t-5","step":"p-4","type":"tool.call","call":"c-9","tool":"show_metrics","kind":"display","input":{"fallback_text":"Total 2,340.","metrics":[{"label":"Total","value":"2,340"}]}}}
+{"type":"event","subscription":21,"event":"session_event","data":{"session":"s-1","seq":41,"at":1700000000041,"turn":"t-5","step":"p-4","type":"tool.result","call":"c-9","outcome":"ok","content":[{"type":"text","text":"shown"}],"display":"shown"}}
+{"type":"event","subscription":21,"event":"session_event","data":{"session":"s-1","seq":42,"at":1700000000042,"turn":"t-5","step":"p-4","type":"tool.result","call":"c-10","outcome":"ok","content":[{"type":"text","text":"shown as text"}],"display":"fallback"}}
+{"type":"request","id":127,"token":"tok-chat-1","method":"tools.result","params":{"session":"s-1","call":"c-9","content":[{"type":"text","text":"Shown"}]}}
+{"type":"response","id":127,"error":{"code":"not_found","message":"c-9 is a display call, which the host answers"}}
