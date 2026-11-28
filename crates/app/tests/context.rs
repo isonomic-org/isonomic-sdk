@@ -210,3 +210,186 @@ mod extra {
         cx.run_until_parked();
     }
 }
+
+// The person's token for an approval: the window decides, through its
+// source, whether the person is acting in the app; the app passes the
+// token to `decide`.
+mod user_action {
+    use std::sync::{Arc, Mutex};
+
+    use isonomic_app::{
+        AppContext, MemorySettings, ShellUserActions, UserActionError, UserActionSource,
+    };
+    use isonomic_client::AppClient;
+    use isonomic_proto::agents::schema::{Concurrency, Effect, ToolKind, Value};
+    use isonomic_proto::agents::{ApprovalId, DecisionInput, SessionId, ToolSpec};
+    use isonomic_proto::manifest::AgentsAccess;
+    use isonomic_proto::{Capabilities, Manifest};
+    use isonomic_testkit::TestEngine;
+
+    const CHAT: &str = "com.isonomic.chat";
+
+    fn manifest() -> Manifest {
+        Manifest {
+            id: CHAT.into(),
+            name: "Chat".into(),
+            version: "0.1.0".into(),
+            icon: "chat".into(),
+            capabilities: Capabilities {
+                agents: Some(AgentsAccess {}),
+                ..Default::default()
+            },
+            schemas: vec![],
+        }
+    }
+
+    /// Chat's client and a session with one approval waiting.
+    async fn waiting(engine: &TestEngine) -> (AppClient, SessionId, ApprovalId) {
+        let client = engine.client().scoped(engine.grant(&manifest()));
+        let agents = client.agents();
+        let session = agents.create("test").await.unwrap();
+        let post = ToolSpec {
+            name: "post".into(),
+            description: "The post tool.".into(),
+            input_schema: Value::object([("type", Value::from("object"))]),
+            kind: ToolKind::Client,
+            effects: vec![Effect::ActsOutward],
+            concurrency: Concurrency::Serial,
+        };
+        agents
+            .register_client_tools(&session, vec![post])
+            .await
+            .unwrap();
+        engine
+            .agents()
+            .with(|host| host.model.calls(&[("post", "{\"text\":\"hi\"}")]));
+        agents.send_text(&session, "Post hi.").await.unwrap();
+        let pending = agents.approvals(None).await.unwrap();
+        let approval = pending[0].request.approval.clone();
+        (client, session, approval)
+    }
+
+    fn context(client: AppClient, source: Option<Arc<dyn UserActionSource>>) -> AppContext {
+        let (cx, _) = AppContext::new(CHAT, client, Arc::new(MemorySettings::default()));
+        match source {
+            Some(source) => cx.with_user_actions(source),
+            None => cx,
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn the_window_mints_only_while_the_person_acts_in_the_app() {
+        let engine = TestEngine::new();
+        let (client, session, approval) = waiting(&engine).await;
+        let acting = Arc::new(Mutex::new(false));
+        let asked = Arc::new(Mutex::new(Vec::new()));
+        let (now, seen) = (acting.clone(), asked.clone());
+        let source = ShellUserActions::new(engine.client().agents(), move |app| {
+            seen.lock().unwrap().push(app.to_string());
+            *now.lock().unwrap()
+        });
+        let cx = context(client.clone(), Some(Arc::new(source)));
+
+        let refused = cx.user_action(&session, &approval).await;
+        assert_eq!(refused, Err(UserActionError::NoUserInput));
+        assert_eq!(refused.unwrap_err().code(), "no_user_input");
+
+        *acting.lock().unwrap() = true;
+        let token = cx.user_action(&session, &approval).await.unwrap();
+        assert_eq!(
+            *asked.lock().unwrap(),
+            [CHAT, CHAT],
+            "the window is told the app"
+        );
+        client
+            .agents()
+            .decide(&session, &approval, DecisionInput::Allow, Some(&token))
+            .await
+            .expect("the minted token decides");
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn the_window_decides_when_asked_not_when_awaited() {
+        let engine = TestEngine::new();
+        let (client, session, approval) = waiting(&engine).await;
+        let acting = Arc::new(Mutex::new(true));
+        let now = acting.clone();
+        let source = ShellUserActions::new(engine.client().agents(), move |_| *now.lock().unwrap());
+        let cx = context(client, Some(Arc::new(source)));
+        let asked = cx.user_action(&session, &approval);
+        *acting.lock().unwrap() = false;
+        assert!(
+            asked.await.is_ok(),
+            "asked during the input, answered after"
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn without_a_source_no_token_comes() {
+        let engine = TestEngine::new();
+        let (client, session, approval) = waiting(&engine).await;
+        let cx = context(client, None);
+        let none = cx.user_action(&session, &approval).await;
+        assert_eq!(none, Err(UserActionError::Unavailable));
+        assert_eq!(none.unwrap_err().code(), "unavailable");
+    }
+
+    #[cfg(feature = "test-support")]
+    #[test]
+    fn the_test_host_stands_in_for_the_window_and_can_refuse() {
+        use isonomic_app::testing::TestHost;
+
+        struct Chat;
+        impl isonomic_app::App for Chat {
+            fn manifest() -> Manifest {
+                manifest()
+            }
+            fn build(
+                _: AppContext,
+                _: &mut isonomic_app::ui::Window,
+                _: &mut isonomic_app::ui::App,
+            ) -> isonomic_app::ui::AnyView {
+                unreachable!("never opened here")
+            }
+        }
+
+        let host = TestHost::new();
+        let (cx, _) = host.context::<Chat>();
+        host.runtime().block_on(async {
+            let agents = cx.client().agents();
+            let session = agents.create("test").await.unwrap();
+            let post = ToolSpec {
+                name: "post".into(),
+                description: "The post tool.".into(),
+                input_schema: Value::object([("type", Value::from("object"))]),
+                kind: ToolKind::Client,
+                effects: vec![Effect::ActsOutward],
+                concurrency: Concurrency::Serial,
+            };
+            agents
+                .register_client_tools(&session, vec![post])
+                .await
+                .unwrap();
+            host.engine()
+                .agents()
+                .with(|h| h.model.calls(&[("post", "{\"text\":\"hi\"}")]));
+            agents.send_text(&session, "Post hi.").await.unwrap();
+            let approval = agents.approvals(None).await.unwrap()[0]
+                .request
+                .approval
+                .clone();
+
+            host.set_user_input(false);
+            let refused = cx.user_action(&session, &approval).await;
+            assert_eq!(refused, Err(UserActionError::NoUserInput));
+
+            host.set_user_input(true);
+            let token = cx.user_action(&session, &approval).await.unwrap();
+            agents
+                .decide(&session, &approval, DecisionInput::Allow, Some(&token))
+                .await
+                .expect("the test host's token decides");
+        });
+        assert_eq!(host.user_actions_asked(), [CHAT, CHAT]);
+    }
+}

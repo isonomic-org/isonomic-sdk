@@ -10,6 +10,12 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
+## 2026-11-28 · An app asks the window for the person's token (#64)
+
+- `AppContext::user_action(session, approval)` over a window-supplied `UserActionSource`; `ShellUserActions` for the window; the test host answers it and can refuse. Stable refusal codes `no_user_input`, `unavailable`, `engine`. No wire change.
+- The window decides at the moment of the call, so an app must call it inside the input handler and await afterwards. A kit that calls it inside a future started later will be refused in the window.
+- Labelled needs-master: it is the approvals policy surface between app and window, though the wire is unchanged.
+
 ## 2026-11-27 · Harness at d7d8ab6
 
 - Harness moves to d7d8ab6 (harness #56): a tool can decline a new session (`Tool::offered`), and the connected-app tools decline an app with nothing connected (`Connections::offered`, true by default). No harness-core change, no SDK type or wire change. Engines and windows must pin this same rev.

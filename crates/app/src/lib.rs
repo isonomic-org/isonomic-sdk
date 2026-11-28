@@ -32,6 +32,7 @@ mod requests;
 pub mod shell;
 #[cfg(feature = "test-support")]
 pub mod testing;
+mod user_action;
 
 use isonomic_ui as gpui;
 
@@ -75,6 +76,7 @@ pub use isonomic_proto::manifest::{BlobAccess, ConnectionAccess, ModelAccess, Sc
 pub use isonomic_proto::{Capabilities, Manifest};
 pub use requests::{Problem, RecordedRequests, WindowRequest, WindowRequests, REPORT_INTERVAL};
 pub use shell::{Shell, Sidebar};
+pub use user_action::{ShellUserActions, UserActionError, UserActionFuture, UserActionSource};
 
 /// One result for the window's global search.
 #[derive(Debug, Clone, PartialEq, Eq)]

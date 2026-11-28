@@ -11,6 +11,14 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+## Unreleased: an app asks the window for the person's token (#64)
+
+- **App crate:** `AppContext::user_action(session, approval)` asks the window for the user-action token `approvals.decide` needs, for an approval the person answered in the app's own view. The window supplies a `UserActionSource` (`AppContext::with_user_actions`) and owns the policy: it decides when the call is made, not when the future is polled. `ShellUserActions::new(shell_agents, acting)` is a ready-made source: `acting(app)` says whether the person is acting in that app's focused tab right now, and it mints with `approvals.user_action { app }`. Refusals are `UserActionError` with a stable `code()`: `no_user_input`, `unavailable`, `engine`.
+- **Test host:** `TestHost` answers `user_action` through the testkit; `set_user_input(false)` makes it refuse with `no_user_input`; `user_actions_asked()` lists who asked.
+- **No wire change:** `approvals.user_action` already exists and stays shell only.
+- **Window:** install a source on each app's context, `cx.with_user_actions(Arc::new(ShellUserActions::new(client.agents(), acting)))`, where `acting(app)` is true only while that app's tab is on screen and focused and a click or key press is being handled. Without one, apps get `unavailable` and approvals answered in an app stay pending.
+- **Engine:** nothing to do.
+
 ## Unreleased: harness at d7d8ab6
 
 - **Harness:** `harness-core` and `harness-host` move to d7d8ab6, harness main after its #56: the host leaves a tool out of a new session when `Tool::offered(app)` is false, and the connected-app tools forward to `Connections::offered(owner)`. No wire change. Engines and windows must pin this same rev.

@@ -28,7 +28,7 @@ Arguments and results (`CreateSession`, `SessionSummary`, `PendingApproval`, …
 | `sessions.unsubscribe` | `{ subscription }` | `unsubscribed {}` |
 | `approvals.list` | `{ app? }` | `approvals [{ session, app, request }]`; the shell may narrow to one `app` |
 | `approvals.decide` | `{ session, approval, decision: allow\|deny\|{text}, user_action? }` | `done {}` |
-| `approvals.user_action` | `{ session, approval, app? }` | `user_action { token }`. Shell only: the window mints the token when the person acts and hands it to `app` (the shell's own when absent) |
+| `approvals.user_action` | `{ session, approval, app? }` | `user_action { token }`. Shell only: the window mints the token when the person acts and hands it to `app` (the shell's own when absent). An app asks for it with `AppContext::user_action` (`docs/guide/build-an-app.md`) |
 | `questions.answer` | `{ session, question, selected?, text?, skipped? }` | `done {}` |
 | `tools.register_client` | `{ session, specs: [ToolSpec] }` | `done {}`; replaces the app's client tools for that session |
 | `tools.result` | `{ session, call, content?, error? }` | `done {}` |

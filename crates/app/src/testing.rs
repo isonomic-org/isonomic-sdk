@@ -19,6 +19,7 @@
 //! }
 //! ```
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -29,7 +30,8 @@ use tokio::sync::watch;
 
 use crate::shell::{ProductWordmark, Shell, Sidebar};
 use crate::{
-    register, App, AppContext, Attention, MemorySettings, RecordedRequests, Tab, WindowRequest,
+    register, App, AppContext, Attention, MemorySettings, RecordedRequests, Tab, UserActionError,
+    UserActionFuture, UserActionSource, WindowRequest,
 };
 
 /// How long [`wait_until`] waits before failing the test.
@@ -43,7 +45,36 @@ pub struct TestHost {
     settings: Arc<MemorySettings>,
     requests: Arc<RecordedRequests>,
     headers: Arc<Mutex<Vec<(String, Sidebar)>>>,
+    user_actions: Arc<TestUserActions>,
     runtime: tokio::runtime::Runtime,
+}
+
+/// The test host's token source: the testkit mints as the window would,
+/// while the person is "acting"; otherwise it refuses with
+/// `no_user_input`.
+struct TestUserActions {
+    engine: TestEngine,
+    acting: AtomicBool,
+    asked: Mutex<Vec<String>>,
+}
+
+impl UserActionSource for TestUserActions {
+    fn user_action(
+        &self,
+        app: &str,
+        session: &isonomic_proto::agents::SessionId,
+        approval: &isonomic_proto::agents::ApprovalId,
+    ) -> UserActionFuture {
+        self.asked.lock().unwrap().push(app.to_string());
+        if !self.acting.load(Ordering::SeqCst) {
+            return Box::pin(async { Err(UserActionError::NoUserInput) });
+        }
+        let token = self
+            .engine
+            .agents()
+            .user_action(Some(app), session, approval);
+        Box::pin(async move { Ok(token) })
+    }
 }
 
 /// The test host's shell: the window's one-app header
@@ -81,8 +112,14 @@ impl TestHost {
             .expect("a Tokio runtime for the client");
         let engine = runtime.block_on(async { TestEngine::new() });
         let client = engine.client_on(runtime.handle());
+        let user_actions = Arc::new(TestUserActions {
+            engine: engine.clone(),
+            acting: AtomicBool::new(true),
+            asked: Mutex::default(),
+        });
         Self {
             engine,
+            user_actions,
             client,
             settings: Arc::new(MemorySettings::default()),
             requests: Arc::new(RecordedRequests::default()),
@@ -115,6 +152,20 @@ impl TestHost {
         self.requests.reports()
     }
 
+    /// Whether the person counts as acting in the app when it asks for a
+    /// user-action token. `true` at first; `false` and every ask is
+    /// refused with `no_user_input`, as the window refuses one made with no
+    /// click or key press being handled.
+    pub fn set_user_input(&self, acting: bool) {
+        self.user_actions.acting.store(acting, Ordering::SeqCst);
+    }
+
+    /// Every app that asked for a user-action token, oldest first, whether
+    /// or not it got one.
+    pub fn user_actions_asked(&self) -> Vec<String> {
+        self.user_actions.asked.lock().unwrap().clone()
+    }
+
     /// Every time an app drew the shell header, oldest first: the app and
     /// the sidebar state it was drawn for.
     pub fn shell_headers(&self) -> Vec<(String, Sidebar)> {
@@ -138,7 +189,8 @@ impl TestHost {
         };
         let cx = cx
             .with_window(self.requests.clone())
-            .with_shell(Arc::new(shell));
+            .with_shell(Arc::new(shell))
+            .with_user_actions(self.user_actions.clone());
         (cx, attention)
     }
 
