@@ -21,21 +21,25 @@ wire rules: new fixture lines only, tolerant decoding.
    revision 2, or revision 1 if they land with display widgets. The harness
    kept revision 1 (its deviation 10), and the SDK reports what the harness
    ships.
-2. **The kit tool specs are not re-exported yet.** `agents::kits`
-   re-exports the frame's types (scope, access, remember, the offer
-   table). harness-core has no kit specs at the pinned commit; they arrive
-   with the harness's files kit and join the re-export when the pin moves.
-   Nothing was copied into the SDK.
+2. **The kit tool specs are re-exported as the harness ships them.**
+   `agents::kits` carries harness-core's `FILES_SPECS`, `kit_spec`,
+   `KitSpec`, `KitField` and `files_errors` beside the frame's types. Only
+   the files kit has specs at the pinned commit; the other kits' specs join
+   as the pin moves. Nothing was copied into the SDK. (Until the pin
+   reached the files kit, this entry recorded that no spec was re-exported.)
 3. **Three of the six conformance checks wait.** `permissions.shell_only`,
    `permissions.scoped` and `permissions.request_needs_person` are built,
    and fail against the token-stripping proxy. `permissions.revoked`,
-   `kits.remember` and `kits.offered` each need a kit tool called in a
-   session. The pinned harness has no kit tools, its chat preset names no
-   kit, and no conformance check sends input (a check cannot know a real
-   model's words). The test engine's own tests cover what can be shown
-   without a tool: a revoked grant refuses the host's next check, `remember`
-   never exceeds what a request offers and needs the person's token, and a
-   kit the manifest does not name is never granted.
+   `kits.remember` and `kits.offered` each need a turn in a session: a
+   kit tool called, or the tool list a step was offered. The pinned harness
+   now has the files kit and its presets name it, but no conformance check
+   sends input (a check cannot know a real model's words), and that rule
+   is not changed here. The test engine's own tests, which script its
+   model, cover them: a revoked grant refuses the host's next check and
+   takes the kit's tools out of the next session's list, `remember` never
+   exceeds what a request offers and needs the person's token, and an app
+   whose manifest does not name a kit is never granted it and never
+   offered one of its tools, under either built-in preset.
 4. **The wire shapes are this repo's.** The design gives the four methods
    and what each carries in prose. The field names (`grant`, `permission`,
    `ask`, `access`, `until`), the one reply (`permissions`, for grant and
@@ -61,15 +65,17 @@ wire rules: new fixture lines only, tolerant decoding.
    before an engine can complete a request.
 10. **The scratch root is the temporary directory, by path alone.** The
     test engine opens nothing: a folder is linkable when its path lies
-    strictly inside the temporary directory. It serves no files; the
-    in-memory file service belongs to the harness's files kit.
+    strictly inside the temporary directory. A linked folder is linked,
+    empty, in the harness's in-memory file store, which the host's files
+    kit works on; the test engine has no call that puts a file there.
 11. **The test engine does not model `session` or `until` on a grant**
     (`unsupported`), and lists no remembered approvals: the host's
     in-memory grants keep neither a session-wide standing grant nor a
-    listing, and no tool at this pin can cause a remembered approval.
+    listing of what they remember.
 12. **One more harness crate, `harness-toolkit`,** at the pinned commit,
-    for the in-memory grants the host already uses. It is in house and
-    comes from the same repository as `harness-host`.
+    for the in-memory grants and the in-memory file store the host already
+    uses. `harness-host` re-exports neither. It is in house and comes from
+    the same repository as `harness-host`.
 13. **One conformance check makes an empty folder** under the temporary
     directory and removes it, so an engine that opens what it links has
     something to open. The other checks still speak the wire alone.

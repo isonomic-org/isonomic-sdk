@@ -165,3 +165,22 @@ fn an_approval_with_unknown_remember_and_scope_decodes() {
     let decide: isonomic_proto::agents::DecideApproval = serde_json::from_str(decide).unwrap();
     assert_eq!(decide.remember, None);
 }
+
+/// The kit specs are harness-core's own, re-exported: an app renders a
+/// files call or its error from the same table the engine offers from.
+#[test]
+fn the_files_kit_specs_are_the_engines() {
+    use isonomic_proto::agents::kits::{files_errors, kit_spec, FILES_SPECS, KITS};
+    use isonomic_proto::agents::SchemaVersion;
+    use isonomic_proto::permissions::FILES_KIT;
+    assert_eq!(FILES_SPECS.len(), 7);
+    for spec in FILES_SPECS {
+        assert_eq!(spec.kit, FILES_KIT);
+        assert!(KITS.contains(&spec.kit));
+        assert_eq!(spec.since_revision, SchemaVersion::CURRENT.revision);
+        assert_eq!(spec.tool_spec().scope, Some(ScopeKind::Folder));
+        assert_eq!(kit_spec(spec.name).map(|s| s.name), Some(spec.name));
+    }
+    assert!(kit_spec("show_table").is_none());
+    assert_eq!(files_errors::NOT_LINKED, "files.not_linked");
+}

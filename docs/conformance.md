@@ -67,7 +67,7 @@ The checks speak the wire alone. They grant their own apps through `apps.grant` 
 
 `permissions.scoped` links one empty folder that it makes under the system's temporary directory and removes again; the engine under test must be able to link a folder there.
 
-Three checks the tool kits design names are not here yet: `permissions.revoked` (after a revoke, the next read is refused), `kits.remember` and `kits.offered`. Each needs a kit tool called in a session. The harness this SDK pins has no kit tools yet, and no check sends input today, so they wait for the files kit and for a way to script a tool call over the wire.
+Three checks the tool kits design names are not here yet: `permissions.revoked` (after a revoke, the next read is refused), `kits.remember` and `kits.offered`. Each needs a turn in a session: a kit tool called, or the tool list a step was offered. No check sends input today, so they wait for a decision on that rule. The test engine's own tests cover them with its scripted model.
 
 ## How we know the checks bite
 

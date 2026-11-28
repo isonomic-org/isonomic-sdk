@@ -71,6 +71,7 @@ Two things the design leaves unsaid are not on the wire yet, and no engine can c
 `TestEngine::permissions()`:
 
 - Grants live in the agent host's own in-memory grants, so what the shell grants is what the host checks. A linked folder is a read grant, plus a write grant marked "ask first" for `read_write`; the `web` kit is fetch on the web without asking and act on any site asking first. Other kits are a switch alone.
+- The host carries the files kit over an in-memory store. A linked folder is linked there, empty, so a new session of that app is offered the files tools (the read tools alone for `read`), and none once the folder is revoked. An app whose manifest does not name `files` is never offered one.
 - `scratch_root()` is the temporary directory. A folder is linkable only from strictly inside it, judged by the path alone: nothing is opened or created. Anything else is `not_linkable`.
 - `user_action(app)` mints the person's token for one `permissions.request`; `requests()` lists what the window was asked to show.
 - Not modelled: a grant with `session` or `until` answers `unsupported`, and `approvals` is always empty.

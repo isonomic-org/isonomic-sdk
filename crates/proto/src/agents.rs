@@ -31,14 +31,16 @@ pub mod display {
     pub use harness_core::DisplayOutcome;
 }
 
-/// Tool kits: what a kit call touches, what an approval may remember, and
-/// the table that decides what a session is offered. One source of truth:
-/// harness-core's types, as for [`display`]. The approval fields (`scope`,
-/// `preview`, `reversible`, `remember`) ride on [`ApprovalRequest`].
+/// Tool kits: what a kit call touches, what an approval may remember, the
+/// table that decides what a session is offered, and the kit tool specs
+/// with their error codes. One source of truth: harness-core's types, as
+/// for [`display`]. The approval fields (`scope`, `preview`, `reversible`,
+/// `remember`) ride on [`ApprovalRequest`].
 pub mod kits {
     pub use harness_core::access::{
         grant_effect, Access, GrantAnswer, HeldGrant, PreviewItem, Scope,
     };
+    pub use harness_core::kits::{files_errors, kit_spec, KitField, KitSpec, FILES_SPECS};
     pub use harness_core::offer::{
         admit, offer, KitCandidate, KitMember, Offer, KITS, MAX_DISPLAY_TOOLS,
     };

@@ -63,7 +63,7 @@ A `tool.call` with `kind: display` is a display widget (`show_table`, `show_step
 
 ### Tool kits
 
-Kit tools (files, commands, the web, the browser) run in the engine like any engine tool, and a session is offered one only while its app holds a grant the tool could use (`docs/interfaces/permissions.md`). The types are harness-core's, re-exported as `isonomic_proto::agents::kits`.
+Kit tools (files, commands, the web, the browser) run in the engine like any engine tool, and a session is offered one only while its app holds a grant the tool could use (`docs/interfaces/permissions.md`). The types and the tool specs are harness-core's, re-exported as `isonomic_proto::agents::kits`: `FILES_SPECS` and `kit_spec` for the files kit's seven tools (`list_dir`, `read_file`, `search_files`, `write_file`, `edit_file`, `move_path`, `trash_path`), and `files_errors` for the codes a files call fails with (`files.not_linked`, `files.read_only` and the rest).
 
 An approval for a kit call carries more than a summary: `scope` (what it touches: a kind, an id and a label), `preview` (labelled values the engine worked out, never cut short), `reversible`, and `remember`, the longest the person may be offered: `once`, `session` or `always`. Absent means once. Show the preview whole, and offer no longer choice than `remember`.
 

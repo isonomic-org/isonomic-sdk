@@ -3,9 +3,11 @@
 
 //! The `permissions` interface of the in-memory engine. Grants live in
 //! memory, in the agent host's own `MemoryGrants`, so what the shell grants
-//! here is what the host checks when it offers and judges kit tools.
+//! here is what the host checks when it offers and judges kit tools. A
+//! linked folder is also linked, empty, in the host's in-memory file store,
+//! which is what the files kit reads and changes.
 //!
-//! Folders are never opened. A path can be linked only when it lies
+//! Folders on disk are never opened. A path can be linked only when it lies
 //! strictly inside the scratch root ([`FakePermissions::scratch_root`]);
 //! anything else, the root included, is `not_linkable`, as the engine
 //! answers for the places a person can never link.
@@ -17,6 +19,7 @@ use std::collections::{BTreeMap, HashSet};
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 
+use harness_toolkit::files::MemoryFs;
 use harness_toolkit::{MemoryGrants, Standing};
 use isonomic_proto::agents::kits::{Effect, Scope, ScopeKind, KITS};
 use isonomic_proto::agents::AppId;
@@ -161,7 +164,7 @@ impl PermissionsState {
         &mut self,
         app: &str,
         link: LinkFolder,
-        grants: &MemoryGrants,
+        (grants, files): (&MemoryGrants, &MemoryFs),
     ) -> Result<(), WireError> {
         if link.access == FolderAccess::Unrecognized {
             return Err(error(ErrorCode::BadRequest, "no such folder access"));
@@ -201,6 +204,9 @@ impl PermissionsState {
             }
         };
         replace(grants, folder_grants(app, &folder));
+        files.unlink(app, &folder.id);
+        let read_only = folder.access == FolderAccess::Read;
+        files.link(app, &folder.id, &folder.name, read_only);
         Ok(())
     }
 
@@ -222,7 +228,7 @@ impl PermissionsState {
         &mut self,
         manifest: &Manifest,
         permission: Revocable,
-        grants: &MemoryGrants,
+        (grants, files): (&MemoryGrants, &MemoryFs),
     ) -> Result<(), WireError> {
         let app = manifest.id.as_str();
         match permission {
@@ -231,6 +237,7 @@ impl PermissionsState {
                 let at = held.folders.iter().position(|f| f.id == id);
                 let folder = held.folders.remove(at.ok_or_else(not_found)?);
                 withdraw(grants, folder_grants(app, &folder));
+                files.unlink(app, &folder.id);
             }
             Revocable::Kit(kit) => {
                 if kit == FILES_KIT || authorize_kit(manifest, &kit).is_err() {
@@ -276,7 +283,7 @@ fn grant(state: &State, request: GrantPermission) -> Result<Reply, WireError> {
     let mut permissions = state.permissions.lock().unwrap();
     let grants = &agents.memory.grants;
     match request.grant {
-        Grantable::Folder(link) => permissions.link(&manifest.id, link, grants)?,
+        Grantable::Folder(link) => permissions.link(&manifest.id, link, (grants, &agents.files))?,
         Grantable::Kit(kit) if kit == FILES_KIT => {
             let message = "the files kit is granted by linking a folder";
             return Err(error(ErrorCode::BadRequest, message));
@@ -307,7 +314,8 @@ pub(crate) fn answer(state: &State, app: Option<&str>, call: Call) -> Result<Rep
             let manifest = manifest_of(state, request.app.as_str()).map_err(|_| not_found())?;
             let agents = state.agents.lock().unwrap();
             let mut permissions = state.permissions.lock().unwrap();
-            permissions.revoke(&manifest, request.permission, &agents.memory.grants)?;
+            let held = (&*agents.memory.grants, &*agents.files);
+            permissions.revoke(&manifest, request.permission, held)?;
             Ok(Reply::Done {})
         }
         Call::PermissionsRequest(request) => {

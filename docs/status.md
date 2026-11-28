@@ -10,13 +10,13 @@ Newest first. History before 14 Nov 2026 is in `isonomic-desktop/docs/architectu
 
 
 
-## 2026-11-28 · Permissions, remembered approvals and kits on the wire; harness at ab016a2 (#59, needs-master)
+## 2026-11-28 · Permissions, remembered approvals and kits on the wire; harness at 67c2c14 (#59, needs-master)
 
 Issue 2 of the tool kits build ("Tool kits: architecture v0.3"). Differences from the design are in `docs/kits-deviations.md`.
 
-- **Built:** the `permissions` interface (grant, list, revoke, request), `remember` on `approvals.decide`, `kits` in the manifest's agents capability checked by `proto::auth`, the code `not_linkable`, `isonomic_proto::agents::kits`, the client's `permissions()`, the test engine's in-memory grants with a scratch root, and three conformance checks with the token-stripping canary.
-- **Harness** moves to ab016a2 (harness #61). Schema revision stays 1.
-- **Waiting on the harness's files kit:** the kit tool specs in the re-export, and the conformance checks `permissions.revoked`, `kits.remember` and `kits.offered`. Each needs a kit tool the host can call, and the chat preset naming a kit; neither is on harness main yet. They also need a decision: no conformance check sends input today, and all three need a tool call.
+- **Built:** the `permissions` interface (grant, list, revoke, request), `remember` on `approvals.decide`, `kits` in the manifest's agents capability checked by `proto::auth`, the code `not_linkable`, `isonomic_proto::agents::kits` with the files kit specs, the client's `permissions()`, the test engine's in-memory grants with a scratch root, and three conformance checks with the token-stripping canary.
+- **Harness** moves to 67c2c14 (harness #61 and #62, the files kit). Schema revision stays 1. The test engine's host carries the files kit over an in-memory store: its tests show an app is offered the files tools only when its manifest names the kit and a folder is linked.
+- **Waiting on a decision:** the conformance checks `permissions.revoked`, `kits.remember` and `kits.offered`. Each needs a turn in a session, and no conformance check sends input today.
 - **Open, for the owner:** the design does not say how the window learns that an app called `permissions.request`, nor how the window mints the user-action token for it (`approvals.user_action` is bound to a session and an approval). Neither was invented here. The test engine records requests for tests to read and mints the token from its scripting handle.
 - Labelled needs-master: it adds to the wire and moves the pinned harness.
 

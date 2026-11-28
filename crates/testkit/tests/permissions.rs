@@ -8,7 +8,9 @@
 
 use harness_toolkit::Grants;
 use isonomic_client::{AppClient, ClientError};
-use isonomic_proto::agents::kits::{Effect, GrantAnswer, Remember, Scope, ScopeKind};
+use isonomic_proto::agents::kits::{
+    kit_spec, Effect, GrantAnswer, Remember, Scope, ScopeKind, FILES_SPECS,
+};
 use isonomic_proto::agents::schema::{Concurrency, Event, Profile, ToolKind, Value};
 use isonomic_proto::agents::{AppId, DecideApproval, DecisionInput, SessionId, ToolSpec};
 use isonomic_proto::manifest::AgentsAccess;
@@ -208,10 +210,21 @@ async fn an_app_token_never_grants_or_revokes() {
     assert_eq!(self::held(&engine, CHAT), 0);
 }
 
+/// Every tool the model was offered since request `from`, by name, and
+/// how many requests the engine has made.
+fn offered(engine: &TestEngine, from: usize) -> (Vec<String>, usize) {
+    engine.agents().with(|host| {
+        let requests = host.model.requests.lock().unwrap();
+        let tools = requests[from..].iter().flat_map(|r| r.tools.iter());
+        (tools.map(|t| t.name.clone()).collect(), requests.len())
+    })
+}
+
 /// A kit the manifest does not name is never granted, so the host never
-/// holds a grant for it, and its offer rule admits no tool without one.
+/// holds a grant for it, and its offer rule admits no tool without one:
+/// the session's tool list carries no kit tool, whatever the preset says.
 #[tokio::test]
-async fn a_kit_the_manifest_does_not_name_is_never_granted() {
+async fn a_kit_the_manifest_does_not_name_is_never_offered() {
     let engine = TestEngine::new();
     let notes = app(&engine, NOTES, &["web"]);
     let shell = engine.client().permissions();
@@ -224,9 +237,14 @@ async fn a_kit_the_manifest_does_not_name_is_never_granted() {
         let asked = notes.permissions().request(ask, Some(&person)).await;
         assert_eq!(code(asked), ErrorCode::CapabilityDenied);
     }
-    // The built-in test preset names the files kit; the manifest does not.
-    let session = notes.agents().create("test").await.unwrap();
-    notes.agents().send_text(&session, "Hello.").await.unwrap();
+    // Both built-in presets name the files kit; the manifest does not.
+    for preset in ["test", "chat"] {
+        let session = notes.agents().create(preset).await.unwrap();
+        notes.agents().send_text(&session, "Hello.").await.unwrap();
+    }
+    let (tools, requests) = offered(&engine, 0);
+    assert!(requests >= 2 && tools.contains(&"ask_user".to_string()));
+    assert_eq!(tools.iter().find(|name| kit_spec(name).is_some()), None);
     assert_eq!(held(&engine, NOTES), 0);
     assert!(engine.permissions().requests().is_empty());
     let listed = notes.permissions().list(None).await.unwrap();
@@ -237,6 +255,43 @@ async fn a_kit_the_manifest_does_not_name_is_never_granted() {
     let plain = engine.client().scoped(engine.grant(&plain));
     let refused = plain.permissions().list(None).await;
     assert_eq!(code(refused), ErrorCode::CapabilityDenied);
+}
+
+/// The other side of the same rule: an app whose manifest names the files
+/// kit is offered its tools once a folder is linked, and only then; a
+/// folder linked for reading offers the read tools alone.
+#[tokio::test]
+async fn a_named_kit_is_offered_once_a_folder_is_linked() {
+    let engine = TestEngine::new();
+    let chat = app(&engine, CHAT, &["files"]);
+    let shell = engine.client().permissions();
+    let names = |core: bool| {
+        let specs = FILES_SPECS.iter().filter(move |s| s.core == core);
+        specs.map(|s| s.name.to_string()).collect::<Vec<_>>()
+    };
+    let turn = || {
+        let (chat, engine) = (&chat, &engine);
+        async move {
+            let (_, before) = offered(engine, 0);
+            let session = chat.agents().create("test").await.unwrap();
+            chat.agents().send_text(&session, "Hello.").await.unwrap();
+            let (tools, _) = offered(engine, before);
+            assert!(tools.contains(&"ask_user".to_string()));
+            let has = |names: Vec<String>| names.iter().all(|name| tools.contains(name));
+            let any = tools.iter().any(|name| kit_spec(name).is_some());
+            (any, has(names(true)), has(names(false)))
+        }
+    };
+    assert_eq!(turn().await, (false, false, false), "nothing is linked");
+    let link = folder(CHAT, path(&engine, "Design"), FolderAccess::Read);
+    shell.grant(link).await.unwrap();
+    assert_eq!(turn().await, (true, true, false), "linked for reading");
+    let link = folder(CHAT, path(&engine, "Design"), FolderAccess::ReadWrite);
+    let held = shell.grant(link).await.unwrap();
+    assert_eq!(turn().await, (true, true, true), "linked for changes");
+    let id = held.folders[0].id.clone();
+    shell.revoke(CHAT, Revocable::Folder(id)).await.unwrap();
+    assert_eq!(turn().await, (false, false, false), "revoked");
 }
 
 #[tokio::test]

@@ -18,6 +18,7 @@ use harness_host::{
     memory_config, AppKind, Caller as HostCaller, CapabilityToken, HostConfig, HostError,
     MemoryHost, Update, UserActionToken,
 };
+use harness_toolkit::files::MemoryFs;
 use isonomic_proto::agents::schema::{Event as Event_, Profile};
 use isonomic_proto::agents::{
     ApprovalId, CallId, EndReason, ForkReason, PresetId, SessionEnded, SessionEvent, SessionId,
@@ -33,15 +34,25 @@ use crate::State;
 /// The host, and which apps it has been told about.
 pub(crate) struct AgentsState {
     pub(crate) memory: MemoryHost,
+    /// The linked folders the host's files kit works on, in memory.
+    pub(crate) files: Arc<MemoryFs>,
     known: HashSet<String>,
+}
+
+impl AgentsState {
+    /// A fresh host over `files`, with the files kit registered.
+    fn over(cfg: HostConfig, files: Arc<MemoryFs>) -> Self {
+        Self {
+            memory: MemoryHost::with_files(cfg, Some(files.clone())),
+            files,
+            known: HashSet::new(),
+        }
+    }
 }
 
 impl Default for AgentsState {
     fn default() -> Self {
-        Self {
-            memory: MemoryHost::new(),
-            known: HashSet::new(),
-        }
+        Self::over(memory_config(), Arc::new(MemoryFs::new()))
     }
 }
 
@@ -394,11 +405,10 @@ impl FakeAgents {
             profile,
             ..memory_config()
         };
-        *agents = AgentsState {
-            memory: MemoryHost::with(cfg),
-            known: HashSet::new(),
-        };
-        // The fresh host holds no grants: give it back what was granted.
+        // The linked folders stay; the fresh host holds no grants: give it
+        // back what was granted.
+        let files = agents.files.clone();
+        *agents = AgentsState::over(cfg, files);
         let permissions = self.state.permissions.lock().unwrap();
         permissions.reissue(&agents.memory.grants);
     }
