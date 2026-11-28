@@ -2,6 +2,49 @@
 
 Moved from `docs/CHANGELOG.md` to keep it under the size limit. Newest first. Older still: `docs/CHANGELOG-archive.md`.
 
+## Unreleased: report ids
+
+**Wire:** no change. Report format 1 gains an optional top-level `id`; older files stay valid.
+
+**What changes:** `Report` has `id: Option<String>`, set by `Report::new` and written as the top-level `id`. It is never scrubbed. The new `isonomic_reports::id` module has `new_id`, `is_id`, `report_id(doc, file_name, capsule_id)` and `derived_id`. A struct literal of `Report` needs `id`.
+
+**For the window:** its sender sends `id::report_id(&doc, file_name, capsule_id)`, so the receiver can drop duplicates.
+
+**For the engine:** its fifth identity step uses the same `report_id` for its stored reports.
+
+## Unreleased: Isonomic UI at 4f1207b (the options Chat needs)
+
+**Wire:** no change.
+
+**For Chat and the window:** move `../isonomic-ui` to `4f1207b811a3d0a2eb16a6ad48e9d1d8db496871`, the commit in `UI_REF`. New options to match the design:
+- sidebar padding and focusable rows;
+- `PopupMenuItem::destructive()`;
+- command palette setters;
+- `PromptComposer::set_comfortable`;
+- model picker options, with list-box roles on rows;
+- text view list styling;
+- the message action bar's size;
+- the pager's position and labels.
+
+**Not purely additive**, three points:
+- `PaletteCommand` gained the public fields `icon` and `meta`, so struct literals need both.
+- `PopupMenuItem::Item` gained `destructive`, so patterns and literals that name every field need it.
+- The component `IconName` now derives `Debug`, `PartialEq` and `Eq`; a local impl of those for it now conflicts.
+
+Nothing in the SDK uses these.
+
+## Unreleased: Isonomic UI at 66e93d3
+
+**Wire:** no change.
+
+**For the window and Chat:** move `../isonomic-ui` to `66e93d359e02166da1237370571f8966f0ce6403`, the commit in `UI_REF`. The run status bar now matches the design:
+- `RunStatus::Running` and `Done` are new, so `RunStatus::ALL` has seven entries;
+- buttons are a list, through `RunStatusButton`, and `.elapsed(..)` is new;
+- the default words for Stopped changed;
+- the ban icon is fixed.
+
+**Not purely additive:** code that matches `RunStatus` exhaustively needs arms for `Running` and `Done`, and tests that compare the Stopped words need updating. Nothing in the SDK matches on it.
+
 ## Unreleased: stricter scrubbing (quoted text at any length, the person's ID)
 
 **Wire:** no change. The report format is unchanged; `system.macos` stays format 1's key.

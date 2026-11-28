@@ -29,7 +29,7 @@ Granting the same app again replaces its manifest and keeps its earlier tokens v
 | `connections` | `[{"provider":"calendar"}]` | Linked accounts of those providers |
 | `egress` | `["example.com"]` | Outbound HTTP to those hosts, once the user approves |
 | `blobs` | `{"max_bytes":10485760}` | The blob store, up to that size per blob |
-| `agents` | `AgentsAccess {}` | Its own agent sessions, presets and artifacts (`docs/interfaces/agents.md`) |
+| `agents` | `{}` or `{"kits":["files","web"]}` | Its own agent sessions, presets and artifacts (`docs/interfaces/agents.md`). `kits` names the tool kits the app may ever be offered; one it does not name is never granted (`docs/interfaces/permissions.md`) |
 
 ## Errors
 

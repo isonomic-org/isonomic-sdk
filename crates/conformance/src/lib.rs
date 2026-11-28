@@ -22,12 +22,15 @@
 //!
 //! Run them against a test engine, never a user's: the checks store and
 //! delete small blobs, publish events, create and purge agent sessions,
-//! add and remove a tool server connection and grant test apps, and the last one asks the engine to shut down with an
-//! app's token, which it must refuse.
+//! add and remove a tool server connection, link and unlink one empty
+//! folder they make under the temporary directory, and grant test apps, and
+//! the last one asks the engine to shut down with an app's token, which it
+//! must refuse.
 
 mod agents;
 mod connections;
 mod interfaces;
+mod permissions;
 mod recovery;
 mod tokens;
 mod wire;
@@ -109,6 +112,12 @@ pub const CHECKS: &[Check] = &[
     check!("agents.unknown_subscription", agents::unknown_subscription),
     check!("agents.model_rules", agents::model_rules),
     check!("agents.session_ended", agents::session_ended),
+    check!("permissions.shell_only", permissions::shell_only),
+    check!("permissions.scoped", permissions::scoped),
+    check!(
+        "permissions.request_needs_person",
+        permissions::request_needs_person
+    ),
     check!("tokens.shutdown_refused", tokens::shutdown_refused),
 ];
 

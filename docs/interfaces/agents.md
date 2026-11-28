@@ -27,7 +27,7 @@ Arguments and results (`CreateSession`, `SessionSummary`, `PendingApproval`, …
 | `sessions.subscribe` | `{ session, from_seq? }` | `session_stream { subscription }`, then `session_event` and `live_delta` events |
 | `sessions.unsubscribe` | `{ subscription }` | `unsubscribed {}` |
 | `approvals.list` | `{ app? }` | `approvals [{ session, app, request }]`; the shell may narrow to one `app` |
-| `approvals.decide` | `{ session, approval, decision: allow\|deny\|{text}, user_action? }` | `done {}` |
+| `approvals.decide` | `{ session, approval, decision: allow\|deny\|{text}, user_action?, remember? }` | `done {}`. `remember` (`session` or `always`) keeps an allow, within what the request's `remember` offers and only with a verified token (Tool kits, below) |
 | `approvals.user_action` | `{ session, approval, app? }` | `user_action { token }`. Shell only: the window mints the token when the person acts and hands it to `app` (the shell's own when absent). An app asks for it with `AppContext::user_action` (`docs/guide/build-an-app.md`) |
 | `questions.answer` | `{ session, question, selected?, text?, skipped? }` | `done {}` |
 | `tools.register_client` | `{ session, specs: [ToolSpec] }` | `done {}`; replaces the app's client tools for that session |
@@ -60,6 +60,19 @@ A client tool call arrives as a `tool.call` event with `kind: client`; answer it
 ### Display tools
 
 A `tool.call` with `kind: display` is a display widget (`show_table`, `show_steps`, `show_metrics`, `show_chart`): the model shows a component inline. The host validates it against its spec, records its `tool.result` itself with `display` set to `shown`, `retry` or `fallback`, and the model goes on. An app renders it and never answers it: `tools.result` for a display call is `not_found`. The specs are harness-core's, re-exported as `isonomic_proto::agents::display` (`DISPLAY_SPECS`, `display_spec`, `display_tool_spec`, `validate`); presets offer them under `[display]`, and only on `high`, `standard` and `intel` profiles and not with `local:smallest` (`display_capable`). Render `shown` with the widget, `fallback` with the input's `fallback_text`, and a widget this build does not know (or a `kind` it does not know) as a generic block: such events always decode. Display tools arrived in schema revision 1.
+
+### Tool kits
+
+Kit tools (files, commands, the web, the browser) run in the engine like any engine tool, and a session is offered one only while its app holds a grant the tool could use (`docs/interfaces/permissions.md`). The types are harness-core's, re-exported as `isonomic_proto::agents::kits`.
+
+An approval for a kit call carries more than a summary: `scope` (what it touches: a kind, an id and a label), `preview` (labelled values the engine worked out, never cut short), `reversible`, and `remember`, the longest the person may be offered: `once`, `session` or `always`. Absent means once. Show the preview whole, and offer no longer choice than `remember`.
+
+```json
+{"type":"response","id":199,"result":{"approvals":[{"session":"s-1","app":"com.isonomic.chat","request":{"approval":"a-5","call":"c-9","summary":"write_file Design/tokens.css","rule":"grant","effects":["modifies_data"],"scope":{"kind":"folder","id":"folder-1","label":"Design"},"preview":[{"label":"Path","value":"/Users/ana/Design/tokens.css"},{"label":"Change","value":"replaces 2.1 KB with 2.4 KB"}],"reversible":true,"remember":"always"}}]}}
+{"type":"request","id":200,"token":"tok-chat-1","method":"approvals.decide","params":{"session":"s-1","approval":"a-5","decision":"allow","user_action":"ua-83","remember":"session"}}
+```
+
+`approvals.decide { remember }` carries the person's choice. The engine never keeps more than the request offered, and keeps nothing without a verified user-action token. `session` covers the same act on the same scope for the rest of that session, and a fork asks again; `always` becomes a standing permission the person can see and revoke. A value from a newer engine (`remember`, a scope `kind`, an effect, a rule) decodes as the schema's `Other`: treat an unknown `remember` as once.
 
 ## Rules
 

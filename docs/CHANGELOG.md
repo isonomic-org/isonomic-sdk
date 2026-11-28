@@ -11,6 +11,19 @@ Newest first. Each entry names what the engine (isonomic-capsule) and the window
 
 
 
+## Unreleased: the permissions interface, remembered approvals and kits; harness at ab016a2 (#59, needs-master)
+
+- **Harness:** `harness-core` and `harness-host` move to ab016a2 (harness #61, the tool-kit frame), and the testkit also takes `harness-toolkit` at that commit for its in-memory grants. The session event schema stays at revision 1: the kit fields are additive in it (effect `modifies_data`, rule `grant`, `scope`, `preview`, `reversible` and `remember` on `approval.request`, `remember` on `approval.decision`, `meta` on `tool.result`, `folders` on the context record).
+- **New interface `permissions`** (`docs/interfaces/permissions.md`): `permissions.grant` and `permissions.revoke`, the window's alone; `permissions.list`, an app's own or any app's for the shell; `permissions.request`, an app's, refused with `missing_user_action` without a user-action token. One new reply, `permissions`. One new error code, `not_linkable`.
+- **`approvals.decide`** takes an optional `remember` (`session` or `always`). The engine holds it to what the request offers and keeps it only for an allow with a verified token.
+- **Manifest:** `agents: { kits: [...] }` names the kits an app may ever be offered. `proto::auth` refuses an app a request for a kit it does not name, and `auth::authorize_kit` is the check an engine makes before it records any permission for an app.
+- **Proto:** `isonomic_proto::agents::kits` re-exports harness-core's kit types (`Scope`, `PreviewItem`, `Access`, `GrantAnswer`, `HeldGrant`, `grant_effect`, `Remember`, `ScopeKind`, `Effect`, `ApprovalRule`, `offer`, `Offer`, `admit`, `KITS`). The kit tool specs are not in harness-core at this commit; they join the re-export when the harness ships them.
+- **Client:** `Client::permissions()` and `AppClient::permissions()`; `Agents::decide_with(DecideApproval)`.
+- **Test engine:** `TestEngine::permissions()`. Grants live in the agent host's own in-memory grants; a folder is linkable only from strictly inside the scratch root (the temporary directory; nothing is opened), anything else is `not_linkable`. It does not model a grant for one session or until a time (`unsupported`) and lists no remembered approvals.
+- **Conformance:** `permissions.shell_only`, `permissions.scoped`, `permissions.request_needs_person`, each failing against the token-stripping proxy. `permissions.revoked`, `kits.remember` and `kits.offered` wait for kit tools in the host (`docs/conformance.md`).
+- **Breaking for Rust:** `AgentsAccess` gains `kits` (write `AgentsAccess::default()`), `DecideApproval` gains `remember`, harness-core's `ToolSpec` gains `scope`, and the host's `decide_approval` takes `remember` before the token.
+- **Engine:** pin harness ab016a2 with this SDK_REF; serve the four calls, answer `not_linkable` for a place that can never be linked, check `authorize_kit` before recording a permission, and pass `remember` to the host. **Window:** call `permissions.grant` and `permissions.revoke` after the person acts; apps that name kits must list them in their manifest. Two things are not settled by this change: how the window learns of a `permissions.request`, and how it mints the token for one (`docs/interfaces/permissions.md`, Open points).
+
 ## Unreleased: display widgets, harness at 982d9fa (#55, needs-master)
 
 - **Harness:** `harness-core` and `harness-host` move to 982d9fa (harness #58, merge of 928f2e6): display widgets and session event schema revision 1, additive (tool kind `display`, `tool.result.display`). `SchemaVersion::CURRENT.revision` is now 1. `ToolResult` gains `display`, so a struct literal of it needs `display: None`.
@@ -184,48 +197,4 @@ No SDK code, test or example names these ids.
 
 **Not purely additive**, one point: the public field `PaletteCommand::icon` is now the icon's path (`Option<SharedString>`). Calls to `.icon(..)` are unaffected; struct literals and reads of the field need the new type.
 
-## Unreleased: report ids
-
-**Wire:** no change. Report format 1 gains an optional top-level `id`; older files stay valid.
-
-**What changes:** `Report` has `id: Option<String>`, set by `Report::new` and written as the top-level `id`. It is never scrubbed. The new `isonomic_reports::id` module has `new_id`, `is_id`, `report_id(doc, file_name, capsule_id)` and `derived_id`. A struct literal of `Report` needs `id`.
-
-**For the window:** its sender sends `id::report_id(&doc, file_name, capsule_id)`, so the receiver can drop duplicates.
-
-**For the engine:** its fifth identity step uses the same `report_id` for its stored reports.
-
-## Unreleased: Isonomic UI at 4f1207b (the options Chat needs)
-
-**Wire:** no change.
-
-**For Chat and the window:** move `../isonomic-ui` to `4f1207b811a3d0a2eb16a6ad48e9d1d8db496871`, the commit in `UI_REF`. New options to match the design:
-- sidebar padding and focusable rows;
-- `PopupMenuItem::destructive()`;
-- command palette setters;
-- `PromptComposer::set_comfortable`;
-- model picker options, with list-box roles on rows;
-- text view list styling;
-- the message action bar's size;
-- the pager's position and labels.
-
-**Not purely additive**, three points:
-- `PaletteCommand` gained the public fields `icon` and `meta`, so struct literals need both.
-- `PopupMenuItem::Item` gained `destructive`, so patterns and literals that name every field need it.
-- The component `IconName` now derives `Debug`, `PartialEq` and `Eq`; a local impl of those for it now conflicts.
-
-Nothing in the SDK uses these.
-
-## Unreleased: Isonomic UI at 66e93d3
-
-**Wire:** no change.
-
-**For the window and Chat:** move `../isonomic-ui` to `66e93d359e02166da1237370571f8966f0ce6403`, the commit in `UI_REF`. The run status bar now matches the design:
-- `RunStatus::Running` and `Done` are new, so `RunStatus::ALL` has seven entries;
-- buttons are a list, through `RunStatusButton`, and `.elapsed(..)` is new;
-- the default words for Stopped changed;
-- the ban icon is fixed.
-
-**Not purely additive:** code that matches `RunStatus` exhaustively needs arms for `Running` and `Done`, and tests that compare the Stopped words need updating. Nothing in the SDK matches on it.
-
-
-Earlier entries: from stricter scrubbing back to the model picker in `docs/CHANGELOG-archive-2.md`; from the agents interface back to S0 (`system.retry`, conformance, sql, events, blobs, the app crate, models, tokens) in `docs/CHANGELOG-archive.md`.
+Earlier entries: from report ids back to the model picker in `docs/CHANGELOG-archive-2.md`; from the agents interface back to S0 (`system.retry`, conformance, sql, events, blobs, the app crate, models, tokens) in `docs/CHANGELOG-archive.md`.
